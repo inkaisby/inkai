@@ -13,16 +13,24 @@ export interface UserRow {
   user_id: string;
   email: string;
   nama: string | null;
-
+  nik: string | null;
+  telepon: string | null;
+  jenis_kelamin: string | null;
+  tanggal_lahir: string | null;
+  nama_ayah: string | null;
+  nama_ibu: string | null;
+  pekerjaan_ortu: string | null;
   app_role: string | null;
   structural_level: number | null;
-
+  structural_role: string | null;
   email_allowed: boolean;
   profile_completed: boolean;
-
+  status: string | null;
   province_id: number | null;
   regency_id: number | null;
-
+  district_id: number | null;
+  village_id: string | null;
+  ranting_id: string | null;
   created_at: string;
   updated_at: string;
 }
