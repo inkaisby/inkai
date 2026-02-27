@@ -18,10 +18,9 @@ type Props = {
 
 /* ================= ICON FIX ================= */
 
-const ICON_RECORD = LucideIcons as Record<string, LucideIcon>;
-
-const ALL_ICONS = Object.entries(ICON_RECORD)
+const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
   .filter(([key]) => /^[A-Z]/.test(key))
+  .map(([key, value]) => [key, value as LucideIcon])
   .sort(([a], [b]) => a.localeCompare(b))
   .slice(0, 1000);
 
