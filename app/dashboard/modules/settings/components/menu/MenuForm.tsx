@@ -18,15 +18,15 @@ type Props = {
 
 /* ================= ICON FIX ================= */
 
-const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
-  .filter(([key]) => /^[A-Z]/.test(key))
-  .map(([key, value]) => [key, value as LucideIcon])
-  .sort(([a], [b]) => a.localeCompare(b))
-  .slice(0, 1000);
+const ALL_ICONS: [string, LucideIcon][] = (
+  Object.entries(LucideIcons)
+    .filter(([key]) => /^[A-Z]/.test(key))
+    .map(([key, value]) => [key, value as LucideIcon] as [string, LucideIcon])
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(0, 1000)
+);
 
-const DEFAULT_ICON =
-  (LucideIcons as unknown as Record<string, LucideIcon>).Circle ??
-  ALL_ICONS[0]?.[1];
+const DEFAULT_ICON = (LucideIcons as any).Circle || ALL_ICONS[0]?.[1];
 
 /* ================= DEFAULT FORM ================= */
 
