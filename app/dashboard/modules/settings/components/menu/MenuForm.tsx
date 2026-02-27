@@ -18,11 +18,11 @@ type Props = {
 
 /* ================= ICON FIX ================= */
 
-const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
+const ALL_ICONS = Object.entries(LucideIcons)
   .filter(([key]) => /^[A-Z]/.test(key))
   .map(([key, value]) => [key, value as LucideIcon])
   .sort(([a], [b]) => a.localeCompare(b))
-  .slice(0, 1000);
+  .slice(0, 1000) as [string, LucideIcon][];
 
 const DEFAULT_ICON = (LucideIcons as any).Circle || ALL_ICONS[0]?.[1];
 
