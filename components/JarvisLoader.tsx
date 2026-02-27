@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 type JarvisLoaderProps = {
@@ -12,7 +13,10 @@ export default function JarvisLoader({
   label,
 }: JarvisLoaderProps) {
   return (
-    <div className="flex flex-col items-center text-center relative">
+    <div
+      className="flex flex-col items-center text-center relative"
+      data-mode={mode}
+    >
       {/* Ring luar */}
       <motion.div
         className="absolute w-44 h-44 rounded-full border border-cyan-400/30"
@@ -28,9 +32,11 @@ export default function JarvisLoader({
       />
 
       {/* Logo */}
-      <img
+      <Image
         src="/logo/inkai-logo.png"
         alt="INKAI Logo"
+        width={160}
+        height={160}
         className="w-40 h-40 relative z-10"
       />
 

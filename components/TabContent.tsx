@@ -17,6 +17,7 @@ export default function TabContent({ children }: Props) {
   // === Detect route change (klik Sidebar) ===
   useEffect(() => {
     if (pathname !== currentPath) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(true);
 
       // Simulasi modul sedang di-boot oleh sistem (tone JARVIS)

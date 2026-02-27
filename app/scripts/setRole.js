@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
 );
 
 async function run() {
-  const { data, error } =
+  const { error } =
     await supabaseAdmin.auth.admin.updateUserById(
       "88175888-8cb1-4b5f-bb44-25e3e508fd77",
       { app_metadata: { role: "admin" } }
