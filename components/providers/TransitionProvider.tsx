@@ -4,7 +4,7 @@ import { createContext, useState } from "react";
 
 export const PageTransitionContext = createContext({
   transitioning: false,
-  setTransitioning: (value: boolean) => {},
+  setTransitioning: (_value: boolean) => {},
 });
 
 export function PageTransitionProvider({

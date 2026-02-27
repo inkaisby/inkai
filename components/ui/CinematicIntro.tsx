@@ -1,22 +1,30 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import SakuraEffect from "../effects/SakuraEffect"; // ✔ gunakan komponen yang benar
 
-export default function CinematicIntro({ onFinish }) {
-  // SAFE CLIENT RANDOM FOR TATAMI DUST
-  const [particles, setParticles] = useState([]);
+type TatamiParticle = {
+  left: number;
+  bottom: number;
+  duration: number;
+  delay: number;
+};
 
-  useEffect(() => {
-    const arr = Array.from({ length: 25 }).map(() => ({
+export default function CinematicIntro({
+  onFinish,
+}: {
+  onFinish?: () => void;
+}) {
+  // SAFE CLIENT RANDOM FOR TATAMI DUST (lazy initializer, no effect)
+  const [particles] = useState<TatamiParticle[]>(() =>
+    Array.from({ length: 25 }).map(() => ({
       left: Math.random() * 100,
       bottom: Math.random() * 40,
       duration: 6 + Math.random() * 4,
       delay: Math.random() * 1.6,
-    }));
-    setParticles(arr);
-  }, []);
+    })),
+  );
 
   return (
     <motion.div
