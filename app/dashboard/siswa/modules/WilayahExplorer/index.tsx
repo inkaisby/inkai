@@ -16,26 +16,33 @@ export default function WilayahExplorer() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWilayah();
-  }, []);
+    let cancelled = false;
 
-  async function loadWilayah() {
-    setLoading(true);
+    async function loadWilayah() {
+      setLoading(true);
 
-    const res = await supabase
-      .from("wilayah")
-      .select("id,name,level,parent_id,created_at")
-      .order("created_at", { ascending: true });
+      const res = await supabase
+        .from("wilayah")
+        .select("id,name,level,parent_id,created_at")
+        .order("created_at", { ascending: true });
 
-    if (res.error) {
-      console.error("FETCH WILAYAH ERROR:", res.error);
-      setData([]);
-    } else {
-      setData(res.data ?? []);
+      if (cancelled) return;
+
+      if (res.error) {
+        console.error("FETCH WILAYAH ERROR:", res.error);
+        setData([]);
+      } else {
+        setData(res.data ?? []);
+      }
+
+      setLoading(false);
     }
 
-    setLoading(false);
-  }
+    loadWilayah();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (loading) {
     return <div className="p-3 text-xs text-slate-500">Loading wilayah…</div>;
