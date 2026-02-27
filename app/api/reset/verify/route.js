@@ -1,7 +1,7 @@
 import { supabaseServer } from "@/app/lib/supabaseServer";
 
 export async function POST(req) {
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
   const { token } = await req.json();
 
   const { data } = await supabase

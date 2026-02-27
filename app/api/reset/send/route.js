@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 export async function POST(req) {
   try {
-    const supabase = supabaseServer();
+    const supabase = await supabaseServer();
     const { email } = await req.json();
 
     // Generate token unik
