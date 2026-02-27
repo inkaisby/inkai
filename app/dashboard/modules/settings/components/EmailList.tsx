@@ -14,6 +14,7 @@ export interface UserRow {
   email: string;
   nama: string | null;
   nik: string | null;
+  telepon: string | null;
   jenis_kelamin: string | null;
   tanggal_lahir: string | null;
   nama_ayah: string | null;
