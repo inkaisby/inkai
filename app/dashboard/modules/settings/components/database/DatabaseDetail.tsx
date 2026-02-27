@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import DataTab from "./tabs/DataTab";
 import ColumnsTab from "./tabs/ColumnsTab";
 import RelationsTab from "./tabs/RelationsTab";
@@ -10,10 +10,6 @@ type Tab = "data" | "columns" | "relations" | "activity";
 
 export default function DatabaseDetail({ table }: { table: string }) {
   const [tab, setTab] = useState<Tab>("data");
-
-  useEffect(() => {
-    setTab("data");
-  }, [table]);
 
   return (
     <div className="h-full flex flex-col min-h-0">

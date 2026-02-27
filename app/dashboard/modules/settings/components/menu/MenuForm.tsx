@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { ReactNode } from "react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { FixedSizeGrid as Grid, GridChildComponentProps } from "react-window";
 import type { MenuRow } from "./useMenuCRUD";
 import JarvisLoader from "@/components/JarvisLoader";
 
@@ -109,38 +108,6 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
       ([name]) => name.toLowerCase() === (form.icon || "").toLowerCase(),
     )?.[1] ?? DEFAULT_ICON;
 
-  const columnCount = 8;
-  const rowCount = Math.ceil(filteredIcons.length / columnCount);
-
-  const Cell = useCallback(
-    ({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
-      const index = rowIndex * columnCount + columnIndex;
-      if (index >= filteredIcons.length) return null;
-
-      const [name, Icon] = filteredIcons[index];
-      const active = name.toLowerCase() === (form.icon || "").toLowerCase();
-
-      return (
-        <div style={style} className="p-1">
-          <button
-            type="button"
-            title={name}
-            onClick={() => setForm((prev) => ({ ...prev, icon: name }))}
-            className={`w-full h-full flex items-center justify-center rounded-xl border transition-all duration-200
-              ${
-                active
-                  ? "border-cyan-400 bg-cyan-400/20 shadow-lg shadow-cyan-500/30"
-                  : "border-white/10 hover:bg-white/5 hover:border-cyan-500/40"
-              }`}
-          >
-            <Icon size={18} />
-          </button>
-        </div>
-      );
-    },
-    [filteredIcons, form.icon],
-  );
-
   if (!open) return null;
 
   async function submit() {
@@ -244,7 +211,9 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
                   label="Scope"
                   value={form.scope ?? "sidebar"}
                   disabled={isDashboard}
-                  onChange={(v) => setForm({ ...form, scope: v as any })}
+                  onChange={(v) =>
+                    setForm({ ...form, scope: v as MenuRow["scope"] })
+                  }
                   options={[
                     { value: "sidebar", label: "Sidebar" },
                     { value: "settings", label: "Settings Only" },

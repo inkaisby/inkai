@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-type Row = Record<string, unknown>;
+type Row = Record<string, any>;
 
 interface DataTabProps {
   table: string;
@@ -67,6 +67,7 @@ export default function DataTab({ table, pageSize = 25 }: DataTabProps) {
       }
 
       setLoading(false);
+      console.groupEnd();
     };
 
     fetchRows();
@@ -80,7 +81,11 @@ export default function DataTab({ table, pageSize = 25 }: DataTabProps) {
   const toggleRow = (i: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) {
+        next.delete(i);
+      } else {
+        next.add(i);
+      }
       return next;
     });
   };
@@ -295,31 +300,15 @@ export default function DataTab({ table, pageSize = 25 }: DataTabProps) {
                       onChange={() => toggleRow(i)}
                     />
                   </td>
-                  {columns.map((c) => {
-                    const value = r[c];
-
-                    if (value === null || value === undefined) {
-                      return (
-                        <td key={c} className="px-2 py-1 whitespace-nowrap">
-                          -
-                        </td>
-                      );
-                    }
-
-                    if (typeof value === "object") {
-                      return (
-                        <td key={c} className="px-2 py-1 whitespace-nowrap">
-                          {JSON.stringify(value)}
-                        </td>
-                      );
-                    }
-
-                    return (
-                      <td key={c} className="px-2 py-1 whitespace-nowrap">
-                        {String(value)}
-                      </td>
-                    );
-                  })}
+                  {columns.map((c) => (
+                    <td key={c} className="px-2 py-1 whitespace-nowrap">
+                      {r[c] === null || r[c] === undefined
+                        ? "-"
+                        : typeof r[c] === "object"
+                          ? JSON.stringify(r[c])
+                          : String(r[c])}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
