@@ -17,6 +17,7 @@ export default function ErrorPage() {
 
     if (cookie) {
       const value = decodeURIComponent(cookie.split("=")[1]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMsg(value);
 
       // Hapus cookie setelah dibaca (one-time)

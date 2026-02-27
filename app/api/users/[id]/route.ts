@@ -55,7 +55,7 @@ export async function PUT(
     return badRequest("User ID tidak valid");
   }
 
-  let body: Record<string, any>;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
@@ -69,11 +69,12 @@ export async function PUT(
   /* ======================
      FILTER PAYLOAD
   ====================== */
-  const payload: Partial<Record<AllowedField, any>> = {};
+  const payload: Partial<Record<AllowedField, string | null>> = {};
 
   for (const key of ALLOWED_FIELDS) {
     if (key in body) {
-      payload[key] = body[key];
+      const value = body[key];
+      payload[key] = (value as string | null) ?? null;
     }
   }
 

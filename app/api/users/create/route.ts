@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
         email: user.email,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[API /users/create] error:", err);
     return NextResponse.json(
       { message: "Internal server error" },
