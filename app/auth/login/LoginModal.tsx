@@ -1,9 +1,9 @@
-\"use client\";
+"use client";
 
-import { useEffect, useRef, useState } from \"react\";
-import Image from \"next/image\";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
-import { supabaseBrowser as supabase } from \"@/app/lib/supabaseBrowser\";
+import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
   const emailRef = useRef<HTMLInputElement>(null);

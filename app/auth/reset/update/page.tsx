@@ -1,9 +1,9 @@
-\"use client\";
+"use client";
 
-import { useState } from \"react\";
-import Image from \"next/image\";
-import { useRouter } from \"next/navigation\";
-import { supabaseBrowser as supabase } from \"@/app/lib/supabaseBrowser\";
+import { useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
