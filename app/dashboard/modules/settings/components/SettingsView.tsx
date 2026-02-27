@@ -51,7 +51,10 @@ export default function SettingsView({
   /* ================= LOAD WIDTH ================= */
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setLeftWidth(Number(saved));
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate width from localStorage once
+      setLeftWidth(Number(saved));
+    }
   }, []);
 
   /* ================= RESIZE HELPERS ================= */

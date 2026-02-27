@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-type Row = Record<string, any>;
+type Row = Record<string, unknown>;
 
 interface DataTabProps {
   table: string;
