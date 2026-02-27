@@ -28,7 +28,6 @@ export function useFunctionalRoles(activeContextId?: string) {
         .eq("context_id", activeContextId)
         .eq("active", true);
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync from external DB
       setRoles(data ?? []);
     };
 

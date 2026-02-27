@@ -42,6 +42,7 @@ export default function ProfilePanel({ user }: ProfilePanelProps) {
   useEffect(() => {
     if (!user) {
       setForm(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when user cleared
       setDirty(false);
       return;
     }

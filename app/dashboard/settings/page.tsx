@@ -97,6 +97,7 @@ export default function SettingsPage() {
       permissions={permissions}
       setPermissions={setPermissions}
       onSavePermission={handleSavePermission}
+      saving={saving}
     />
   );
 }

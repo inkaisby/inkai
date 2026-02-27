@@ -23,6 +23,18 @@ const ROOT_EMAIL =
   (process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL as string | undefined)?.toLowerCase() ??
   null;
 
+type SettingsViewProps = {
+  loading: boolean;
+  isSuperAdmin: boolean;
+  sessionEmail: string | null;
+  selectedEmail: string | null;
+  onSelectEmail: (email: string | null) => void;
+  permissions: Record<string, unknown>;
+  setPermissions: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  onSavePermission: () => Promise<void>;
+  saving: boolean;
+};
+
 export default function SettingsView({
   loading,
   isSuperAdmin,
@@ -31,7 +43,7 @@ export default function SettingsView({
   setPermissions,
   onSavePermission,
   saving,
-}: any) {
+}: SettingsViewProps) {
   const [mode, setMode] = useState<Mode>("users");
 
   // USERS MODE STATE
@@ -44,6 +56,7 @@ export default function SettingsView({
   const dragging = useRef(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset tabs when selected user changes
     setActiveTab("profile");
     setPermissionOpen(false);
   }, [selectedUser?.user_id]);
