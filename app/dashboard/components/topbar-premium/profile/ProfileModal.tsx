@@ -30,11 +30,13 @@ import CompletionScore from "./components/CompletionScore";
 /* ================= TYPES ================= */
 type Option = { label: string; value: string };
 
-const toOptions = (arr: any[]): Option[] =>
+const toOptions = (
+  arr: { id: unknown; nama?: string; name?: string }[] | unknown,
+): Option[] =>
   Array.isArray(arr)
     ? arr.map((v) => ({
-        label: v.nama ?? v.name ?? "-",
-        value: String(v.id),
+        label: (v as { nama?: string; name?: string }).nama ?? (v as { name?: string }).name ?? "-",
+        value: String((v as { id: unknown }).id),
       }))
     : [];
 

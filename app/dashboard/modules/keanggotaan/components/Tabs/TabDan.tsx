@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Anggota } from "../../types/Anggota";
-import Image from "next/image";
 
 /* ===============================
    CONFIG
@@ -324,6 +323,7 @@ export default function TabDan({
                 ) : (
                   <img
                     src={previewUrl}
+                    alt="Preview lampiran"
                     className="max-h-40 mx-auto object-contain"
                   />
                 )}

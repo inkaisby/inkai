@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 
-export default function useCompletionScore(profile: any) {
+export default function useCompletionScore(
+  profile: Record<string, unknown> | null | undefined,
+) {
   return useMemo(() => {
     if (!profile) return 0;
 

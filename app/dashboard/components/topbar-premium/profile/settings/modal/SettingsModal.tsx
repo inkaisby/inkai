@@ -66,7 +66,9 @@ export default function SettingsModal() {
             <button
               key={key}
               type="button"
-              onClick={() => setTab(key as any)}
+              onClick={() =>
+                setTab(key as "security" | "account" | "sessions")
+              }
               className={`pb-2 ${
                 tab === key
                   ? "text-cyan-300 border-b border-cyan-400"

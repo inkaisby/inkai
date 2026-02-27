@@ -374,7 +374,7 @@ export default function useProfileData() {
         setSaving(false);
       }
     },
-    [saving, profile]
+    [saving, profile, nikExists]
   );
 
   return {

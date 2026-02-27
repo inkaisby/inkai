@@ -325,6 +325,7 @@ export default function TabKyu({
                 ) : (
                   <img
                     src={previewUrl}
+                    alt="Preview lampiran"
                     className="max-h-40 mx-auto object-contain"
                   />
                 )}

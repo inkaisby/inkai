@@ -30,14 +30,15 @@ export default function ChangeEmailSection() {
 
       setCurrentEmail(user.email ?? "");
 
+      const meta = user.user_metadata as Record<string, unknown> | undefined;
       const pending =
-        (user.user_metadata as any)?.email_change ??
-        (user.user_metadata as any)?.new_email ??
+        (meta?.email_change as string | undefined) ??
+        (meta?.new_email as string | undefined) ??
         null;
 
       setPendingEmail(pending);
     });
-  }, [supabase]);
+  }, []);
 
   // dianggap sama hanya jika user sudah mengetik
   const isSameEmail = email.trim() !== "" && email === currentEmail;

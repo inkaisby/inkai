@@ -26,7 +26,11 @@ const REQUIRED_FIELDS = [
   "rantingId",
 ];
 
-export default function CompletionScore({ profile }: { profile: any }) {
+export default function CompletionScore({
+  profile,
+}: {
+  profile: Record<string, unknown> | null | undefined;
+}) {
   const totalFields = REQUIRED_FIELDS.length;
 
   const filledCount = useMemo(() => {
