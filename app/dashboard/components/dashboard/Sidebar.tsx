@@ -39,9 +39,13 @@ export default function Sidebar() {
 
   /* ===================== MOUNT ===================== */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const stored = localStorage.getItem("sidebar:isOpen");
-    if (stored !== null) setIsOpen(stored === "true");
+    if (stored !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsOpen(stored === "true");
+    }
   }, []);
 
   /* ===================== TOGGLE FROM TOPBAR ===================== */

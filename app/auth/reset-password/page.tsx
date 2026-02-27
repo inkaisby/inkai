@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, FormEvent } from "react";
+import Image from "next/image";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 export default function ResetPasswordPage() {
@@ -8,7 +9,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setErrMsg("");
@@ -31,9 +32,11 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-black/60 backdrop-blur-xl text-white px-6">
       <div className="bg-black/40 p-8 rounded-2xl border border-white/20 w-[380px] shadow-xl">
         <div className="flex flex-col items-center mb-6">
-          <img
+          <Image
             src="/logo/inkai-logo.png"
             alt="INKAI Logo"
+            width={80}
+            height={80}
             className="w-20 h-20 object-contain drop-shadow-lg"
           />
           <h1 className="text-2xl font-bold mt-3 tracking-wide">

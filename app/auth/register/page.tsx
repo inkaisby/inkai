@@ -1,8 +1,9 @@
-"use client";
+\"use client\";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
+import { useState } from \"react\";
+import Image from \"next/image\";
+import { useRouter } from \"next/navigation\";
+import { supabaseBrowser as supabase } from \"@/app/lib/supabaseBrowser\";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -98,10 +99,12 @@ export default function RegisterForm() {
         <div className="w-[380px] p-8 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
           {/* LOGO */}
           <div className="flex flex-col items-center mb-6">
-            <img
+            <Image
               src="/logo/inkai-logo.png"
               className="w-20 h-20 rounded-full shadow-md"
               alt="INKAI"
+              width={80}
+              height={80}
             />
             <h1 className="text-2xl font-bold mt-3 tracking-wide">
               Daftar Akun INKAI

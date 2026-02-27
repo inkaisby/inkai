@@ -1,15 +1,11 @@
-"use client";
+\"use client\";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from \"react\";
+import Image from \"next/image\";
 
-import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
+import { supabaseBrowser as supabase } from \"@/app/lib/supabaseBrowser\";
 
-interface LoginModalProps {
-  onSuccess?: () => void;
-  onClose?: () => void;
-}
-
-export default function LoginModal({ onSuccess }: LoginModalProps) {
+export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -94,9 +90,17 @@ export default function LoginModal({ onSuccess }: LoginModalProps) {
       }
 
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message =
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : "";
+
       setErrorMsg(
-        err?.message === "ROLE_MISSING"
+        message === "ROLE_MISSING"
           ? "Akun belum memiliki hak akses. Hubungi administrator."
           : "Email / Username atau Password salah",
       );
@@ -105,7 +109,7 @@ export default function LoginModal({ onSuccess }: LoginModalProps) {
       try {
         await supabase.rpc("insert_login_log", {
           p_status: "FAILED",
-          p_failure_reason: err?.message || "UNKNOWN",
+          p_failure_reason: message || "UNKNOWN",
           p_device: navigator.userAgent,
         });
       } catch {}
@@ -125,7 +129,13 @@ export default function LoginModal({ onSuccess }: LoginModalProps) {
   return (
     <div className="inkai-overlay">
       <div className="inkai-card" onKeyDown={onKeyDown}>
-        <img src="/logo/inkai-logo.png" alt="INKAI" className="inkai-logo" />
+        <Image
+          src="/logo/inkai-logo.png"
+          alt="INKAI"
+          width={88}
+          height={88}
+          className="inkai-logo"
+        />
 
         <h1 className="inkai-title">LOGIN SYSTEM</h1>
         <p className="inkai-subtitle">Masuk ke akun Anda</p>

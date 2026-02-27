@@ -1,8 +1,9 @@
-"use client";
+\"use client\";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
+import { useState } from \"react\";
+import Image from \"next/image\";
+import { useRouter } from \"next/navigation\";
+import { supabaseBrowser as supabase } from \"@/app/lib/supabaseBrowser\";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -50,9 +51,11 @@ export default function UpdatePasswordPage() {
       <div className="bg-black/40 p-8 rounded-2xl border border-cyan-400/40 w-[380px] shadow-xl">
         {/* HEADER */}
         <div className="flex flex-col items-center mb-6">
-          <img
+          <Image
             src="/logo/inkai-logo.png"
             alt="INKAI Logo"
+            width={80}
+            height={80}
             className="w-20 h-20 object-contain drop-shadow-lg"
           />
           <h1 className="text-2xl font-bold mt-3 tracking-wide">
