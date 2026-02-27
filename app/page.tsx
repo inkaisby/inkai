@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
@@ -10,7 +9,7 @@ import CinematicIntro from "@/components/ui/CinematicIntro";
 import LoginModal from "@/app/auth/login/LoginModal";
 import JarvisLoader from "@/components/JarvisLoader";
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/dashboard";
@@ -30,7 +29,6 @@ export default function Home() {
     }
   }, [phase]);
 
-  // 🔐 AUTH LISTENER — SATU CLIENT
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
@@ -54,11 +52,9 @@ export default function Home() {
 
       {phase === "landing" && (
         <motion.div className="text-center">
-          <Image
+          <img
             src="/logo/inkai-logo.png"
             alt="INKAI"
-            width={160}
-            height={160}
             className="w-40 mx-auto mb-6"
           />
           <h1 className="text-5xl font-extrabold">INKAI</h1>
@@ -93,5 +89,19 @@ export default function Home() {
         </motion.div>
       )}
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <main className="relative h-screen w-screen overflow-hidden bg-black text-white flex items-center justify-center">
+          <JarvisLoader mode="full" />
+        </main>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
