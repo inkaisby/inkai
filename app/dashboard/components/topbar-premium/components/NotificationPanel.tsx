@@ -62,7 +62,7 @@ export default function NotificationPanel() {
     };
 
     load();
-  }, [open, supabase]);
+  }, [open]);
 
   // ============================
   // GROUPING LOGIC

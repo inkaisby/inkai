@@ -36,7 +36,7 @@ export default function useConnectionStatus() {
       mounted = false;
       clearInterval(interval);
     };
-  }, [supabase]);
+  }, []);
 
   return { isConnected };
 }

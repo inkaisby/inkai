@@ -3,6 +3,7 @@
 import { User } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 import { useRouter } from "next/navigation";
@@ -15,7 +16,7 @@ export default function AvatarMenu() {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -37,7 +38,7 @@ export default function AvatarMenu() {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   const avatarUrl =
     session?.user?.user_metadata?.avatar_url ||
@@ -113,9 +114,10 @@ export default function AvatarMenu() {
         "
       >
         {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- user avatar URL from auth metadata
           <img
             src={avatarUrl}
-            alt="avatar"
+            alt="Avatar pengguna"
             className="h-full w-full object-cover"
           />
         ) : (
