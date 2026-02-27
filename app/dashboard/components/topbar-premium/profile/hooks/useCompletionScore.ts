@@ -1,21 +1,20 @@
 "use client";
 
 import { useMemo } from "react";
+import type { ProfileData } from "./useProfileData";
 
 export default function useCompletionScore(
-  profile: Record<string, unknown> | null | undefined,
+  profile: ProfileData | null | undefined,
 ) {
   return useMemo(() => {
     if (!profile) return 0;
 
-    const fields = [
+    const fields: (keyof ProfileData)[] = [
       "nama",
       "email",
       "telepon",
       "jenisKelamin",
       "tanggalLahir",
-      "provinsi",
-      "kabupaten",
       "alamat",
       "avatarUrl",
     ];

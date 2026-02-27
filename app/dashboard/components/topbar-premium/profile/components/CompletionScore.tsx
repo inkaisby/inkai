@@ -7,8 +7,9 @@ import {
   animate,
   useMotionValueEvent,
 } from "framer-motion";
+import type { ProfileData } from "../hooks/useProfileData";
 
-const REQUIRED_FIELDS = [
+const REQUIRED_FIELDS: (keyof ProfileData)[] = [
   "nik",
   "nama",
   "email",
@@ -29,7 +30,7 @@ const REQUIRED_FIELDS = [
 export default function CompletionScore({
   profile,
 }: {
-  profile: Record<string, unknown> | null | undefined;
+  profile: ProfileData | null | undefined;
 }) {
   const totalFields = REQUIRED_FIELDS.length;
 
