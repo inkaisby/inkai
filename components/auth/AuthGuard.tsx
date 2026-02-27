@@ -24,7 +24,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [supabase]);
+  }, []);
 
   if (!ready) {
     return (

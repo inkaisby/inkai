@@ -1,29 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 
 export default function SakuraAnimeEffect({ count = 40 }) {
-  const [petals, setPetals] = useState([]);
+  const petals = useMemo(
+    () =>
+      Array.from({ length: count }).map(() => {
+        const depth = Math.random(); // 0 = jauh, 1 = dekat
 
-  useEffect(() => {
-    const p = Array.from({ length: count }).map(() => {
-      const depth = Math.random(); // 0 = jauh, 1 = dekat
-
-      return {
-        left: Math.random() * 100,
-        delay: Math.random() * 3,
-        duration: 8 + Math.random() * 10,
-        rotate: 20 + Math.random() * 120,
-        size: 10 + depth * 22,
-        blur: (1 - depth) * 3,
-        drift: 15 + depth * 45,
-        depth,
-      };
-    });
-
-    setPetals(p);
-  }, [count]);
+        return {
+          left: Math.random() * 100,
+          delay: Math.random() * 3,
+          duration: 8 + Math.random() * 10,
+          rotate: 20 + Math.random() * 120,
+          size: 10 + depth * 22,
+          blur: (1 - depth) * 3,
+          drift: 15 + depth * 45,
+          depth,
+        };
+      }),
+    [count],
+  );
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
