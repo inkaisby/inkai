@@ -10,7 +10,7 @@ interface LogRow {
   email: string | null;
   action: string;
   module: string | null;
-  detail: any;
+  detail: unknown;
   created_at: string;
 }
 
@@ -46,7 +46,7 @@ export default function UserActivityLogPanel({ email }: Props) {
     return () => {
       mounted = false;
     };
-  }, [supabase, email]);
+  }, [email]);
 
   if (!email) {
     return (

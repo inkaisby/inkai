@@ -80,7 +80,7 @@ export default function SettingsPage() {
       setPermissions(json.permissions ?? {});
 
       alert("Permission berhasil disimpan");
-    } catch (_e) {
+    } catch (e) {
       alert("Gagal menyimpan permission");
     } finally {
       setSaving(false);
