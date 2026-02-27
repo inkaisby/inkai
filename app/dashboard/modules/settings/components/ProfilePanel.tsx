@@ -40,9 +40,9 @@ export default function ProfilePanel({ user }: ProfilePanelProps) {
    * INIT FORM FROM SQL (1:1)
    * =============================== */
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- sync form from selected user */
     if (!user) {
       setForm(null);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when user cleared
       setDirty(false);
       return;
     }
@@ -72,6 +72,7 @@ export default function ProfilePanel({ user }: ProfilePanelProps) {
     });
 
     setDirty(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [user]);
 
   if (!user || !form) {

@@ -52,7 +52,7 @@ export default function EmailList({
     return () => {
       mounted = false;
     };
-  }, [supabase]);
+  }, []);
 
   /* Auto-select akun login saat pertama load */
   useEffect(() => {
