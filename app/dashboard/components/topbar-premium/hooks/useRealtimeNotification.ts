@@ -25,7 +25,7 @@ export default function useRealtimeNotification() {
     return () => {
       mounted = false;
     };
-  }, [supabase]);
+  }, []);
 
   // Load unread count awal
   const loadUnreadCount = async (uid: string) => {
@@ -43,6 +43,7 @@ export default function useRealtimeNotification() {
   useEffect(() => {
     if (!userId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load + subscription sync from DB
     loadUnreadCount(userId);
 
     const channel = supabase
@@ -71,7 +72,7 @@ export default function useRealtimeNotification() {
       if (timerRef.current) clearTimeout(timerRef.current);
       supabase.removeChannel(channel);
     };
-  }, [supabase, userId]);
+  }, [userId]);
 
   return {
     count,

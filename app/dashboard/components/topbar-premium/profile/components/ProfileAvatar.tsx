@@ -20,11 +20,9 @@ interface ProfileAvatarProps {
 export default function ProfileAvatar({
   profile,
   uploadAvatar,
-  saveProfile: _saveProfile,
   readonly = false,
 }: ProfileAvatarProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const _lastFileRef = useRef<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   if (!profile) {

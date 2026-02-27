@@ -7,7 +7,7 @@ import { z } from "zod";
 import { toast } from "react-hot-toast";
 
 import useProfileModal from "./useProfileModal";
-import useProfileData from "./hooks/useProfileData";
+import useProfileData, { type ProfileData } from "./hooks/useProfileData";
 import useAutoSave from "./hooks/useAutoSave";
 import useWizard from "./hooks/useWizard";
 import useRantingOptions from "./hooks/useRantingOptions";
@@ -41,7 +41,7 @@ const toOptions = (
     : [];
 
 /* ================= RESUME ORDER ================= */
-const resumeOrder: Array<[keyof any, string]> = [
+const resumeOrder: Array<[keyof ProfileData, string]> = [
   ["nik", "NIK"],
   ["nama", "Nama"],
   ["email", "Email"],
@@ -107,7 +107,6 @@ export default function ProfileModal() {
   const [villageOptions, setVillageOptions] = useState<Option[]>([]);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from async APIs */
     getProvinces().then((res) => setProvinceOptions(toOptions(res)));
   }, []);
 
