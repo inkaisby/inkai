@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import type { ReactNode } from "react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { FixedSizeGrid as Grid, GridChildComponentProps } from "react-window";
@@ -18,14 +19,15 @@ type Props = {
 
 /* ================= ICON FIX ================= */
 
+const ICONS_MAP = LucideIcons as unknown as Record<string, LucideIcon>;
+
 const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
   .filter(([key]) => /^[A-Z]/.test(key))
-  .map(([key, value]) => [key, value as LucideIcon] as [string, LucideIcon])
+  .map(([key, value]) => [key, value as LucideIcon])
   .sort(([a], [b]) => a.localeCompare(b))
   .slice(0, 1000);
 
-const DEFAULT_ICON =
-  (LucideIcons as Record<string, LucideIcon>).Circle ?? ALL_ICONS[0]?.[1];
+const DEFAULT_ICON = ICONS_MAP.Circle ?? ALL_ICONS[0]?.[1];
 
 /* ================= DEFAULT FORM ================= */
 
@@ -341,7 +343,12 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
 /* ================= UI COMPONENTS ================= */
 
-function Section({ title, children }: any) {
+type SectionProps = {
+  title: string;
+  children: ReactNode;
+};
+
+function Section({ title, children }: SectionProps) {
   return (
     <div className="space-y-4">
       <div className="text-sm font-semibold text-cyan-400 tracking-wide">
@@ -352,6 +359,15 @@ function Section({ title, children }: any) {
   );
 }
 
+type InputFieldProps = {
+  icon: string;
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  type?: string;
+  disabled?: boolean;
+};
+
 function InputField({
   icon,
   label,
@@ -359,8 +375,8 @@ function InputField({
   onChange,
   type = "text",
   disabled = false,
-}: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+}: InputFieldProps) {
+  const Icon = ICONS_MAP[icon] ?? ICONS_MAP.Circle;
 
   return (
     <div className="space-y-2">
@@ -379,8 +395,29 @@ function InputField({
   );
 }
 
-function SelectField({ icon, label, value, onChange, options, disabled }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+type SelectOption = {
+  value: string | number;
+  label: string;
+};
+
+type SelectFieldProps = {
+  icon: string;
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  disabled?: boolean;
+};
+
+function SelectField({
+  icon,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+}: SelectFieldProps) {
+  const Icon = ICONS_MAP[icon] ?? ICONS_MAP.Circle;
 
   return (
     <div className="space-y-2">
@@ -394,7 +431,7 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-2 rounded-xl bg-black/30 border border-white/10 focus:border-cyan-400 outline-none transition"
       >
-        {options.map((o: any) => (
+        {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
@@ -404,8 +441,15 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
   );
 }
 
-function CheckboxCard({ icon, label, checked, onChange }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+type CheckboxCardProps = {
+  icon: string;
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+};
+
+function CheckboxCard({ icon, label, checked, onChange }: CheckboxCardProps) {
+  const Icon = ICONS_MAP[icon] ?? ICONS_MAP.Circle;
 
   return (
     <label
