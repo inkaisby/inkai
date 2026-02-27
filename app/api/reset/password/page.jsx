@@ -1,10 +1,10 @@
 "use client";
 
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const params = useSearchParams();
   const token = params.get("token");
 
@@ -13,7 +13,6 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [done, setDone] = useState(false);
 
-  // Cek token
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/reset/verify", {
@@ -68,5 +67,13 @@ export default function ResetPasswordPage() {
         Simpan Password Baru
       </button>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Cek token...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
