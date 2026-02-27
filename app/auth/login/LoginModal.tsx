@@ -5,7 +5,12 @@ import Image from "next/image";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
-export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
+interface LoginModalProps {
+  onSuccess?: () => void;
+  onClose?: () => void;
+}
+
+export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -129,6 +134,16 @@ export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <div className="inkai-overlay">
       <div className="inkai-card" onKeyDown={onKeyDown}>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 text-cyan-200 hover:text-white text-xl"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        )}
         <Image
           src="/logo/inkai-logo.png"
           alt="INKAI"
