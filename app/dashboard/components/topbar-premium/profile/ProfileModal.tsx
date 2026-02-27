@@ -107,10 +107,12 @@ export default function ProfileModal() {
   const [villageOptions, setVillageOptions] = useState<Option[]>([]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from async APIs */
     getProvinces().then((res) => setProvinceOptions(toOptions(res)));
   }, []);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from profile */
     if (!profile?.provinceId) return setRegencyOptions([]);
     getRegencies(profile.provinceId).then((res) =>
       setRegencyOptions(toOptions(res)),
@@ -118,6 +120,7 @@ export default function ProfileModal() {
   }, [profile?.provinceId]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from profile */
     if (!profile?.regencyId) return setDistrictOptions([]);
     getDistricts(profile.regencyId).then((res) =>
       setDistrictOptions(toOptions(res)),
@@ -125,6 +128,7 @@ export default function ProfileModal() {
   }, [profile?.regencyId]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from profile */
     if (!profile?.districtId) return setVillageOptions([]);
     getVillages(profile.districtId).then((res) =>
       setVillageOptions(toOptions(res)),

@@ -323,6 +323,7 @@ export default function TabKyu({
                 {form.file?.type === "application/pdf" ? (
                   <iframe src={previewUrl} className="w-full h-40" />
                 ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- blob preview URL
                   <img
                     src={previewUrl}
                     alt="Preview lampiran"
