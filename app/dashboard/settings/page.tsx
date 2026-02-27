@@ -22,7 +22,8 @@ export default function SettingsPage() {
    * PERMISSION CONTEXT
    * =============================== */
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
-  const [permissions, setPermissions] = useState<Record<string, unknown>>({});
+  const [permissions, setPermissions] =
+    useState<Record<string, unknown>>({});
 
   /* ===============================
    * LOAD SESSION

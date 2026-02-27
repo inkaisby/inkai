@@ -16,7 +16,6 @@ export function useFunctionalRoles(activeContextId?: string) {
 
   useEffect(() => {
     if (!activeContextId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRoles([]);
       return;
     }
@@ -28,7 +27,6 @@ export function useFunctionalRoles(activeContextId?: string) {
         .eq("context_id", activeContextId)
         .eq("active", true);
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRoles(data ?? []);
     };
 

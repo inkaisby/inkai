@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { FixedSizeGrid as Grid, GridChildComponentProps } from "react-window";
+import type { ReactNode } from "react";
 import type { MenuRow } from "./useMenuCRUD";
 import JarvisLoader from "@/components/JarvisLoader";
 
@@ -16,16 +16,54 @@ type Props = {
   onSubmit: (payload: Partial<MenuRow>) => Promise<void>;
 };
 
+type IconEntry = [string, LucideIcon];
+
+interface SectionProps {
+  title: string;
+  children: ReactNode;
+}
+
+interface InputFieldProps {
+  icon: string;
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  type?: string;
+  disabled?: boolean;
+}
+
+interface SelectOption {
+  value: string | number;
+  label: string;
+}
+
+interface SelectFieldProps {
+  icon: string;
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  disabled?: boolean;
+}
+
+interface CheckboxCardProps {
+  icon: string;
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}
+
 /* ================= ICON FIX ================= */
 
-const ALL_ICONS: [string, LucideIcon][] = Object.entries(
-  LucideIcons as unknown as Record<string, LucideIcon>,
-)
+const lucideIconMap = LucideIcons as Record<string, LucideIcon>;
+
+const ALL_ICONS: IconEntry[] = Object.entries(lucideIconMap)
   .filter(([key]) => /^[A-Z]/.test(key))
   .sort(([a], [b]) => a.localeCompare(b))
   .slice(0, 1000);
 
-const DEFAULT_ICON = (LucideIcons as any).Circle || ALL_ICONS[0]?.[1];
+const DEFAULT_ICON: LucideIcon =
+  lucideIconMap.Circle || ALL_ICONS[0]?.[1] || LucideIcons.Circle;
 
 /* ================= DEFAULT FORM ================= */
 
@@ -69,38 +107,6 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
       ([name]) => name.toLowerCase() === (form.icon || "").toLowerCase(),
     )?.[1] ?? DEFAULT_ICON;
 
-  const columnCount = 8;
-  const rowCount = Math.ceil(filteredIcons.length / columnCount);
-
-  const Cell = useCallback(
-    ({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
-      const index = rowIndex * columnCount + columnIndex;
-      if (index >= filteredIcons.length) return null;
-
-      const [name, Icon] = filteredIcons[index];
-      const active = name.toLowerCase() === (form.icon || "").toLowerCase();
-
-      return (
-        <div style={style} className="p-1">
-          <button
-            type="button"
-            title={name}
-            onClick={() => setForm((prev) => ({ ...prev, icon: name }))}
-            className={`w-full h-full flex items-center justify-center rounded-xl border transition-all duration-200
-              ${
-                active
-                  ? "border-cyan-400 bg-cyan-400/20 shadow-lg shadow-cyan-500/30"
-                  : "border-white/10 hover:bg-white/5 hover:border-cyan-500/40"
-              }`}
-          >
-            <Icon size={18} />
-          </button>
-        </div>
-      );
-    },
-    [filteredIcons, form.icon],
-  );
-
   if (!open) return null;
 
   async function submit() {
@@ -139,7 +145,8 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
         "message" in err &&
         typeof (err as { message: unknown }).message === "string"
           ? (err as { message: string }).message
-          : null;
+          : undefined;
+
       alert(message ?? "Terjadi kesalahan");
     } finally {
       setSaving(false);
@@ -203,7 +210,12 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
                   label="Scope"
                   value={form.scope ?? "sidebar"}
                   disabled={isDashboard}
-                  onChange={(v) => setForm({ ...form, scope: v as any })}
+                  onChange={(v) =>
+                    setForm({
+                      ...form,
+                      scope: v as MenuRow["scope"],
+                    })
+                  }
                   options={[
                     { value: "sidebar", label: "Sidebar" },
                     { value: "settings", label: "Settings Only" },
@@ -348,7 +360,7 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
 /* ================= UI COMPONENTS ================= */
 
-function Section({ title, children }: any) {
+function Section({ title, children }: SectionProps) {
   return (
     <div className="space-y-4">
       <div className="text-sm font-semibold text-cyan-400 tracking-wide">
@@ -366,8 +378,8 @@ function InputField({
   onChange,
   type = "text",
   disabled = false,
-}: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+}: InputFieldProps) {
+  const Icon = lucideIconMap[icon] || lucideIconMap.Circle;
 
   return (
     <div className="space-y-2">
@@ -386,8 +398,15 @@ function InputField({
   );
 }
 
-function SelectField({ icon, label, value, onChange, options, disabled }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+function SelectField({
+  icon,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+}: SelectFieldProps) {
+  const Icon = lucideIconMap[icon] || lucideIconMap.Circle;
 
   return (
     <div className="space-y-2">
@@ -401,7 +420,7 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-2 rounded-xl bg-black/30 border border-white/10 focus:border-cyan-400 outline-none transition"
       >
-        {options.map((o: any) => (
+        {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
@@ -411,8 +430,13 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
   );
 }
 
-function CheckboxCard({ icon, label, checked, onChange }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+function CheckboxCard({
+  icon,
+  label,
+  checked,
+  onChange,
+}: CheckboxCardProps) {
+  const Icon = lucideIconMap[icon] || lucideIconMap.Circle;
 
   return (
     <label
