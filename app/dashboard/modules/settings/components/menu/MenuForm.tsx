@@ -18,8 +18,8 @@ type Props = {
 
 /* ================= ICON FIX ================= */
 
-const ALL_ICONS = Object.entries(
-  LucideIcons as Record<string, LucideIcon>,
+const ALL_ICONS: [string, LucideIcon][] = Object.entries(
+  LucideIcons as unknown as Record<string, LucideIcon>,
 )
   .filter(([key]) => /^[A-Z]/.test(key))
   .sort(([a], [b]) => a.localeCompare(b))
@@ -132,8 +132,15 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
       await onSubmit(payload);
       onClose();
-    } catch (err: any) {
-      alert(err?.message ?? "Terjadi kesalahan");
+    } catch (err: unknown) {
+      const message =
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : null;
+      alert(message ?? "Terjadi kesalahan");
     } finally {
       setSaving(false);
     }
