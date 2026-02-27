@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
-export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
+interface LoginModalProps {
+  onSuccess?: () => void;
+  onClose?: () => void;
+}
+
+export default function LoginModal({ onSuccess }: LoginModalProps) {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
