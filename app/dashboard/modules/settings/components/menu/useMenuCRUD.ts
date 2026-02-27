@@ -41,8 +41,9 @@ export function useMenuCRUD() {
       setIsSuperadmin(
         (rootEmail && email && email === rootEmail) || appRole === "SUPERADMIN",
       );
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string" ? (e as { message: string }).message : "Unknown error";
+      setError(msg);
       setIsSuperadmin(false);
     }
   }, []);
@@ -54,8 +55,9 @@ export function useMenuCRUD() {
       if (!res.ok) throw new Error("Gagal memuat menu");
       const data = await res.json();
       setMenus(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string" ? (e as { message: string }).message : "Unknown error";
+      setError(msg);
       setMenus([]);
     }
     
@@ -144,8 +146,9 @@ useEffect(() => {
     try {
       await fetchUserRole();
       await fetchMenus();
-    } catch (e: any) {
-      if (mounted) setError(e.message);
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string" ? (e as { message: string }).message : "Unknown error";
+      if (mounted) setError(msg);
     } finally {
       if (mounted) setLoading(false);
     }

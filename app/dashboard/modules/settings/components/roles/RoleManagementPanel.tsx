@@ -28,8 +28,6 @@ interface Props {
   userId: string;
 }
 
-const ROOT_EMAIL = "karateinkaisby@gmail.com";
-
 export default function RoleManagementPanel({ userId }: Props) {
   const [loading, setLoading] = useState(true);
   const [structuralMaster, setStructuralMaster] = useState<

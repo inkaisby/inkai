@@ -20,11 +20,12 @@ type Props = {
 
 const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
   .filter(([key]) => /^[A-Z]/.test(key))
-  .map(([key, value]) => [key, value as LucideIcon] as [string, LucideIcon])
-  .sort((a, b) => a[0].localeCompare(b[0]))
+  .map(([key, value]) => [key, value as LucideIcon])
+  .sort(([a], [b]) => a.localeCompare(b))
   .slice(0, 1000);
 
-const DEFAULT_ICON = (LucideIcons as any).Circle || ALL_ICONS[0]?.[1];
+const LucideIconMap = LucideIcons as Record<string, LucideIcon>;
+const DEFAULT_ICON = LucideIconMap.Circle ?? ALL_ICONS[0]?.[1];
 
 /* ================= DEFAULT FORM ================= */
 
@@ -131,8 +132,9 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
       await onSubmit(payload);
       onClose();
-    } catch (err: any) {
-      alert(err?.message ?? "Terjadi kesalahan");
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string" ? (err as { message: string }).message : "";
+      alert(msg || "Terjadi kesalahan");
     } finally {
       setSaving(false);
     }
@@ -340,7 +342,7 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
 /* ================= UI COMPONENTS ================= */
 
-function Section({ title, children }: any) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-4">
       <div className="text-sm font-semibold text-cyan-400 tracking-wide">
@@ -351,6 +353,15 @@ function Section({ title, children }: any) {
   );
 }
 
+type InputFieldProps = {
+  icon: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  disabled?: boolean;
+};
+
 function InputField({
   icon,
   label,
@@ -358,8 +369,8 @@ function InputField({
   onChange,
   type = "text",
   disabled = false,
-}: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+}: InputFieldProps) {
+  const Icon = LucideIconMap[icon] ?? DEFAULT_ICON;
 
   return (
     <div className="space-y-2">
@@ -378,8 +389,19 @@ function InputField({
   );
 }
 
-function SelectField({ icon, label, value, onChange, options, disabled }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+type OptionItem = { value: string; label: string };
+
+type SelectFieldProps = {
+  icon: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: OptionItem[];
+  disabled?: boolean;
+};
+
+function SelectField({ icon, label, value, onChange, options, disabled }: SelectFieldProps) {
+  const Icon = LucideIconMap[icon] ?? DEFAULT_ICON;
 
   return (
     <div className="space-y-2">
@@ -393,7 +415,7 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-2 rounded-xl bg-black/30 border border-white/10 focus:border-cyan-400 outline-none transition"
       >
-        {options.map((o: any) => (
+        {options.map((o: OptionItem) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
@@ -403,8 +425,15 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
   );
 }
 
-function CheckboxCard({ icon, label, checked, onChange }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+type CheckboxCardProps = {
+  icon: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+};
+
+function CheckboxCard({ icon, label, checked, onChange }: CheckboxCardProps) {
+  const Icon = LucideIconMap[icon] ?? DEFAULT_ICON;
 
   return (
     <label
