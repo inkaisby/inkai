@@ -4,7 +4,7 @@ export async function POST(req) {
   const supabase = supabaseServer();
   const { token } = await req.json();
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("password_resets")
     .select("*")
     .eq("token", token)

@@ -7,8 +7,8 @@ import { checkRateLimit } from "@/app/lib/security/rateLimit";
 export async function GET(req: Request) {
   try {
     const ip =
-      (req.headers as any).get?.("x-forwarded-for") ??
-      (req.headers as any).get?.("x-real-ip") ??
+      req.headers.get("x-forwarded-for") ??
+      req.headers.get("x-real-ip") ??
       "unknown";
 
     const rl = checkRateLimit(`check-nik:${ip}`, { max: 30, windowMs: 60_000 });
