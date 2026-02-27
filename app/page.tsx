@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
@@ -53,9 +54,11 @@ export default function Home() {
 
       {phase === "landing" && (
         <motion.div className="text-center">
-          <img
+          <Image
             src="/logo/inkai-logo.png"
             alt="INKAI"
+            width={160}
+            height={160}
             className="w-40 mx-auto mb-6"
           />
           <h1 className="text-5xl font-extrabold">INKAI</h1>
