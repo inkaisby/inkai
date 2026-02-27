@@ -22,8 +22,7 @@ export default function SettingsPage() {
    * PERMISSION CONTEXT
    * =============================== */
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
-  const [permissions, setPermissions] =
-    useState<Record<string, unknown>>({});
+  const [permissions, setPermissions] = useState<Record<string, unknown>>({});
 
   /* ===============================
    * LOAD SESSION
@@ -81,7 +80,7 @@ export default function SettingsPage() {
       setPermissions(json.permissions ?? {});
 
       alert("Permission berhasil disimpan");
-    } catch (e) {
+    } catch {
       alert("Gagal menyimpan permission");
     } finally {
       setSaving(false);

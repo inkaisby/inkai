@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import type { ReactNode } from "react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { FixedSizeGrid as Grid, GridChildComponentProps } from "react-window";
@@ -16,7 +17,44 @@ type Props = {
   onSubmit: (payload: Partial<MenuRow>) => Promise<void>;
 };
 
+type SectionProps = {
+  title: string;
+  children: ReactNode;
+};
+
+type InputFieldProps = {
+  icon: string;
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  type?: string;
+  disabled?: boolean;
+};
+
+type SelectOption = {
+  value: string | number;
+  label: string;
+};
+
+type SelectFieldProps = {
+  icon: string;
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  disabled?: boolean;
+};
+
+type CheckboxCardProps = {
+  icon: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+};
+
 /* ================= ICON FIX ================= */
+
+const ICON_RECORD = LucideIcons as unknown as Record<string, LucideIcon>;
 
 const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
   .filter(([key]) => /^[A-Z]/.test(key))
@@ -27,7 +65,7 @@ const ALL_ICONS: [string, LucideIcon][] = Object.entries(LucideIcons)
   .sort(([a], [b]) => a.localeCompare(b))
   .slice(0, 1000);
 
-const DEFAULT_ICON = (LucideIcons as any).Circle || ALL_ICONS[0]?.[1];
+const DEFAULT_ICON = ICON_RECORD.Circle || ALL_ICONS[0]?.[1];
 
 /* ================= DEFAULT FORM ================= */
 
@@ -134,8 +172,16 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
       await onSubmit(payload);
       onClose();
-    } catch (err: any) {
-      alert(err?.message ?? "Terjadi kesalahan");
+    } catch (err: unknown) {
+      const message =
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : undefined;
+
+      alert(message ?? "Terjadi kesalahan");
     } finally {
       setSaving(false);
     }
@@ -343,7 +389,7 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
 
 /* ================= UI COMPONENTS ================= */
 
-function Section({ title, children }: any) {
+function Section({ title, children }: SectionProps) {
   return (
     <div className="space-y-4">
       <div className="text-sm font-semibold text-cyan-400 tracking-wide">
@@ -361,8 +407,8 @@ function InputField({
   onChange,
   type = "text",
   disabled = false,
-}: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+}: InputFieldProps) {
+  const Icon = ICON_RECORD[icon] ?? ICON_RECORD.Circle;
 
   return (
     <div className="space-y-2">
@@ -381,8 +427,15 @@ function InputField({
   );
 }
 
-function SelectField({ icon, label, value, onChange, options, disabled }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+function SelectField({
+  icon,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+}: SelectFieldProps) {
+  const Icon = ICON_RECORD[icon] ?? ICON_RECORD.Circle;
 
   return (
     <div className="space-y-2">
@@ -396,7 +449,7 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-2 rounded-xl bg-black/30 border border-white/10 focus:border-cyan-400 outline-none transition"
       >
-        {options.map((o: any) => (
+        {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
@@ -406,8 +459,8 @@ function SelectField({ icon, label, value, onChange, options, disabled }: any) {
   );
 }
 
-function CheckboxCard({ icon, label, checked, onChange }: any) {
-  const Icon = (LucideIcons as any)[icon] || LucideIcons.Circle;
+function CheckboxCard({ icon, label, checked, onChange }: CheckboxCardProps) {
+  const Icon = ICON_RECORD[icon] ?? ICON_RECORD.Circle;
 
   return (
     <label
