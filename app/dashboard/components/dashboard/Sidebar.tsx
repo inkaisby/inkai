@@ -39,11 +39,9 @@ export default function Sidebar() {
 
   /* ===================== MOUNT ===================== */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const stored = localStorage.getItem("sidebar:isOpen");
     if (stored !== null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsOpen(stored === "true");
     }
   }, []);
@@ -75,13 +73,14 @@ export default function Sidebar() {
       const builtUser: SessionUserAccess = json.user ?? null;
       setSessionUser(builtUser);
 
-      const normalized = (json.menus ?? []).map((m: any) => ({
+      const rawMenus = (json.menus ?? []) as Array<Record<string, unknown> & { required_structural_level?: number | string | null }>;
+      const normalized: MenuRow[] = rawMenus.map((m) => ({
         ...m,
         required_structural_level:
           m.required_structural_level != null
             ? Number(m.required_structural_level)
             : null,
-      }));
+      })) as MenuRow[];
       setMenus(normalized);
     };
 

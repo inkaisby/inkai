@@ -35,7 +35,10 @@ function TopbarContent() {
   const [mounted, setMounted] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // 🔥 TITLE TANPA QUERY DATABASE
   const title = useMemo(() => {
