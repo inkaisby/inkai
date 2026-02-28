@@ -8,46 +8,14 @@ import {
   useMotionValueEvent,
 } from "framer-motion";
 import type { ProfileData } from "../hooks/useProfileData";
-
-const REQUIRED_FIELDS: (keyof ProfileData)[] = [
-  "nik",
-  "nama",
-  "email",
-  "telepon",
-  "jenisKelamin",
-  "tanggalLahir",
-  "namaAyah",
-  "namaIbu",
-  "pekerjaanOrtu",
-  "alamat",
-  "provinceId",
-  "regencyId",
-  "districtId",
-  "villageId",
-  "rantingId",
-];
+import useCompletionScore from "../hooks/useCompletionScore";
 
 export default function CompletionScore({
   profile,
 }: {
   profile: ProfileData | null | undefined;
 }) {
-  const totalFields = REQUIRED_FIELDS.length;
-
-  const filledCount = useMemo(() => {
-    if (!profile) return 0;
-
-    return REQUIRED_FIELDS.filter((key) => {
-      const value = profile[key];
-      return (
-        value !== null && value !== undefined && String(value).trim() !== ""
-      );
-    }).length;
-  }, [profile]);
-
-  const score = useMemo(() => {
-    return Math.round((filledCount / totalFields) * 100);
-  }, [filledCount, totalFields]);
+  const { score } = useCompletionScore(profile);
 
   // ===== Motion counter
   const animatedScore = useMotionValue(0);

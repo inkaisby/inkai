@@ -9,6 +9,7 @@ type Ctx = {
   open: boolean;
   openNotifications: () => void;
   closeNotifications: () => void;
+  refreshCount?: () => void;
 };
 
 const NotificationContext = createContext<Ctx | null>(null);

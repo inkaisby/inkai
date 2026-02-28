@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
-import CinematicIntro from "@/components/ui/CinematicIntro";
 import LoginModal from "@/app/auth/login/LoginModal";
 import JarvisLoader from "@/components/JarvisLoader";
 
@@ -15,13 +14,9 @@ function HomeContent() {
   const returnTo = searchParams.get("returnTo") || "/dashboard";
 
   const [phase, setPhase] = useState<"intro" | "landing" | "auth" | "boot">(
-    "intro",
+    "landing",
   );
   const loginButtonRef = useRef<HTMLButtonElement>(null);
-
-  const handleIntroFinish = () => {
-    setTimeout(() => setPhase("landing"), 600);
-  };
 
   useEffect(() => {
     if (phase === "landing") {
@@ -30,6 +25,16 @@ function HomeContent() {
   }, [phase]);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setPhase("boot");
+        setTimeout(() => {
+          router.replace(returnTo);
+          router.refresh();
+        }, 300);
+      }
+    });
+
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
         setPhase("boot");
@@ -44,20 +49,19 @@ function HomeContent() {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-black text-white flex items-center justify-center">
-      {phase === "intro" && (
-        <motion.div>
-          <CinematicIntro onFinish={handleIntroFinish} />
-        </motion.div>
-      )}
-
       {phase === "landing" && (
-        <motion.div className="text-center">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
           <img
             src="/logo/inkai-logo.png"
             alt="INKAI"
             className="w-40 mx-auto mb-6"
           />
-          <h1 className="text-5xl font-extrabold">INKAI</h1>
+          <h1 className="text-5xl font-extrabold text-white">INKAI</h1>
 
           <form
             onSubmit={(e) => {
@@ -68,7 +72,7 @@ function HomeContent() {
             <button
               ref={loginButtonRef}
               type="submit"
-              className="mt-10 px-12 py-3 font-bold bg-gradient-to-r from-yellow-300 to-red-500 rounded-xl
+              className="mt-10 px-12 py-3 font-bold bg-gradient-to-r from-yellow-300 to-red-500 rounded-xl text-black
                          focus:outline-none focus:ring-2 focus:ring-yellow-400"
             >
               Login
@@ -97,7 +101,10 @@ export default function Home() {
     <Suspense
       fallback={
         <main className="relative h-screen w-screen overflow-hidden bg-black text-white flex items-center justify-center">
-          <JarvisLoader mode="full" />
+          <div className="flex flex-col items-center gap-4">
+            <img src="/logo/inkai-logo.png" alt="" className="w-24 opacity-80" />
+            <p className="text-cyan-300 text-sm">Memuat…</p>
+          </div>
         </main>
       }
     >

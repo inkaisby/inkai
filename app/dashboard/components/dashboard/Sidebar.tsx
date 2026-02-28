@@ -120,7 +120,7 @@ export default function Sidebar() {
   /* ===================== UI ===================== */
   return (
     <aside
-      className={`h-screen bg-[#020617] border-r border-cyan-500/40
+      className={`h-screen bg-[#020617] border-r border-cyan-500/40 z-30
       transition-all duration-200 ${isOpen ? "w-56" : "w-16"}`}
     >
       <div className="h-16 flex items-center justify-center border-b border-cyan-500/30">

@@ -98,11 +98,12 @@ export default function ProfileModal() {
       provinceId: profile?.provinceId ?? null,
       regencyId: profile?.regencyId ?? null,
       districtId: profile?.districtId ?? null,
+      contextRantingId: profile?.rantingId ?? null,
     });
 
-  /* ================= ROLE LOGIC ================= */
-  const isKetua = profile?.role === "ketua_cabang";
-  const rantingLocked = !!profile?.rantingId && !isKetua;
+  /* ================= RANTING LOCK ================= */
+  // User baru pilih ranting sekali (by wilayah); setelah tersimpan terkunci. Hanya admin yang bisa ubah (via Pengaturan → Edit pengguna).
+  const rantingLocked = !!profile?.rantingId;
 
   /* ================= WILAYAH ================= */
   const [provinceOptions, setProvinceOptions] = useState<Option[]>([]);
@@ -179,6 +180,49 @@ export default function ProfileModal() {
     false,
   );
 
+  /* ================= FORCE-OPEN LISTENER ================= */
+  useEffect(() => {
+    const handler = () => useProfileModal.getState().open();
+    window.addEventListener("force-open-profile-modal", handler);
+    return () => window.removeEventListener("force-open-profile-modal", handler);
+  }, []);
+
+  /* ================= CLOSE REQUEST ================= */
+  const handleCloseRequest = () => {
+    if (validation.success) {
+      close();
+    } else {
+      toast.error("Profil belum lengkap. Lengkapi untuk akses penuh.");
+      close(); // Tetap izinkan tutup agar user bisa akses sidebar/topbar
+    }
+  };
+
+  /* ================= CAN NEXT (step-specific validation) ================= */
+  const step1Schema = ProfileSchema.pick({
+    nik: true,
+    nama: true,
+    email: true,
+    telepon: true,
+    jenisKelamin: true,
+    tanggalLahir: true,
+    namaAyah: true,
+    namaIbu: true,
+    pekerjaanOrtu: true,
+  });
+  const step2Schema = ProfileSchema.pick({
+    alamat: true,
+    provinceId: true,
+    regencyId: true,
+    districtId: true,
+    villageId: true,
+  });
+  const canNext =
+    currentStep === 1
+      ? step1Schema.safeParse(profile).success && !nikExists
+      : currentStep === 2
+        ? step2Schema.safeParse(profile).success
+        : true;
+
   if (!isOpen) return null;
 
   if (loading || !profile) {
@@ -197,13 +241,17 @@ export default function ProfileModal() {
       <motion.div className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/60">
         <motion.div className="relative w-[900px] max-h-[90vh] rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20">
           <button
-            onClick={close}
+            onClick={handleCloseRequest}
             className="absolute right-4 top-4 text-cyan-300"
+            aria-label="Tutup"
           >
             <X size={22} />
           </button>
 
-          <ProfileHeader currentStep={currentStep} />
+          <ProfileHeader
+            currentStep={currentStep}
+            onCloseRequest={handleCloseRequest}
+          />
           <CompletionScore profile={profile} />
           <WizardStepper step={currentStep} maxStep={maxStep} />
 
@@ -292,7 +340,7 @@ export default function ProfileModal() {
       cursor-wait"
                       />
                     ) : !rantingLocked ? (
-                      /* 🟢 USER BARU atau KETUA → Dropdown */
+                      /* 🟢 User baru: pilih ranting (by wilayah), sekali simpan lalu terkunci */
                       <select
                         value={profile?.rantingId ?? ""}
                         onChange={(e) =>
@@ -311,16 +359,21 @@ export default function ProfileModal() {
                         ))}
                       </select>
                     ) : (
-                      /* 🔒 TERKUNCI */
-                      <input
-                        value={resolveRanting(profile!.rantingId)}
-                        disabled
-                        className="w-full rounded-lg px-3 py-2 text-sm
+                      /* 🔒 Terkunci setelah simpan; hanya admin yang bisa ubah */
+                      <>
+                        <input
+                          value={resolveRanting(profile!.rantingId)}
+                          disabled
+                          className="w-full rounded-lg px-3 py-2 text-sm
       bg-[#0A0F14]
       border border-emerald-400/40
       text-emerald-300
       cursor-not-allowed"
-                      />
+                        />
+                        <p className="text-xs text-cyan-300/70 mt-1">
+                          Hanya admin yang dapat mengubah ranting.
+                        </p>
+                      </>
                     )}
                   </div>
                 </div>
@@ -334,7 +387,7 @@ export default function ProfileModal() {
             next={nextStep}
             prev={prevStep}
             isSaving={saving}
-            canNext={true}
+            canNext={canNext}
             save={async () => {
               try {
                 await saveProfile();

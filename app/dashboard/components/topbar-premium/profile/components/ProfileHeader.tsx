@@ -1,14 +1,16 @@
 "use client";
 
 import React from "react";
-import useProfileModal from "../useProfileModal";
 
 interface ProfileHeaderProps {
   currentStep: number;
+  onCloseRequest: () => void;
 }
 
-export default function ProfileHeader({ currentStep }: ProfileHeaderProps) {
-  const { close } = useProfileModal();
+export default function ProfileHeader({
+  currentStep,
+  onCloseRequest,
+}: ProfileHeaderProps) {
 
   const titles = {
     1: {
@@ -47,7 +49,7 @@ export default function ProfileHeader({ currentStep }: ProfileHeaderProps) {
 
       {/* BUTTON TUTUP */}
       <button
-        onClick={close}
+        onClick={onCloseRequest}
         className="
           px-4 py-1.5 
           text-cyan-300 hover:text-black

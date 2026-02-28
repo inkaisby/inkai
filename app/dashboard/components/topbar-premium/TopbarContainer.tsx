@@ -12,9 +12,7 @@ import TitleDynamic from "./components/TitleDynamic";
 import NotificationNode from "./components/NotificationNode";
 import AvatarMenu from "./components/AvatarMenu";
 import ConnectionPulse from "./components/ConnectionPulse";
-
 import NotificationPanel from "./components/NotificationPanel";
-//import ProfileModal from "./profile/ProfileModal";
 //import SettingsModalProvider from "./profile/settings/modal/SettingsModalProvider";
 
 /* ====================================================== */
@@ -32,13 +30,12 @@ function TopbarContent() {
   const { contextOptions, selectedContext, setSelectedContext, loading: scopeLoading } = useScope();
 
   const [mounted, setMounted] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
   const showKonteks = contextOptions.length > 1;
 
-  // 🔥 TITLE TANPA QUERY DATABASE
+  // 🔥 TITLE TANPA QUERY DATABASE (suffix responsive di TitleDynamic)
   const title = useMemo(() => {
     if (pathname === "/dashboard") return "Dashboard";
     const segments = pathname.split("/").filter(Boolean);
@@ -68,12 +65,14 @@ function TopbarContent() {
 
         <div className="flex items-center gap-3 z-10">
           <button
+            type="button"
             onClick={() =>
               window.dispatchEvent(
                 new CustomEvent("toggle-sidebar", { detail: true }),
               )
             }
-            className="p-2 rounded text-cyan-300 hover:text-white transition"
+            className="p-2 rounded text-cyan-300 hover:text-white transition cursor-pointer"
+            aria-label="Toggle sidebar"
           >
             <Menu size={20} />
           </button>
@@ -100,14 +99,13 @@ function TopbarContent() {
       </Header>
 
       {/* HUD */}
-      <div className="fixed top-3 right-6 z-50 flex items-center gap-5">
-        <NotificationNode onClick={() => setShowNotification(true)} />
+      <div className="fixed top-3 right-6 z-50 flex items-center gap-5 pointer-events-auto">
+        <NotificationNode />
         <ConnectionPulse />
         <AvatarMenu />
       </div>
 
-      {/* 🔥 MODAL LAZY MOUNT */}
-      {showNotification && <NotificationPanel />}
+      <NotificationPanel />
     </>
   );
 }

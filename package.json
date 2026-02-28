@@ -10,7 +10,7 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
-    "supabase:push": "supabase db push"
+    "supabase:push": "npx supabase db push --yes"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

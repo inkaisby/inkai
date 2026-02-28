@@ -294,30 +294,34 @@ export default function useProfileData() {
         let avatarPath = p.avatarPath;
 
         /* ===== UPLOAD AVATAR =====
-           Jika upload gagal (misalnya masalah Storage / 42P01),
-           kita hanya log dan lanjut simpan profil tanpa update avatar. */
+           Upload via API route (server + service role) agar tidak kena error 42P01
+           saat upload langsung dari client ke Storage. */
         if (p.avatarDirty && p.avatarFile) {
           try {
-            const ext =
-              p.avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
+            const formData = new FormData();
+            formData.set("file", p.avatarFile);
 
-            const filePath = `${userId}/avatar_${Date.now()}.${ext}`;
+            const uploadUrl =
+              typeof window !== "undefined"
+                ? `${window.location.origin}/api/profile/upload-avatar`
+                : "/api/profile/upload-avatar";
+            const uploadRes = await fetch(uploadUrl, {
+              method: "POST",
+              body: formData,
+              credentials: "include",
+            });
 
-            const { error: uploadError } =
-              await supabase.storage
-                .from("avatars_v2")
-                .upload(filePath, p.avatarFile, {
-                  upsert: true,
-                  contentType: p.avatarFile.type,
-                  cacheControl: "3600",
-                });
+            if (!uploadRes.ok) {
+              const data = await uploadRes.json().catch(() => ({}));
+              throw new Error(
+                (data as { message?: string }).message ||
+                  "Gagal mengunggah avatar"
+              );
+            }
 
-            if (uploadError) {
-              console.warn("Upload avatar gagal, lewati update avatar:", uploadError);
-            } else {
-              avatarPath = filePath;
-
-              // reset dirty agar autosave tidak upload ulang
+            const data = (await uploadRes.json()) as { path: string };
+            if (data.path) {
+              avatarPath = data.path;
               setProfile((prev) => ({
                 ...prev,
                 avatarPath,
@@ -326,7 +330,8 @@ export default function useProfileData() {
               }));
             }
           } catch (e) {
-            console.warn("Upload avatar exception, lewati update avatar:", e);
+            console.warn("Upload avatar gagal:", e);
+            throw e;
           }
         }
 

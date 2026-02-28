@@ -16,8 +16,16 @@ export default function NotificationNode({ onClick }: Props) {
 
   return (
     <motion.div
+      role="button"
+      tabIndex={0}
       whileTap={{ scale: 0.9 }}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       className="
         relative cursor-pointer p-2 rounded-md
         bg-white/5 hover:bg-white/10

@@ -3,23 +3,49 @@
 import { useMemo } from "react";
 import type { ProfileData } from "./useProfileData";
 
+/** Field wajib sama dengan ProfileSchema / step 1+2+3 + avatar (profil lengkap = 100%). */
+const REQUIRED_FIELDS: (keyof ProfileData)[] = [
+  "nik",
+  "nama",
+  "email",
+  "telepon",
+  "jenisKelamin",
+  "tanggalLahir",
+  "namaAyah",
+  "namaIbu",
+  "pekerjaanOrtu",
+  "alamat",
+  "provinceId",
+  "regencyId",
+  "districtId",
+  "villageId",
+  "rantingId",
+  "avatarPath", // avatar wajib agar score tidak 100% sebelum foto profil terisi (modal bisa dipaksa buka)
+];
+
+function isFilled(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  return String(value).trim() !== "";
+}
+
+/**
+ * Skor kelengkapan profil (0–100%). 100% hanya bila semua field wajib terisi.
+ * Sumber kebenaran tunggal agar score di modal konsisten dengan validasi simpan.
+ */
 export default function useCompletionScore(
   profile: ProfileData | null | undefined,
 ) {
   return useMemo(() => {
-    if (!profile) return 0;
+    if (!profile) {
+      return { score: 0, filledCount: 0, totalFields: REQUIRED_FIELDS.length };
+    }
 
-    const fields: (keyof ProfileData)[] = [
-      "nama",
-      "email",
-      "telepon",
-      "jenisKelamin",
-      "tanggalLahir",
-      "alamat",
-      "avatarUrl",
-    ];
+    const filledCount = REQUIRED_FIELDS.filter((key) =>
+      isFilled(profile[key]),
+    ).length;
+    const totalFields = REQUIRED_FIELDS.length;
+    const score = Math.round((filledCount / totalFields) * 100);
 
-    const filled = fields.filter((f) => !!profile[f]);
-    return Math.round((filled.length / fields.length) * 100);
+    return { score, filledCount, totalFields };
   }, [profile]);
 }

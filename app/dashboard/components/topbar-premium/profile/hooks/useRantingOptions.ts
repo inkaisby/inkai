@@ -12,11 +12,13 @@ type UseRantingOptionsParams = {
   provinceId?: string | null;
   regencyId?: string | null;
   districtId?: string | null;
+  /** Ranting saat ini (dari profil) agar API bisa sertakan namanya dan tidak "Tidak ditemukan" */
+  contextRantingId?: string | null;
 };
 
 /** Daftar ranting untuk dropdown (difilter by scope + wilayah: provinsi/kabupaten/kecamatan user). */
 export default function useRantingOptions(params?: UseRantingOptionsParams) {
-  const { provinceId, regencyId, districtId } = params ?? {};
+  const { provinceId, regencyId, districtId, contextRantingId } = params ?? {};
   const [options, setOptions] = useState<RantingOption[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +36,9 @@ export default function useRantingOptions(params?: UseRantingOptionsParams) {
         if (provinceId) sp.set("province_id", provinceId);
         if (regencyId) sp.set("regency_id", regencyId);
         if (districtId) sp.set("district_id", districtId);
+        if (contextRantingId) sp.set("context_ranting_id", contextRantingId);
         const qs = sp.toString();
+        // Step 3: butuh wilayah agar filter by wilayah; tanpa province_id bisa dapat [] untuk non-PP
         const url = qs ? `/api/ranting?${qs}` : "/api/ranting";
 
         const res = await fetch(url, { method: "GET", credentials: "include" });
@@ -66,7 +70,7 @@ export default function useRantingOptions(params?: UseRantingOptionsParams) {
       }
     };
     fetchRanting();
-  }, [provinceId ?? "", regencyId ?? "", districtId ?? ""]);
+  }, [provinceId ?? "", regencyId ?? "", districtId ?? "", contextRantingId ?? ""]);
 
   return { options, loading };
 }

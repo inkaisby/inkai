@@ -12,11 +12,7 @@ export default function useConnectionStatus() {
 
     const checkConnection = async () => {
       try {
-        // Gunakan query ringan, TANPA auth listener
-        const { error } = await supabase
-          .from("events")
-          .select("id", { head: true, count: "exact" })
-          .limit(1);
+        const { error } = await supabase.rpc("get_my_events_count");
 
         if (!mounted) return;
         setIsConnected(!error);

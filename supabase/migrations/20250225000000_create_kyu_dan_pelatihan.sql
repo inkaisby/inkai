@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_kyu_profile_id ON public.kyu(profile_id);
 
 ALTER TABLE public.kyu ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "User can manage own kyu" ON public.kyu;
 CREATE POLICY "User can manage own kyu"
   ON public.kyu
   FOR ALL
@@ -47,6 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_dan_profile_id ON public.dan(profile_id);
 
 ALTER TABLE public.dan ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "User can manage own dan" ON public.dan;
 CREATE POLICY "User can manage own dan"
   ON public.dan
   FOR ALL
@@ -76,6 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_pelatihan_profile_id ON public.pelatihan(profile_
 
 ALTER TABLE public.pelatihan ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "User can manage own pelatihan" ON public.pelatihan;
 CREATE POLICY "User can manage own pelatihan"
   ON public.pelatihan
   FOR ALL

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 
@@ -27,16 +27,12 @@ export default function useRealtimeNotification() {
     };
   }, []);
 
-  // Load unread count awal
+  // Load unread count via RPC (bypass permission denied)
   const loadUnreadCount = async (uid: string) => {
-    const { count } = await supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", uid)
-      .is("read_at", null);
-
-    setCount(count ?? 0);
-    setHasNew((count ?? 0) > 0);
+    const { data } = await supabase.rpc("get_my_events_count");
+    const c = typeof data === "number" ? data : 0;
+    setCount(c);
+    setHasNew(c > 0);
   };
 
   // Subscribe realtime SETELAH userId ada
@@ -74,8 +70,13 @@ export default function useRealtimeNotification() {
     };
   }, [userId]);
 
+  const refreshCount = useCallback(() => {
+    if (userId) void loadUnreadCount(userId);
+  }, [userId]);
+
   return {
     count,
     hasNew,
+    refreshCount,
   };
 }

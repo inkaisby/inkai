@@ -31,11 +31,42 @@ export async function GET(req: NextRequest) {
     .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id")
     .order("nama");
 
-  if (!scope.is_pp) {
+  const hasWilayahFilter = Boolean(provinceId || regencyId || districtId);
+
+  // Untuk profil self-service: jika filter wilayah, skip scope agar user bisa pilih ranting di area alamat.
+  const skipScopeForWilayah = hasWilayahFilter;
+
+  if (!scope.is_pp && !skipScopeForWilayah) {
     if (scope.ranting_ids.length === 0) {
-      return NextResponse.json([]);
+      if (!hasWilayahFilter) {
+        // Tanpa filter wilayah dan tanpa scope: kembalikan hanya context_ranting milik user (untuk tampilan nama)
+        if (contextRantingId) {
+          const { data: one } = await admin
+            .from("ranting")
+            .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id")
+            .eq("id", contextRantingId)
+            .maybeSingle();
+          const { data: usr } = await admin
+            .from("user_structural_roles")
+            .select("ranting_id")
+            .eq("user_id", user.id)
+            .eq("ranting_id", contextRantingId)
+            .limit(1)
+            .maybeSingle();
+          const { data: prof } = await admin
+            .from("profiles")
+            .select("ranting_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle();
+          const isSelf = !!(usr?.ranting_id || prof?.ranting_id === contextRantingId);
+          if (isSelf && one) return NextResponse.json([one]);
+        }
+        return NextResponse.json([]);
+      }
+    } else {
+      query = query.in("id", scope.ranting_ids);
     }
-    query = query.in("id", scope.ranting_ids);
   }
 
   if (contextRantingId && (scope.is_pp || scope.ranting_ids.includes(contextRantingId))) {
@@ -46,23 +77,62 @@ export async function GET(req: NextRequest) {
     query = query.eq("cabang_id", cabangId);
   }
 
+  // Filter by wilayah: provinsi wajib; kabupaten/kecamatan fleksibel (ranting dengan null tetap ikut)
   if (provinceId) {
     query = query.eq("province_id", Number(provinceId));
   }
   if (regencyId) {
-    query = query.eq("regency_id", Number(regencyId));
+    query = query.or(
+      `regency_id.eq.${regencyId},regency_id.is.null`
+    );
   }
   if (districtId) {
-    query = query.eq("district_id", Number(districtId));
+    query = query.or(
+      `district_id.eq.${districtId},district_id.is.null`
+    );
   }
 
-  const { data, error } = await query;
+  let { data, error } = await query;
 
   if (error) {
     return NextResponse.json(
       { message: error.message, code: error.code },
       { status: 500 }
     );
+  }
+
+  // Agar nama ranting user tetap tampil (bukan "Tidak ditemukan") saat ranting tidak ada di filter wilayah
+  if (contextRantingId && data) {
+    const hasInResult = data.some((r) => r.id === contextRantingId);
+    if (!hasInResult) {
+      let isSelfRanting = false;
+      const { data: selfRole } = await admin
+        .from("user_structural_roles")
+        .select("ranting_id")
+        .eq("user_id", user.id)
+        .eq("ranting_id", contextRantingId)
+        .limit(1)
+        .maybeSingle();
+      if (selfRole?.ranting_id) isSelfRanting = true;
+      // Sumber ranting_id bisa dari profiles (get_profile_self)
+      if (!isSelfRanting) {
+        const { data: prof } = await admin
+          .from("profiles")
+          .select("ranting_id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        if (prof?.ranting_id === contextRantingId) isSelfRanting = true;
+      }
+      if (isSelfRanting) {
+        const { data: one } = await admin
+          .from("ranting")
+          .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id")
+          .eq("id", contextRantingId)
+          .maybeSingle();
+        if (one) data = [...data, one];
+      }
+    }
   }
 
   return NextResponse.json(data ?? []);

@@ -17,6 +17,8 @@ export default function AvatarMenu() {
 
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [roleLabel, setRoleLabel] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -39,6 +41,73 @@ export default function AvatarMenu() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  /* ===============================
+   * Load nama dari profile (via /api/me)
+   * =============================== */
+  useEffect(() => {
+    if (!session?.user) {
+      setDisplayName(null);
+      setRoleLabel(null);
+      return;
+    }
+
+    let mounted = true;
+    fetch("/api/me", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!mounted) return;
+        const nama = data?.profile?.nama;
+        setDisplayName(
+          nama && String(nama).trim() !== "" ? String(nama).trim() : null
+        );
+
+        const appRole = data?.profile?.app_role;
+        const structural = (data?.structural_roles ?? []) as Array<{
+          role_name?: string;
+          structural_level?: number;
+          active?: boolean;
+        }>;
+        const activeStructural = structural.filter((r) => r.active !== false);
+        const topStructural = activeStructural.sort(
+          (a, b) => (b.structural_level ?? 0) - (a.structural_level ?? 0)
+        )[0];
+
+        const roleMap: Record<string, string> = {
+          SUPERADMIN: "Superadmin",
+          ADMIN: "Admin",
+          USER: "User",
+          KETUA_PP: "Ketua PP",
+          KETUA_CABANG: "Ketua Cabang",
+          KETUA_RANTING: "Ketua Ranting",
+          PENGPROV: "Pengprov",
+          SEKRETARIS: "Sekretaris",
+          BENDAHARA: "Bendahara",
+        };
+        const fmt = (r: string) =>
+          roleMap[r] ?? r.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+        if (appRole === "SUPERADMIN") {
+          setRoleLabel("Superadmin");
+        } else if (topStructural?.role_name) {
+          setRoleLabel(fmt(topStructural.role_name));
+        } else if (appRole) {
+          setRoleLabel(fmt(appRole));
+        } else {
+          setRoleLabel(null);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setDisplayName(null);
+          setRoleLabel(null);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [session?.user?.id]);
 
   const avatarUrl =
     session?.user?.user_metadata?.avatar_url ||
@@ -142,9 +211,16 @@ export default function AvatarMenu() {
               z-[99999]
             "
           >
-            {/* User Email */}
-            <div className="text-cyan-300 text-sm pb-2 mb-2 border-b border-cyan-500/20 truncate">
-              {session?.user?.email ?? "Pengguna"}
+            {/* User Name + Role */}
+            <div className="pb-2 mb-2 border-b border-cyan-500/20 space-y-0.5">
+              <div className="text-cyan-300 text-sm font-medium truncate">
+                {displayName ?? session?.user?.email ?? "Pengguna"}
+              </div>
+              {roleLabel && (
+                <div className="text-cyan-400/80 text-xs truncate">
+                  {roleLabel}
+                </div>
+              )}
             </div>
 
             {/* Profil */}

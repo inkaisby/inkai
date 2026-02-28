@@ -22,19 +22,20 @@ type GroupedEvents = {
 
 export default function NotificationPanel() {
 
-  const { open, closeNotifications } = useNotification();
+  const { open, closeNotifications, refreshCount } = useNotification();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
 
     const load = async () => {
       setLoading(true);
+      setError(null);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
 
       if (!user) {
         setEvents([]);
@@ -42,26 +43,27 @@ export default function NotificationPanel() {
         return;
       }
 
-      const { data } = await supabase
-        .from("events")
-        .select("id, type, title, created_at, read_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const { data, error: err } = await supabase.rpc("get_my_events", {
+        p_limit: 20,
+      });
 
-      const list = data ?? [];
+      if (err) {
+        setError(err.message);
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+
+      const list = (data ?? []) as EventItem[];
       setEvents(list);
       setLoading(false);
 
-      // MARK AS READ (SETELAH DATA DITAMPILKAN)
-      await supabase
-        .from("events")
-        .update({ read_at: new Date().toISOString() })
-        .eq("user_id", user.id)
-        .is("read_at", null);
+      await supabase.rpc("mark_my_events_read");
+      refreshCount?.();
     };
 
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshCount stable, only re-run when open
   }, [open]);
 
   // ============================
@@ -156,7 +158,13 @@ export default function NotificationPanel() {
               </div>
             )}
 
-            {!loading && events.length === 0 && (
+            {!loading && error && (
+              <div className="p-4 text-xs text-red-400">
+                Gagal memuat: {error}
+              </div>
+            )}
+
+            {!loading && !error && events.length === 0 && (
               <div className="p-4 text-xs text-cyan-200 opacity-60">
                 Tidak ada aktivitas
               </div>

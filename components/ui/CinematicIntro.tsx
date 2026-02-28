@@ -1,12 +1,20 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import SakuraEffect from "../effects/SakuraEffect"; // ✔ gunakan komponen yang benar
+import { useEffect, useState, useRef } from "react";
+import SakuraEffect from "../effects/SakuraEffect";
 
-export default function CinematicIntro({ onFinish }) {
-  // SAFE CLIENT RANDOM FOR TATAMI DUST
-  const [particles, setParticles] = useState([]);
+const INTRO_DURATION_MS = 4000;
+
+export default function CinematicIntro({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
+  const [particles, setParticles] = useState<
+    Array<{ left: number; bottom: number; duration: number; delay: number }>
+  >([]);
+  const finishedRef = useRef(false);
 
   useEffect(() => {
     const arr = Array.from({ length: 25 }).map(() => ({
@@ -18,14 +26,24 @@ export default function CinematicIntro({ onFinish }) {
     setParticles(arr);
   }, []);
 
+  const handleFinish = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    onFinish();
+  };
+
+  useEffect(() => {
+    const t = setTimeout(handleFinish, INTRO_DURATION_MS);
+    return () => clearTimeout(t);
+  }, [onFinish]);
+
   return (
     <motion.div
-      className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden"
+      className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden min-h-[100vh] min-w-[100vw]"
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 1.5 }}
-      onAnimationComplete={onFinish}
+      transition={{ duration: 0.5 }}
     >
       {/* 🌸 SAKURA EFFECT (PASTI BERFUNGSI) */}
       <SakuraEffect count={50} />
@@ -140,6 +158,18 @@ export default function CinematicIntro({ onFinish }) {
       >
         日本空手道 • Dojo Awakening
       </motion.p>
+
+      {/* SKIP */}
+      <motion.button
+        type="button"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.6 }}
+        transition={{ delay: 2 }}
+        onClick={handleFinish}
+        className="absolute bottom-8 right-8 text-xs text-white/50 hover:text-white/90 transition z-30"
+      >
+        Lewati →
+      </motion.button>
     </motion.div>
   );
 }
