@@ -67,6 +67,13 @@ type FetchOptions = {
 ================================ */
 };
 
+function getWilayahUrl(path: string): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+  return path;
+}
+
 async function safeFetch<T = unknown>(
   url: string,
   options?: FetchOptions
@@ -77,8 +84,9 @@ async function safeFetch<T = unknown>(
     if (cached != null) return cached;
   }
 
+  const fetchUrl = getWilayahUrl(url);
   try {
-    const res = await fetch(url, {
+    const res = await fetch(fetchUrl, {
       cache: "force-cache",
       signal: options?.signal,
     });
@@ -96,7 +104,7 @@ async function safeFetch<T = unknown>(
   } catch (err: unknown) {
     const name = err && typeof err === "object" && "name" in err ? (err as { name: string }).name : undefined;
     if (name === "AbortError") return [];
-    console.error("Wilayah fetch error:", url, err);
+    console.error("Wilayah fetch error:", fetchUrl, err);
     const stale = getCached<T>(cacheKey);
     return stale ?? [];
   }
