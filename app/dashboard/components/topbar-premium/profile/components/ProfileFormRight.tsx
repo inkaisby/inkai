@@ -24,14 +24,21 @@ type Props = {
   villagesLoading?: boolean;
 };
 
-/** Agar nilai dari DB tetap tampil di HP saat opsi belum ter-load; piker tidak kosong. */
+/** Normalisasi id wilayah (tanpa titik) agar "35.78.01" dan "357801" dianggap sama. */
+function normalizeId(x: string | undefined): string {
+  if (x == null) return "";
+  return String(x).replace(/\./g, "").trim();
+}
+
+/** Agar nilai dari DB tetap tampil di HP saat opsi belum ter-load; picker tidak kosong. */
 function optionsWithFallback(
   options: WilayahOption[],
   currentValue: string | undefined,
   loadingLabel: string
 ): WilayahOption[] {
   if (!currentValue?.trim()) return options;
-  const hasValue = options.some((o) => String(o.value) === String(currentValue));
+  const n = normalizeId(currentValue);
+  const hasValue = options.some((o) => normalizeId(o.value) === n);
   if (hasValue) return options;
   return [{ value: currentValue, label: loadingLabel }, ...options];
 }

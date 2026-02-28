@@ -1,5 +1,7 @@
 import { fetchWilayahJson } from "../fetchWilayah";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const provinceId = new URL(req.url).searchParams.get("provinceId");
   if (!provinceId)

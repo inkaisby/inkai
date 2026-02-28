@@ -1,7 +1,10 @@
 import { fetchWilayahJson } from "../fetchWilayah";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
-  const regencyId = new URL(req.url).searchParams.get("regencyId");
+  const raw = new URL(req.url).searchParams.get("regencyId");
+  const regencyId = raw?.trim() ?? "";
   if (!regencyId)
     return Response.json({ error: "regencyId required" }, { status: 400 });
 

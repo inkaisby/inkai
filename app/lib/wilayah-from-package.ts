@@ -35,28 +35,38 @@ export async function getRegenciesFromPackage(
     }));
 }
 
+function getRegencyCode(d: { regency_code?: string; regencyCode?: string }): string {
+  return d.regency_code ?? (d as { regencyCode?: string }).regencyCode ?? "";
+}
+
 export async function getDistrictsFromPackage(
   regencyId: string
 ): Promise<Array<{ id: string; regency_id: string; name: string }>> {
   const list = await getDistricts();
+  const rid = toId(regencyId);
   return list
-    .filter((d) => toId(d.regency_code) === regencyId)
+    .filter((d) => toId(getRegencyCode(d)) === rid)
     .map((d) => ({
       id: toId(d.code),
-      regency_id: toId(d.regency_code),
+      regency_id: toId(getRegencyCode(d)),
       name: d.name,
     }));
+}
+
+function getDistrictCode(v: { district_code?: string; districtCode?: string }): string {
+  return v.district_code ?? (v as { districtCode?: string }).districtCode ?? "";
 }
 
 export async function getVillagesFromPackage(
   districtId: string
 ): Promise<Array<{ id: string; district_id: string; name: string }>> {
   const list = await getVillages();
+  const did = toId(districtId);
   return list
-    .filter((v) => toId(v.district_code) === districtId)
+    .filter((v) => toId(getDistrictCode(v)) === did)
     .map((v) => ({
       id: toId(v.code),
-      district_id: toId(v.district_code),
+      district_id: toId(getDistrictCode(v)),
       name: v.name,
     }));
 }

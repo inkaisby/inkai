@@ -1,7 +1,10 @@
 import { fetchWilayahJson } from "../fetchWilayah";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
-  const districtId = new URL(req.url).searchParams.get("districtId");
+  const raw = new URL(req.url).searchParams.get("districtId");
+  const districtId = raw?.trim() ?? "";
   if (!districtId)
     return Response.json({ error: "districtId required" }, { status: 400 });
 

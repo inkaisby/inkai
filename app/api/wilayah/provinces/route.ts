@@ -1,5 +1,7 @@
 import { fetchWilayahJson } from "../fetchWilayah";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const data = await fetchWilayahJson("provinces.json");
