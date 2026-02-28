@@ -110,33 +110,59 @@ export default function ProfileModal() {
   const [regencyOptions, setRegencyOptions] = useState<Option[]>([]);
   const [districtOptions, setDistrictOptions] = useState<Option[]>([]);
   const [villageOptions, setVillageOptions] = useState<Option[]>([]);
+  const [provincesLoading, setProvincesLoading] = useState(true);
+  const [regenciesLoading, setRegenciesLoading] = useState(false);
+  const [districtsLoading, setDistrictsLoading] = useState(false);
+  const [villagesLoading, setVillagesLoading] = useState(false);
 
   useEffect(() => {
-    getProvinces().then((res) => setProvinceOptions(toOptions(res)));
+    setProvincesLoading(true);
+    getProvinces()
+      .then((res) => setProvinceOptions(toOptions(res)))
+      .catch(() => setProvinceOptions([]))
+      .finally(() => setProvincesLoading(false));
   }, []);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from profile */
-    if (!profile?.provinceId) return setRegencyOptions([]);
-    getRegencies(profile.provinceId).then((res) =>
-      setRegencyOptions(toOptions(res)),
-    );
+    if (!profile?.provinceId) {
+      setRegencyOptions([]);
+      setRegenciesLoading(false);
+      return;
+    }
+    setRegenciesLoading(true);
+    getRegencies(profile.provinceId)
+      .then((res) => setRegencyOptions(toOptions(res)))
+      .catch(() => setRegencyOptions([]))
+      .finally(() => setRegenciesLoading(false));
   }, [profile?.provinceId]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from profile */
-    if (!profile?.regencyId) return setDistrictOptions([]);
-    getDistricts(profile.regencyId).then((res) =>
-      setDistrictOptions(toOptions(res)),
-    );
+    if (!profile?.regencyId) {
+      setDistrictOptions([]);
+      setDistrictsLoading(false);
+      return;
+    }
+    setDistrictsLoading(true);
+    getDistricts(profile.regencyId)
+      .then((res) => setDistrictOptions(toOptions(res)))
+      .catch(() => setDistrictOptions([]))
+      .finally(() => setDistrictsLoading(false));
   }, [profile?.regencyId]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- sync wilayah options from profile */
-    if (!profile?.districtId) return setVillageOptions([]);
-    getVillages(profile.districtId).then((res) =>
-      setVillageOptions(toOptions(res)),
-    );
+    if (!profile?.districtId) {
+      setVillageOptions([]);
+      setVillagesLoading(false);
+      return;
+    }
+    setVillagesLoading(true);
+    getVillages(profile.districtId)
+      .then((res) => setVillageOptions(toOptions(res)))
+      .catch(() => setVillageOptions([]))
+      .finally(() => setVillagesLoading(false));
   }, [profile?.districtId]);
 
   /* ================= RESOLVE FUNCTIONS ================= */
@@ -239,7 +265,7 @@ export default function ProfileModal() {
   return (
     <AnimatePresence>
       <motion.div className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/60">
-        <motion.div className="relative w-[900px] max-h-[90vh] rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20">
+        <motion.div className="relative w-full max-w-[900px] max-h-[90vh] mx-4 sm:mx-6 rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20">
           <button
             onClick={handleCloseRequest}
             className="absolute right-4 top-4 text-cyan-300"
@@ -255,7 +281,10 @@ export default function ProfileModal() {
           <CompletionScore profile={profile} />
           <WizardStepper step={currentStep} maxStep={maxStep} />
 
-          <div className="px-6 py-6 space-y-10 overflow-y-auto max-h-[62vh]">
+          <div
+            className="px-4 sm:px-6 py-6 space-y-10 overflow-y-auto max-h-[62vh] overscroll-contain"
+            style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          >
             {currentStep === 1 && (
               <>
                 <ProfileAvatar
@@ -284,6 +313,10 @@ export default function ProfileModal() {
                 regencyOptions={regencyOptions}
                 districtOptions={districtOptions}
                 villageOptions={villageOptions}
+                provincesLoading={provincesLoading}
+                regenciesLoading={regenciesLoading}
+                districtsLoading={districtsLoading}
+                villagesLoading={villagesLoading}
               />
             )}
 

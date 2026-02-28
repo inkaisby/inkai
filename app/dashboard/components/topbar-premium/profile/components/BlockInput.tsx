@@ -47,7 +47,7 @@ export default function BlockInput({
           onChange(e.target.value);
         }}
         className={clsx(
-          "w-full px-3 py-2 rounded outline-none transition",
+          "w-full min-h-[48px] px-3 py-2 rounded outline-none transition touch-manipulation",
           disabled || readOnly
             ? "bg-[#0b1520]/60 border border-cyan-800/30 text-cyan-400 cursor-not-allowed"
             : "bg-[#0b1520] border border-cyan-700/40 text-cyan-200",

@@ -37,9 +37,10 @@ export default function BlockSelect({
           onChange(e.target.value);
         }}
         className={clsx(
-          "w-full px-4 py-2 rounded-lg bg-[#0d1218] border outline-none text-cyan-100 cursor-pointer",
+          "w-full min-h-[48px] px-4 py-3 rounded-lg bg-[#0d1218] border outline-none text-cyan-100 cursor-pointer",
           "border-cyan-700/40 focus:border-cyan-300",
           "focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition",
+          "touch-manipulation", // kurangi delay tap di mobile
           disabled && "opacity-50 cursor-not-allowed",
           error && "border-red-400 text-red-300"
         )}
