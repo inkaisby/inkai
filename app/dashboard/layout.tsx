@@ -7,6 +7,7 @@ import Sidebar from "./components/dashboard/Sidebar";
 import TopbarContainer from "./components/topbar-premium/TopbarContainer";
 import ProfileModal from "./components/topbar-premium/profile/ProfileModal";
 import SettingsModalProvider from "./components/topbar-premium/profile/settings/modal/SettingsModalProvider";
+import { ScopeProvider } from "./components/topbar-premium/context/ScopeContext";
 export default function DashboardLayout({
   children,
 }: {
@@ -57,12 +58,14 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-black text-white overflow-hidden">
       {!hideSidebar && <Sidebar />}
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <TopbarContainer />
-        <ProfileModal />
-        <SettingsModalProvider />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
-      </div>
+      <ScopeProvider>
+        <div className="flex flex-col flex-1 min-w-0">
+          <TopbarContainer />
+          <ProfileModal />
+          <SettingsModalProvider />
+          <main className="flex-1 overflow-auto p-6">{children}</main>
+        </div>
+      </ScopeProvider>
     </div>
   );
 }

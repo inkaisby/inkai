@@ -94,7 +94,11 @@ export default function ProfileModal() {
 
   const { currentStep, nextStep, prevStep, maxStep } = useWizard();
   const { options: rantingOptions, loading: rantingLoading } =
-    useRantingOptions();
+    useRantingOptions({
+      provinceId: profile?.provinceId ?? null,
+      regencyId: profile?.regencyId ?? null,
+      districtId: profile?.districtId ?? null,
+    });
 
   /* ================= ROLE LOGIC ================= */
   const isKetua = profile?.role === "ketua_cabang";

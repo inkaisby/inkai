@@ -7,7 +7,7 @@ export async function waitForSessionReady(
 ) {
 
   for (let i = 0; i < maxRetry; i++) {
-    const { data } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
 
     // ❗ JANGAN throw — Supabase kadang belum siap
     if (data?.session?.user) {

@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { getUserScope } from "@/app/lib/scope/getUserScope";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -22,6 +23,8 @@ export async function GET() {
     p_user_id: user.id,
   });
 
+  const scope = await getUserScope(admin, user.id);
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -30,6 +33,7 @@ export async function GET() {
     profile: profile ?? null,
     structural_roles: structural ?? [],
     functional_roles: [],
+    scope,
   });
 }
 

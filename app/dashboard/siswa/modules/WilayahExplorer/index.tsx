@@ -16,33 +16,27 @@ export default function WilayahExplorer() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    loadWilayah();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    async function loadWilayah() {
-      setLoading(true);
+  async function loadWilayah() {
+    setLoading(true);
 
-      const res = await supabase
-        .from("wilayah")
-        .select("id,name,level,parent_id,created_at")
-        .order("created_at", { ascending: true });
+    const res = await supabase
+      .from("wilayah")
+      .select("id,name,level,parent_id,created_at")
+      .order("created_at", { ascending: true });
 
-      if (cancelled) return;
-
-      if (res.error) {
-        console.error("FETCH WILAYAH ERROR:", res.error);
-        setData([]);
-      } else {
-        setData(res.data ?? []);
-      }
-
-      setLoading(false);
+    if (res.error) {
+      console.error("FETCH WILAYAH ERROR:", res.error);
+      setData([]);
+    } else {
+      setData(res.data ?? []);
     }
 
-    loadWilayah();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    setLoading(false);
+  }
 
   if (loading) {
     return <div className="p-3 text-xs text-slate-500">Loading wilayah…</div>;

@@ -49,9 +49,18 @@ export default function MenuList() {
 
       setOpen(false);
       setEditing(undefined);
-    } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string" ? (err as { message: string }).message : "";
-      alert(msg || "Terjadi kesalahan");
+    } catch (err: any) {
+      alert(err.message ?? "Terjadi kesalahan");
+    } finally {
+      setProcessing(false);
+    }
+  }
+  async function handleDelete(id: string) {
+    try {
+      setProcessing(true);
+      await deleteMenu(id);
+    } catch (err: any) {
+      alert(err.message ?? "Gagal hapus");
     } finally {
       setProcessing(false);
     }
@@ -157,9 +166,8 @@ export default function MenuList() {
                         onClick={async () => {
                           try {
                             await deleteMenu(m.id);
-                          } catch (err: unknown) {
-                            const msg = err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string" ? (err as { message: string }).message : "";
-                            alert(msg || "Gagal hapus");
+                          } catch (err: any) {
+                            alert(err.message ?? "Gagal hapus");
                           }
                         }}
                         className="px-2 py-1 text-xs border border-red-500/40 text-red-400 rounded"

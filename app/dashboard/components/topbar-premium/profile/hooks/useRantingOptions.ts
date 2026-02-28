@@ -8,12 +8,18 @@ export type RantingOption = {
   value: string;
 };
 
-export default function useRantingOptions() {
+type UseRantingOptionsParams = {
+  provinceId?: string | null;
+  regencyId?: string | null;
+  districtId?: string | null;
+};
+
+/** Daftar ranting untuk dropdown (difilter by scope + wilayah: provinsi/kabupaten/kecamatan user). */
+export default function useRantingOptions(params?: UseRantingOptionsParams) {
+  const { provinceId, regencyId, districtId } = params ?? {};
   const [options, setOptions] = useState<RantingOption[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-        // Pastikan session sudah siap dulu, supaya query tidak "miss"
   useEffect(() => {
     const fetchRanting = async () => {
       setLoading(true);
@@ -24,7 +30,14 @@ export default function useRantingOptions() {
           return;
         }
 
-        const res = await fetch("/api/ranting", { method: "GET", credentials: "include" });
+        const sp = new URLSearchParams();
+        if (provinceId) sp.set("province_id", provinceId);
+        if (regencyId) sp.set("regency_id", regencyId);
+        if (districtId) sp.set("district_id", districtId);
+        const qs = sp.toString();
+        const url = qs ? `/api/ranting?${qs}` : "/api/ranting";
+
+        const res = await fetch(url, { method: "GET", credentials: "include" });
         if (!res.ok) {
           const msg = await res.text().catch(() => "");
           console.warn("Gagal memuat ranting dari API:", res.status, msg);
@@ -32,7 +45,14 @@ export default function useRantingOptions() {
           return;
         }
 
-        const list = (await res.json()) as Array<{ id: string; nama: string }>;
+        let list = (await res.json()) as Array<{ id: string; nama: string }>;
+        const hasWilayahFilter = Boolean(provinceId || regencyId || districtId);
+        if (hasWilayahFilter && (!list || list.length === 0)) {
+          const fallback = await fetch("/api/ranting", { method: "GET", credentials: "include" });
+          if (fallback.ok) {
+            list = (await fallback.json()) as Array<{ id: string; nama: string }>;
+          }
+        }
         setOptions(
           (list ?? []).map((r) => ({
             label: r.nama,
@@ -46,7 +66,7 @@ export default function useRantingOptions() {
       }
     };
     fetchRanting();
-  }, []);
+  }, [provinceId ?? "", regencyId ?? "", districtId ?? ""]);
 
   return { options, loading };
 }

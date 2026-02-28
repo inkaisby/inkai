@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 import JarvisLoader from "@/components/JarvisLoader";
+import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 
 /* ===============================
  * TYPES (1:1 dengan SQL)
@@ -53,27 +54,73 @@ const resolveCabang = (
   return "-";
 };
 
+function apiRowToUserRow(r: Record<string, unknown>): UserRow {
+  return {
+    id: String(r.id ?? ""),
+    user_id: String(r.user_id ?? r.id ?? ""),
+    email: String(r.email ?? ""),
+    nama: (r.nama as string) ?? null,
+    nik: (r.nik as string) ?? null,
+    telepon: (r.telepon as string) ?? null,
+    jenis_kelamin: (r.jenis_kelamin as string) ?? null,
+    tanggal_lahir: (r.tanggal_lahir as string) ?? null,
+    nama_ayah: (r.nama_ayah as string) ?? null,
+    nama_ibu: (r.nama_ibu as string) ?? null,
+    pekerjaan_ortu: (r.pekerjaan_ortu as string) ?? null,
+    app_role: (r.app_role as string) ?? null,
+    structural_level: (r.structural_level as number) ?? null,
+    structural_role: (r.structural_role as string) ?? null,
+    email_allowed: Boolean(r.email_allowed),
+    profile_completed: Boolean(r.profile_completed),
+    status: (r.status as string) ?? null,
+    province_id: (r.province_id as number) ?? null,
+    regency_id: (r.regency_id as number) ?? null,
+    district_id: (r.district_id as number) ?? null,
+    village_id: (r.village_id as string) ?? null,
+    ranting_id: (r.ranting_id as string) ?? null,
+    created_at: String(r.created_at ?? ""),
+    updated_at: String(r.updated_at ?? ""),
+  };
+}
+
 export default function EmailList({
   sessionEmail,
   selectedUser,
   onSelectUser,
 }: EmailListProps) {
+  const { selectedContext } = useScope();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  const contextRantingId =
+    selectedContext &&
+    selectedContext !== "all" &&
+    !selectedContext.startsWith("cabang:")
+      ? selectedContext
+      : undefined;
+
   /* ===============================
-   * LOAD USERS (RPC)
+   * LOAD USERS (API dengan scope + konteks)
    * =============================== */
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       try {
-        const { data, error } = await supabase.rpc("get_users_with_profile");
-        if (error) throw error;
-        if (mounted) setUsers(data ?? []);
+        const url = contextRantingId
+          ? `/api/users?context_ranting_id=${encodeURIComponent(contextRantingId)}`
+          : "/api/users";
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) {
+          if (mounted) setUsers([]);
+          return;
+        }
+        const data = (await res.json()) as Record<string, unknown>[];
+        if (mounted) setUsers((data ?? []).map(apiRowToUserRow));
+      } catch {
+        if (mounted) setUsers([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -83,7 +130,7 @@ export default function EmailList({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [contextRantingId]);
 
   /* AUTO SELECT LOGIN USER */
   useEffect(() => {
@@ -100,7 +147,8 @@ export default function EmailList({
     return users.filter(
       (u) =>
         u.email.toLowerCase().includes(q) ||
-        (u.nama ?? "").toLowerCase().includes(q),
+        (u.nama ?? "").toLowerCase().includes(q) ||
+        resolveCabang(u.province_id, u.regency_id).toLowerCase().includes(q),
     );
   }, [users, search]);
 

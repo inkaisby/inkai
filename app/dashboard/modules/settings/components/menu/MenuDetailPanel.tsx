@@ -36,7 +36,15 @@ export default function MenuDetailPanel({
           <Row label="Status" value={data.is_active ? "Aktif" : "Nonaktif"} />
           <Row
             label="Akses"
-            value={data.superadmin_only ? "SUPERADMIN" : "PUBLIC"}
+            value={
+              data.superadmin_only
+                ? "SUPERADMIN"
+                : data.required_structural_level != null
+                  ? `STRUKTURAL ≥ ${data.required_structural_level}`
+                  : data.required_functional_role
+                    ? `FUNGSIONAL: ${data.required_functional_role}`
+                    : "PUBLIC"
+            }
           />
           <Row label="Scope" value={data.scope ?? "-"} />
           <Row label="Icon" value={data.icon ?? "-"} />
@@ -47,11 +55,7 @@ export default function MenuDetailPanel({
           />
           <Row
             label="Structural Level"
-            value={
-              data.required_structural_level != null
-                ? String(data.required_structural_level)
-                : "-"
-            }
+            value={data.required_structural_level ?? "-"}
           />
           <Row
             label="Functional Role"

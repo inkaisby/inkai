@@ -40,7 +40,7 @@ export async function getUserPermissions(email: string) {
 
   if (error || !data) return {};
 
-  const permissions: Record<string, Record<string, boolean>> = {};
+  const permissions: Record<string, any> = {};
 
   for (const [scope, map] of Object.entries(ACTION_MAP)) {
     permissions[scope] = {};
@@ -57,7 +57,7 @@ export async function getUserPermissions(email: string) {
  * =============================== */
 export async function saveUserPermissions(
   email: string,
-  permissions: Record<string, Record<string, boolean>>,
+  permissions: Record<string, any>,
 ) {
   const supabaseAdmin = createSupabaseAdminClient();
   const actions = new Set<string>();
@@ -66,7 +66,7 @@ export async function saveUserPermissions(
     const map = ACTION_MAP[scope];
     if (!map) continue;
 
-    for (const [crud, enabled] of Object.entries(perms)) {
+    for (const [crud, enabled] of Object.entries(perms as any)) {
       if (enabled && map[crud]) {
         actions.add(map[crud]);
       }

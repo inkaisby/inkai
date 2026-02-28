@@ -1,15 +1,14 @@
 "use client";
 
 import { createContext, useEffect, useRef, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 export const SessionContext = createContext<{
-  session: Session | null;
+  session: any;
 } | null>(null);
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any>(null);
   const initializedRef = useRef(false);
 
   useEffect(() => {

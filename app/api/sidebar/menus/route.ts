@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { getUserScope } from "@/app/lib/scope/getUserScope";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -22,6 +23,19 @@ export async function GET() {
     p_user_id: user.id,
   });
 
+  const { data: functionalRows } = await admin
+    .from("user_functional_roles")
+    .select("role, active")
+    .eq("user_id", user.id)
+    .eq("active", true);
+
+  const functional_roles = (functionalRows ?? []).map((r: { role: string; active: boolean }) => ({
+    role_name: r.role,
+    active: r.active,
+  }));
+
+  const scope = await getUserScope(admin, user.id);
+
   const { data: menus } = await admin
     .from("menus")
     .select(
@@ -36,7 +50,8 @@ export async function GET() {
       email_allowed: profile?.email_allowed ?? false,
       app_role: profile?.app_role ?? null,
       structural_roles: structural ?? [],
-      functional_roles: [],
+      functional_roles,
+      scope,
     },
     menus: menus ?? [],
   });

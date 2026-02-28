@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import * as Icons from "lucide-react";
 import Image from "next/image";
@@ -8,30 +8,6 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { canAccessMenu } from "./canAccess";
 import type { SessionUserAccess, MenuAccess } from "./canAccess";
-
-function getSidebarOpenSnapshot(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    return localStorage.getItem("sidebar:isOpen") !== "false";
-  } catch {
-    return true;
-  }
-}
-
-function subscribeSidebarOpen(callback: () => void): () => void {
-  window.addEventListener("toggle-sidebar", callback);
-  return () => window.removeEventListener("toggle-sidebar", callback);
-}
-
-function getClientSnapshot(): boolean {
-  return true;
-}
-function getServerSnapshot(): boolean {
-  return false;
-}
-function subscribeClient(): () => void {
-  return () => {};
-}
 
 interface MenuRow {
   id: string;
@@ -52,16 +28,8 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const mounted = useSyncExternalStore(
-    subscribeClient,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
-  const isOpen = useSyncExternalStore(
-    subscribeSidebarOpen,
-    getSidebarOpenSnapshot,
-    getSidebarOpenSnapshot,
-  );
+  const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [menus, setMenus] = useState<MenuRow[]>([]);
   const [sessionUser, setSessionUser] = useState<SessionUserAccess | null>(
     null,
@@ -69,11 +37,33 @@ export default function Sidebar() {
 
   const iconMap = Icons as unknown as Record<string, LucideIcon>;
 
-  function toggleSidebar() {
-    const next = !getSidebarOpenSnapshot();
-    localStorage.setItem("sidebar:isOpen", String(next));
-    window.dispatchEvent(new Event("toggle-sidebar"));
-  }
+  /* ===================== MOUNT ===================== */
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    const stored = localStorage.getItem("sidebar:isOpen");
+    if (stored !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsOpen(stored === "true");
+    }
+  }, []);
+
+  /* ===================== TOGGLE FROM TOPBAR ===================== */
+  useEffect(() => {
+    const handler = () => {
+      setIsOpen((v) => {
+        const next = !v;
+        localStorage.setItem("sidebar:isOpen", String(next));
+        return next;
+      });
+    };
+
+    window.addEventListener("toggle-sidebar", handler);
+
+    return () => {
+      window.removeEventListener("toggle-sidebar", handler);
+    };
+  }, []);
 
   /* ===================== LOAD SESSION + MENUS ===================== */
   useEffect(() => {
@@ -85,15 +75,13 @@ export default function Sidebar() {
       const builtUser: SessionUserAccess = json.user ?? null;
       setSessionUser(builtUser);
 
-      const normalized = (json.menus ?? []).map(
-        (m: MenuRow & { required_structural_level?: number | string | null }) => ({
-          ...m,
-          required_structural_level:
-            m.required_structural_level != null
-              ? Number(m.required_structural_level)
-              : null,
-        }),
-      );
+      const normalized = (json.menus ?? []).map((m: any) => ({
+        ...m,
+        required_structural_level:
+          m.required_structural_level != null
+            ? Number(m.required_structural_level)
+            : null,
+      }));
       setMenus(normalized);
     };
 
@@ -141,7 +129,12 @@ export default function Sidebar() {
           alt="INKAI"
           width={28}
           height={28}
-          onClick={toggleSidebar}
+          onClick={() => {
+            setIsOpen((v) => {
+              localStorage.setItem("sidebar:isOpen", String(!v));
+              return !v;
+            });
+          }}
           className="cursor-pointer"
         />
       </div>

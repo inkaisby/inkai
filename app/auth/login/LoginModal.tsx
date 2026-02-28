@@ -2,16 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
-interface LoginModalProps {
-  onSuccess?: () => void;
-  onClose?: () => void;
-}
+const ID_USERNAME = "login-username";
+const ID_PASSWORD = "login-password";
 
-export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
-  const emailRef = useRef<HTMLInputElement>(null);
+export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
+  const loginIdRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const [username, setUsername] = useState("");
@@ -34,7 +33,7 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         passwordRef.current?.focus();
       }, 0);
     } else {
-      emailRef.current?.focus();
+      loginIdRef.current?.focus();
     }
   }, []);
 
@@ -107,7 +106,9 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
       setErrorMsg(
         message === "ROLE_MISSING"
           ? "Akun belum memiliki hak akses. Hubungi administrator."
-          : "Email / Username atau Password salah",
+          : message === "EMPTY_CREDENTIALS"
+            ? "Email/Username dan Password wajib diisi."
+            : "Email / Username atau Password salah.",
       );
 
       // ===== LOGIN LOG (NON-BLOCKING) =====
@@ -123,41 +124,33 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
     }
   };
 
-  // ENTER = LOGIN
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleLogin();
-    }
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleLogin();
   };
 
   return (
     <div className="inkai-overlay">
-      <div className="inkai-card" onKeyDown={onKeyDown}>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 text-cyan-200 hover:text-white text-xl"
-            aria-label="Tutup"
-          >
-            ×
-          </button>
-        )}
-        <Image
-          src="/logo/inkai-logo.png"
-          alt="INKAI"
-          width={88}
-          height={88}
-          className="inkai-logo"
-        />
+      <div className="inkai-card">
+        <header className="inkai-header">
+          <Image
+            src="/logo/inkai-logo.png"
+            alt="INKAI"
+            width={88}
+            height={88}
+            className="inkai-logo"
+          />
+          <h1 className="inkai-title">LOGIN SYSTEM</h1>
+          <p className="inkai-subtitle">Masuk ke akun Anda</p>
+        </header>
 
-        <h1 className="inkai-title">LOGIN SYSTEM</h1>
-        <p className="inkai-subtitle">Masuk ke akun Anda</p>
-
-        <div className="inkai-form">
+        <form className="inkai-form" onSubmit={onSubmit} noValidate>
+          <label htmlFor={ID_USERNAME} className="sr-only">
+            Email atau Username
+          </label>
           <input
-            ref={emailRef}
+            ref={loginIdRef}
+            id={ID_USERNAME}
             className="inkai-input"
             type="text"
             placeholder="Email atau Username"
@@ -165,11 +158,17 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
             disabled={loading}
+            aria-invalid={!!errorMsg}
+            aria-describedby={errorMsg ? "login-error" : undefined}
           />
 
           <div className="inkai-password">
+            <label htmlFor={ID_PASSWORD} className="sr-only">
+              Password
+            </label>
             <input
               ref={passwordRef}
+              id={ID_PASSWORD}
               className="inkai-input"
               type={showPwd ? "text" : "password"}
               placeholder="Password"
@@ -177,6 +176,8 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               disabled={loading}
+              aria-invalid={!!errorMsg}
+              aria-describedby={errorMsg ? "login-error" : undefined}
             />
 
             <button
@@ -184,46 +185,48 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
               className="pwd-toggle"
               onClick={() => setShowPwd((v) => !v)}
               tabIndex={-1}
+              aria-label={showPwd ? "Sembunyikan password" : "Tampilkan password"}
             >
               {showPwd ? "🙈" : "👁️"}
             </button>
           </div>
 
           <div className="inkai-options">
-            <label className="inkai-remember">
+            <label className="inkai-remember" htmlFor="login-remember">
               <input
+                id="login-remember"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={loading}
               />
-              <span>Remember me</span>
+              <span>Ingat saya</span>
             </label>
 
-            <a href="/auth/reset-password" className="inkai-forgot">
+            <Link href="/auth/reset-password" className="inkai-forgot">
               Lupa password?
-            </a>
+            </Link>
           </div>
 
-          {errorMsg && <div className="inkai-error">{errorMsg}</div>}
+          {errorMsg && (
+            <div id="login-error" className="inkai-error" role="alert">
+              {errorMsg}
+            </div>
+          )}
 
-          <button
-            className="inkai-button"
-            onClick={handleLogin}
-            disabled={loading}
-          >
+          <button type="submit" className="inkai-button" disabled={loading}>
             {loading ? "Memproses..." : "Login"}
           </button>
           <div className="inkai-register">
             Belum punya akun?
-            <a href="/auth/register">Buat akun</a>
+            <Link href="/auth/register">Buat akun</Link>
           </div>
 
           <div className="inkai-admin">
             Hubungi admin:
             <a href="tel:081331053100"> 081331053100</a>
           </div>
-        </div>
+        </form>
       </div>
 
       <style jsx>{`
@@ -245,27 +248,46 @@ export default function LoginModal({ onSuccess, onClose }: LoginModalProps) {
           box-shadow:
             0 0 0 1px rgba(0, 255, 255, 0.15) inset,
             0 0 40px rgba(0, 255, 255, 0.25);
-          text-align: center;
           backdrop-filter: blur(6px);
+        }
+        .inkai-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          margin-bottom: 4px;
         }
         .inkai-logo {
           width: 88px;
-          margin: 0 auto 8px;
+          height: 88px;
+          flex-shrink: 0;
+          margin: 0 0 8px;
           display: block;
           filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.6));
         }
         .inkai-title {
           color: #00ffff;
           letter-spacing: 1px;
-          margin: 8px 0 2px;
+          margin: 0 0 2px;
         }
         .inkai-subtitle {
           color: #9aa;
-          margin-bottom: 16px;
+          margin: 0 0 16px;
         }
         .inkai-form {
           display: grid;
           gap: 12px;
+        }
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+          white-space: nowrap;
+          border: 0;
         }
         .inkai-input {
           width: 100%;
