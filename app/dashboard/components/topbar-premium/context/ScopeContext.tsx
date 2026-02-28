@@ -26,6 +26,8 @@ export type ScopeContextOption = {
 type ScopeContextValue = {
   scope: UserScope | null;
   loading: boolean;
+  /** app_role dari profile (SUPERADMIN, USER, dll.) — untuk pengecekan superadmin */
+  app_role: string | null;
   /** Opsi untuk dropdown konteks (Semua + ranting/cabang yang user punya akses) */
   contextOptions: ScopeContextOption[];
   /** Nilai terpilih: "all" atau uuid (ranting/cabang) */
@@ -38,6 +40,7 @@ const STORAGE_KEY = "inkai:scope_context";
 const defaultValue: ScopeContextValue = {
   scope: null,
   loading: true,
+  app_role: null,
   contextOptions: [],
   selectedContext: "all",
   setSelectedContext: () => {},
@@ -54,6 +57,7 @@ type ScopeProviderProps = { children: ReactNode };
 
 export function ScopeProvider({ children }: ScopeProviderProps) {
   const [scope, setScope] = useState<UserScope | null>(null);
+  const [app_role, setAppRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [contextOptions, setContextOptions] = useState<ScopeContextOption[]>([]);
   const [selectedContext, setSelectedContextState] = useState<string>(() => {
@@ -76,6 +80,8 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
         const res = await fetch("/api/me", { credentials: "include" });
         if (!res.ok || cancelled) return;
         const json = await res.json();
+        const profileRole = (json?.profile?.app_role as string) ?? null;
+        if (!cancelled) setAppRole(profileRole);
         const sc: UserScope | undefined = json?.scope;
         if (!sc || cancelled) {
           setScope(null);
@@ -115,6 +121,7 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
       } catch {
         if (!cancelled) {
           setScope(null);
+          setAppRole(null);
           setContextOptions([{ value: "all", label: "Semua", type: "all" }]);
         }
       } finally {
@@ -132,11 +139,12 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
     () => ({
       scope,
       loading,
+      app_role,
       contextOptions,
       selectedContext,
       setSelectedContext,
     }),
-    [scope, loading, contextOptions, selectedContext, setSelectedContext]
+    [scope, loading, app_role, contextOptions, selectedContext, setSelectedContext]
   );
 
   return (

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   let query = admin
     .from("ranting")
-    .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id")
+    .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
     .order("nama");
 
   const hasWilayahFilter = Boolean(provinceId || regencyId || districtId);
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         if (contextRantingId) {
           const { data: one } = await admin
             .from("ranting")
-            .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id")
+            .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
             .eq("id", contextRantingId)
             .maybeSingle();
           const { data: usr } = await admin
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
       if (isSelfRanting) {
         const { data: one } = await admin
           .from("ranting")
-          .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id")
+          .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
           .eq("id", contextRantingId)
           .maybeSingle();
         if (one) data = [...data, one];
