@@ -45,44 +45,53 @@ async function tryFetch(url: string): Promise<Response | null> {
 }
 
 /**
- * Ambil data wilayah: (1) file statis, (2) paket idn-area-data (tanpa jaringan), (3) fetch API.
+ * Ambil data wilayah: (1) paket idn-area-data, (2) file statis, (3) fetch API.
+ * Paket dulu agar di Vercel/serverless tetap dapat data tanpa full.json atau jaringan.
  */
 export async function fetchWilayahJson(filePath: string): Promise<unknown> {
-  try {
-    const { getStaticWilayahJson } = await import("@/app/lib/wilayah-static");
-    const staticData = getStaticWilayahJson(filePath);
-    // Hanya pakai static jika ada data (array tidak kosong). Kalau [] dari full.json, fallback ke package/network.
-    if (staticData != null && (!Array.isArray(staticData) || staticData.length > 0))
-      return staticData;
-  } catch {
-    // wilayah-static pakai fs; skip jika tidak di Node (atau error)
-  }
-
-  // Fallback dari paket (data di node_modules, tidak pakai jaringan — cocok untuk WiFi kantor)
+  // 1. Paket idn-area-data (node_modules) — andal di Vercel, tidak butuh full.json/jaringan
   try {
     if (filePath === "provinces.json") {
       const { getProvincesFromPackage } = await import("@/app/lib/wilayah-from-package");
-      return getProvincesFromPackage();
-    }
-    const regMatch = filePath.match(/^regencies\/(.+)\.json$/);
-    if (regMatch) {
-      const { getRegenciesFromPackage } = await import("@/app/lib/wilayah-from-package");
-      return getRegenciesFromPackage(regMatch[1]);
-    }
-    const distMatch = filePath.match(/^districts\/(.+)\.json$/);
-    if (distMatch) {
-      const { getDistrictsFromPackage } = await import("@/app/lib/wilayah-from-package");
-      return getDistrictsFromPackage(distMatch[1]);
-    }
-    const villMatch = filePath.match(/^villages\/(.+)\.json$/);
-    if (villMatch) {
-      const { getVillagesFromPackage } = await import("@/app/lib/wilayah-from-package");
-      return getVillagesFromPackage(villMatch[1]);
+      const data = await getProvincesFromPackage();
+      if (Array.isArray(data) && data.length > 0) return data;
+    } else {
+      const regMatch = filePath.match(/^regencies\/(.+)\.json$/);
+      if (regMatch) {
+        const { getRegenciesFromPackage } = await import("@/app/lib/wilayah-from-package");
+        const data = await getRegenciesFromPackage(regMatch[1]);
+        if (Array.isArray(data) && data.length > 0) return data;
+      } else {
+        const distMatch = filePath.match(/^districts\/(.+)\.json$/);
+        if (distMatch) {
+          const { getDistrictsFromPackage } = await import("@/app/lib/wilayah-from-package");
+          const data = await getDistrictsFromPackage(distMatch[1]);
+          if (Array.isArray(data) && data.length > 0) return data;
+        } else {
+          const villMatch = filePath.match(/^villages\/(.+)\.json$/);
+          if (villMatch) {
+            const { getVillagesFromPackage } = await import("@/app/lib/wilayah-from-package");
+            const data = await getVillagesFromPackage(villMatch[1]);
+            if (Array.isArray(data) && data.length > 0) return data;
+          }
+        }
+      }
     }
   } catch (e) {
-    console.warn("Wilayah from package failed, trying network:", e);
+    console.warn("Wilayah from package failed:", filePath, e);
   }
 
+  // 2. File statis full.json (jika ada di deploy)
+  try {
+    const { getStaticWilayahJson } = await import("@/app/lib/wilayah-static");
+    const staticData = getStaticWilayahJson(filePath);
+    if (staticData != null && (!Array.isArray(staticData) || staticData.length > 0))
+      return staticData;
+  } catch {
+    // skip
+  }
+
+  // 3. Fetch dari API eksternal
   for (const base of WILAYAH_BASE_URLS) {
     const url = `${base}/${filePath}`;
     const res = await tryFetch(url);
