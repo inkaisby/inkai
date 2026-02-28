@@ -9,7 +9,13 @@ import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 const ID_USERNAME = "login-username";
 const ID_PASSWORD = "login-password";
 
-export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
+export default function LoginModal({
+  onSuccess,
+  onClose,
+}: {
+  onSuccess?: () => void;
+  onClose?: () => void;
+}) {
   const loginIdRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -133,6 +139,16 @@ export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
     <div className="inkai-overlay">
       <div className="inkai-card">
         <header className="inkai-header">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inkai-back"
+              aria-label="Kembali"
+            >
+              ← Kembali
+            </button>
+          )}
           <Image
             src="/logo/inkai-logo.png"
             alt="INKAI"
@@ -239,6 +255,7 @@ export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
           z-index: 50;
         }
         .inkai-card {
+          position: relative;
           width: 520px;
           max-width: calc(100vw - 32px);
           padding: 28px 32px 32px;
@@ -249,6 +266,17 @@ export default function LoginModal({ onSuccess }: { onSuccess?: () => void }) {
             0 0 0 1px rgba(0, 255, 255, 0.15) inset,
             0 0 40px rgba(0, 255, 255, 0.25);
           backdrop-filter: blur(6px);
+        }
+        .inkai-back {
+          position: absolute;
+          left: 16px;
+          top: 16px;
+          background: transparent;
+          border: none;
+          color: #9ff;
+          cursor: pointer;
+          font-size: 14px;
+          text-decoration: underline;
         }
         .inkai-header {
           display: flex;

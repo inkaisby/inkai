@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
     const usersToShow =
       allowedUserIds === null
         ? authData.users
-        : authData.users.filter((u) => allowedUserIds!.has(u.id));
+        : authData.users.filter((u: { id: string }) => allowedUserIds!.has(u.id));
 
     if (!isSuperadmin && allowedUserIds !== null && allowedUserIds.size === 0) {
       return NextResponse.json([]);

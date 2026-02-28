@@ -40,28 +40,28 @@ export async function getUserScope(
     };
   }
 
-  const provinsi_ids = [...new Set(active.map((r) => r.provinsi_id).filter(Boolean) as string[])];
-  const cabang_ids_direct = [...new Set(active.map((r) => r.cabang_id).filter(Boolean) as string[])];
-  const ranting_ids_direct = [...new Set(active.map((r) => r.ranting_id).filter(Boolean) as string[])];
+  const provinsi_ids = Array.from(new Set(active.map((r) => r.provinsi_id).filter(Boolean) as string[]));
+  const cabang_ids_direct = Array.from(new Set(active.map((r) => r.cabang_id).filter(Boolean) as string[]));
+  const ranting_ids_direct = Array.from(new Set(active.map((r) => r.ranting_id).filter(Boolean) as string[]));
 
-  let cabang_ids = [...cabang_ids_direct];
+  let cabang_ids = cabang_ids_direct.slice();
   if (provinsi_ids.length > 0) {
     const { data: cabangUnderProvinsi } = await admin
       .from("cabang")
       .select("id")
       .in("provinsi_id", provinsi_ids);
     const fromProvinsi = (cabangUnderProvinsi ?? []).map((c: { id: string }) => c.id);
-    cabang_ids = [...new Set([...cabang_ids, ...fromProvinsi])];
+    cabang_ids = Array.from(new Set(cabang_ids.concat(fromProvinsi)));
   }
 
-  let ranting_ids = [...ranting_ids_direct];
+  let ranting_ids = ranting_ids_direct.slice();
   if (cabang_ids.length > 0) {
     const { data: rantingUnderCabang } = await admin
       .from("ranting")
       .select("id")
       .in("cabang_id", cabang_ids);
     const fromCabang = (rantingUnderCabang ?? []).map((r: { id: string }) => r.id);
-    ranting_ids = [...new Set([...ranting_ids, ...fromCabang])];
+    ranting_ids = Array.from(new Set(ranting_ids.concat(fromCabang)));
   }
 
   return {

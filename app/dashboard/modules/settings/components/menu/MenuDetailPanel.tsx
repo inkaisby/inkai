@@ -55,11 +55,11 @@ export default function MenuDetailPanel({
           />
           <Row
             label="Structural Level"
-            value={data.required_structural_level ?? "-"}
+            value={String(data.required_structural_level ?? "-")}
           />
           <Row
             label="Functional Role"
-            value={data.required_functional_role ?? "-"}
+            value={String(data.required_functional_role ?? "-")}
           />
         </div>
       </div>
