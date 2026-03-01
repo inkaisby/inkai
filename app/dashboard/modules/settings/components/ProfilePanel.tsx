@@ -193,7 +193,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
   }, []);
 
   useEffect(() => {
-    if (form?.province_id == null || form.province_id === "") {
+    if (form?.province_id == null) {
       setRegencyOptions([]);
       setRegenciesLoading(false);
       return;
@@ -206,7 +206,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
   }, [form?.province_id]);
 
   useEffect(() => {
-    if (form?.regency_id == null || form.regency_id === "") {
+    if (form?.regency_id == null) {
       setDistrictOptions([]);
       setDistrictsLoading(false);
       return;
@@ -228,7 +228,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
   }, [form?.regency_id]);
 
   useEffect(() => {
-    if (form?.district_id == null || form.district_id === "") {
+    if (form?.district_id == null) {
       setVillageOptions([]);
       setVillagesLoading(false);
       return;
