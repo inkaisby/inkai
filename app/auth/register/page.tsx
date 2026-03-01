@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 export default function RegisterForm() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   const [form, setForm] = useState({
     email: "",
@@ -20,6 +21,11 @@ export default function RegisterForm() {
 
   const [errorMsg, setErrorMsg] = useState("");
   const [errorKey, setErrorKey] = useState(0);
+
+  // Render form hanya setelah mount agar tidak hydration mismatch (ekstensi browser bisa ubah DOM sebelum React)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // helper error (blink)
   const triggerError = (msg: string) => {
@@ -111,6 +117,12 @@ export default function RegisterForm() {
             </h1>
           </div>
 
+          {!mounted ? (
+            <div className="space-y-4 py-4 text-center text-white/60 text-sm">
+              Memuat form...
+            </div>
+          ) : (
+            <>
           {/* ERROR */}
           {errorMsg && (
             <>
@@ -221,6 +233,8 @@ export default function RegisterForm() {
               </button>
             </div>
           </form>
+            </>
+          )}
         </div>
       </div>
     </>

@@ -233,15 +233,19 @@ export default function LoginModal({
           <button type="submit" className="inkai-button" disabled={loading}>
             {loading ? "Memproses..." : "Login"}
           </button>
-          <div className="inkai-register">
-            Belum punya akun?
-            <Link href="/auth/register">Buat akun</Link>
-          </div>
+          <p className="inkai-register">
+            <span className="inkai-register-text">Belum punya akun? </span>
+            <Link href="/auth/register" className="inkai-register-cta">
+              Buat akun
+            </Link>
+          </p>
 
-          <div className="inkai-admin">
-            Hubungi admin:
-            <a href="tel:081331053100"> 081331053100</a>
-          </div>
+          <p className="inkai-admin">
+            <span className="inkai-admin-text">Hubungi admin: </span>
+            <a href="tel:081331053100" className="inkai-admin-cta">
+              081331053100
+            </a>
+          </p>
         </form>
       </div>
 
@@ -379,27 +383,62 @@ export default function LoginModal({
           cursor: not-allowed;
         }
         .inkai-admin {
-          margin-top: 10px;
+          margin-top: 12px;
+          margin-bottom: 0;
+          text-align: center;
           font-size: 13px;
+        }
+        .inkai-admin-text {
           color: #9aa;
         }
-        .inkai-admin a {
-          color: #00ffff;
-          text-decoration: none;
+        .inkai-admin-cta {
+          display: inline-block;
           margin-left: 4px;
+          padding: 6px 14px;
+          border-radius: 8px;
+          background: rgba(0, 255, 255, 0.1);
+          border: 1px solid rgba(0, 255, 255, 0.4);
+          color: #00ffff !important;
+          font-weight: 600;
+          font-size: 13px;
+          text-decoration: none;
+          box-shadow: 0 0 8px rgba(0, 255, 255, 0.15);
+          transition: background 0.2s, box-shadow 0.2s;
+          vertical-align: middle;
+        }
+        .inkai-admin-cta:hover {
+          background: rgba(0, 255, 255, 0.18);
+          color: #e0ffff !important;
+          box-shadow: 0 0 12px rgba(0, 255, 255, 0.25);
         }
         .inkai-register {
-          margin-top: 10px;
-          font-size: 14px;
-          color: #9aa;
+          margin-top: 14px;
+          margin-bottom: 0;
           text-align: center;
+          font-size: 14px;
         }
-
-        .inkai-register a {
+        .inkai-register-text {
+          color: #9aa;
+        }
+        .inkai-register-cta {
+          display: inline-block;
           margin-left: 6px;
-          color: #00ffff;
-          font-weight: 600;
-          text-decoration: underline;
+          padding: 8px 18px;
+          border-radius: 8px;
+          background: rgba(0, 255, 255, 0.12);
+          border: 1px solid #00ffff;
+          color: #00ffff !important;
+          font-weight: 700;
+          font-size: 14px;
+          text-decoration: none;
+          box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+          transition: background 0.2s, box-shadow 0.2s;
+          vertical-align: middle;
+        }
+        .inkai-register-cta:hover {
+          background: rgba(0, 255, 255, 0.22);
+          color: #e0ffff !important;
+          box-shadow: 0 0 16px rgba(0, 255, 255, 0.35);
         }
       `}</style>
     </div>
