@@ -61,10 +61,12 @@ export async function GET(req: NextRequest) {
           avatar_path,
           email_allowed,
           profile_completed,
+          structural_level,
+          structural_role,
           created_at,
-          updated_at,
-          villages ( name )
+          updated_at
         `)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
     if (profileError) {
@@ -76,6 +78,55 @@ export async function GET(req: NextRequest) {
     }
 
     const profileList = (profiles ?? []) as ProfileRow[];
+
+    // User yang sudah di-delete: dari profiles.deleted_at (satu sumber kebenaran)
+    const { data: deletedProfiles } = await supabaseAdmin
+      .from("profiles")
+      .select("user_id")
+      .not("deleted_at", "is", null);
+    let extraDeleted: string[] = [];
+    const { data: deletedAuthRows, error: _delErr } = await supabaseAdmin
+      .from("deleted_auth_users")
+      .select("user_id");
+    if (!_delErr && deletedAuthRows?.length) {
+      extraDeleted = deletedAuthRows.map((r: { user_id?: string }) => r?.user_id).filter(Boolean) as string[];
+    }
+    const deletedUserIds = new Set([
+      ...(deletedProfiles ?? []).map((r: { user_id?: string }) => r?.user_id).filter(Boolean),
+      ...extraDeleted,
+    ]);
+
+    // ===============================
+    // Resolve regency_id → nama (Kabupaten/Kota) untuk kolom Cabang
+    // ===============================
+    const regencyNameById = new Map<string, string>();
+    const provinceIds = Array.from(
+      new Set(
+        profileList
+          .filter((p) => p.province_id != null && p.regency_id != null)
+          .map((p) => String(p.province_id).replace(/\./g, ""))
+      )
+    );
+    try {
+      const { getRegenciesFromPackage } = await import(
+        "@/app/lib/wilayah-from-package"
+      );
+      for (const pid of provinceIds) {
+        const list = await getRegenciesFromPackage(pid);
+        for (const r of list) {
+          const id = String(r.id).replace(/\./g, "");
+          if (id) regencyNameById.set(id, r.name ?? id);
+        }
+      }
+    } catch (e) {
+      console.warn("[API /users] resolve regency names:", e);
+    }
+
+    const getCabangLabel = (regencyId: unknown): string => {
+      if (regencyId == null) return "-";
+      const id = String(regencyId).replace(/\./g, "").trim();
+      return regencyNameById.get(id) ?? "-";
+    };
 
     // ===============================
     // SCOPE + KONTEKS: filter user yang boleh dilihat
@@ -115,10 +166,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const usersToShow =
+    const authUsers = authData?.users ?? [];
+    let usersToShow =
       allowedUserIds === null
-        ? authData.users
-        : authData.users.filter((u: { id: string }) => allowedUserIds!.has(u.id));
+        ? authUsers
+        : authUsers.filter((u: { id: string }) => allowedUserIds!.has(u.id));
+
+    // Sembunyikan user yang profilnya sudah di-delete (soft delete)
+    usersToShow = usersToShow.filter(
+      (u: { id: string }) => !deletedUserIds.has(u.id)
+    );
 
     if (!isSuperadmin && allowedUserIds !== null && allowedUserIds.size === 0) {
       return NextResponse.json([]);
@@ -147,10 +204,7 @@ export async function GET(req: NextRequest) {
           p?.nama && String(p.nama).trim() !== ""
             ? p.nama
             : "Belum Lengkap",
-        cabang:
-          (Array.isArray(p?.villages)
-            ? (p.villages as { name?: string }[])[0]?.name
-            : (p?.villages as { name?: string } | null)?.name) ?? "-",
+        cabang: getCabangLabel(p?.regency_id),
 
         // PROFILE
         nik: p?.nik ?? null,
@@ -160,6 +214,7 @@ export async function GET(req: NextRequest) {
         nama_ayah: p?.nama_ayah ?? null,
         nama_ibu: p?.nama_ibu ?? null,
         pekerjaan_ortu: p?.pekerjaan_ortu ?? null,
+        alamat: p?.alamat ?? null,
         province_id: p?.province_id ?? null,
         regency_id: p?.regency_id ?? null,
         district_id: p?.district_id ?? null,

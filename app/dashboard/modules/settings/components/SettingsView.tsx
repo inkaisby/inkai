@@ -39,6 +39,8 @@ export default function SettingsView({
   loading,
   isSuperAdmin,
   sessionEmail,
+  selectedEmail,
+  onSelectEmail,
   permissions,
   setPermissions,
   onSavePermission,
@@ -50,6 +52,11 @@ export default function SettingsView({
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [permissionOpen, setPermissionOpen] = useState(false);
+
+  // Sinkronkan email terpilih ke parent agar Simpan Akses (permission) pakai user yang benar
+  useEffect(() => {
+    onSelectEmail?.(selectedUser?.email ?? null);
+  }, [selectedUser?.email, onSelectEmail]);
 
   // LAYOUT
   const [leftWidth, setLeftWidth] = useState(420);
@@ -169,10 +176,12 @@ export default function SettingsView({
                 className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-white/5"
               >
                 <span>
-                  Permission
+                  Akses Menu
+                  <span className="block text-xs text-white/40 font-normal">
+                    Akses per menu (baca, tambah, ubah, hapus)
+                  </span>
                   {selectedUser && (
-                    <span className="text-white/40">
-                      {" "}
+                    <span className="text-white/40 text-xs mt-0.5 block">
                       — {selectedUser.email}
                     </span>
                   )}
@@ -248,7 +257,7 @@ export default function SettingsView({
 
                 <div className="flex-1 min-h-0 overflow-y-auto pt-4 pr-2">
                   {activeTab === "profile" && (
-                    <ProfilePanel user={selectedUser} />
+                    <ProfilePanel user={selectedUser} isSuperAdmin={isSuperAdmin} />
                   )}
                   {activeTab === "password" && (
                     <ChangePasswordPanel

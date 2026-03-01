@@ -87,7 +87,7 @@ export default function AvatarMenu() {
         const fmt = (r: string) =>
           roleMap[r] ?? r.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
-        if (appRole === "SUPERADMIN") {
+        if ((appRole ?? "").toUpperCase() === "SUPERADMIN") {
           setRoleLabel("Superadmin");
         } else if (topStructural?.role_name) {
           setRoleLabel(fmt(topStructural.role_name));

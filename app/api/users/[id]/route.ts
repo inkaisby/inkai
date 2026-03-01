@@ -101,7 +101,8 @@ export async function PUT(
 
 /* ======================
    DELETE /api/users/:id
-   (SOFT DELETE)
+   (SOFT DELETE via profiles.deleted_at)
+   :id = auth user_id (UUID)
 ====================== */
 export async function DELETE(
   _req: NextRequest,
@@ -120,19 +121,64 @@ export async function DELETE(
     return badRequest("User ID tidak valid");
   }
 
-  const { data, error } = await supabase
-    .from("users")
-    .update({
-      status: "INACTIVE",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
-    .select()
-    .single();
+  const now = new Date().toISOString();
+  const updatePayload = {
+    deleted_at: now,
+    updated_at: now,
+  };
 
-  if (error || !data) {
-    return serverError(error?.message ?? "User tidak ditemukan");
+  // 1) Update by user_id (auth id) — paling pasti karena client kirim auth user_id
+  const { data: updatedByUserId, error: errByUser } = await supabase
+    .from("profiles")
+    .update(updatePayload)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+
+  if (!errByUser && updatedByUserId) {
+    return NextResponse.json(updatedByUserId, { status: 200 });
+  }
+  if (errByUser) {
+    return serverError(errByUser.message);
   }
 
-  return NextResponse.json(data, { status: 200 });
+  // 2) Baris tidak ketemu by user_id: coba by profile id (skema lama id = auth id)
+  const { data: profile, error: findError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (findError) {
+    return serverError(findError.message);
+  }
+  if (profile) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(updatePayload)
+      .eq("id", profile.id)
+      .select()
+      .single();
+    if (error) return serverError(error.message);
+    return NextResponse.json(data, { status: 200 });
+  }
+
+  // 3) Tidak ada baris profile (auth-only): buat "tombstone" di profiles agar GET menyembunyikan
+  // profiles.id punya FK ke auth.users(id), jadi id harus = userId (auth id)
+  const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+  const email = authUser?.user?.email ?? "";
+  const { error: insertErr } = await supabase.from("profiles").insert({
+    id: userId,
+    user_id: userId,
+    email: email || "(deleted)",
+    deleted_at: now,
+    updated_at: now,
+  });
+
+  if (insertErr) {
+    return serverError(insertErr.message);
+  }
+
+  return NextResponse.json({ message: "Akun dihapus dari daftar.", ok: true }, { status: 200 });
 }

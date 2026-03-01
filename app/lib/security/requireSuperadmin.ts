@@ -23,7 +23,7 @@ export async function requireSuperadmin(user: User | null) {
     .maybeSingle();
 
   if (error) return { ok: false as const, status: 403 as const };
-  if (profile?.app_role === "SUPERADMIN") return { ok: true as const };
+  if ((profile?.app_role ?? "").toUpperCase() === "SUPERADMIN") return { ok: true as const };
   return { ok: false as const, status: 403 as const };
 }
 

@@ -56,7 +56,7 @@ export default function RegisterForm() {
       });
 
       if (error) {
-        console.error("SIGNUP ERROR:", error); // ⬅️ TAMBAHAN INI
+        console.error("SIGNUP ERROR:", error);
 
         const msg = error.message.toLowerCase();
 
@@ -70,12 +70,18 @@ export default function RegisterForm() {
           return;
         }
 
-        triggerError(error.message); // tampilkan error asli
+        if (msg.includes("rate limit") || msg.includes("rate_limit")) {
+          triggerError(
+            "Batas pengiriman email sementara tercapai. Coba lagi dalam 1 jam, atau cek inbox/spam untuk link konfirmasi yang mungkin sudah terkirim.",
+          );
+          return;
+        }
+
+        triggerError(error.message);
         return;
       }
 
       setSuccessModal(true);
-      setTimeout(() => router.push("/"), 1800);
     } catch (err) {
       console.error("UNEXPECTED ERROR:", err); // ⬅️ tambahan opsional
       triggerError("Terjadi kesalahan sistem.");
@@ -87,9 +93,22 @@ export default function RegisterForm() {
       {/* SUCCESS MODAL */}
       {successModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#1a1a1d] p-6 rounded-xl border border-white/10 text-center">
+          <div className="bg-[#1a1a1d] p-6 rounded-xl border border-white/10 text-center max-w-md mx-4">
             <div className="text-[#00c3ff] text-4xl mb-3">✓</div>
-            <p className="text-lg">Pendaftaran berhasil!</p>
+            <p className="text-lg font-semibold mb-2">Pendaftaran berhasil!</p>
+            <p className="text-sm text-white/90 mb-2">
+              Cek email yang terdaftar: <strong className="text-cyan-300 break-all">{form.email}</strong>
+            </p>
+            <p className="text-sm text-white/80">
+              Klik link <strong>Konfirmasi email</strong> di email tersebut untuk mengaktifkan akun. Cek juga folder spam jika belum muncul.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="mt-4 px-5 py-2.5 bg-cyan-400 text-black font-semibold rounded-lg hover:bg-cyan-300 transition-colors"
+            >
+              Ke beranda
+            </button>
           </div>
         </div>
       )}

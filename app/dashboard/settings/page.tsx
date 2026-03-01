@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
-import SettingsView from "../modules/settings/components/SettingsView";
+import SettingsView from "../modules/settings/SettingsModule";
 
 const SUPERADMIN_EMAIL = "karateinkaisby@gmail.com";
 
 export default function SettingsPage() {
   /* ===============================
-   * SESSION
+   * SESSION + APP_ROLE
    * =============================== */
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [appRole, setAppRole] = useState<string | null>(null);
 
   /* ===============================
    * UI STATE
@@ -31,6 +32,12 @@ export default function SettingsPage() {
     const loadSession = async () => {
       const { data } = await supabase.auth.getSession();
       setSessionEmail(data.session?.user?.email ?? null);
+
+      const res = await fetch("/api/me", { credentials: "include" });
+      if (res.ok) {
+        const json = (await res.json()) as { profile?: { app_role?: string } };
+        setAppRole(json?.profile?.app_role ?? null);
+      }
       setLoading(false);
     };
 
@@ -55,7 +62,9 @@ export default function SettingsPage() {
     loadPermissions();
   }, [selectedEmail]);
 
-  const isSuperAdmin = sessionEmail === SUPERADMIN_EMAIL;
+  const isSuperAdmin =
+    sessionEmail === SUPERADMIN_EMAIL ||
+    (appRole ?? "").toUpperCase() === "SUPERADMIN";
 
   /* ===============================
    * SAVE HANDLER

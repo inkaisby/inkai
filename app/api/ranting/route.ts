@@ -26,6 +26,15 @@ export async function GET(req: NextRequest) {
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
 
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("app_role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const isSuperAdmin =
+    (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
+  const canSeeAllRanting = scope.is_pp || isSuperAdmin;
+
   let query = admin
     .from("ranting")
     .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
@@ -36,7 +45,7 @@ export async function GET(req: NextRequest) {
   // Untuk profil self-service: jika filter wilayah, skip scope agar user bisa pilih ranting di area alamat.
   const skipScopeForWilayah = hasWilayahFilter;
 
-  if (!scope.is_pp && !skipScopeForWilayah) {
+  if (!canSeeAllRanting && !skipScopeForWilayah) {
     if (scope.ranting_ids.length === 0) {
       if (!hasWilayahFilter) {
         // Tanpa filter wilayah dan tanpa scope: kembalikan hanya context_ranting milik user (untuk tampilan nama)
@@ -69,7 +78,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (contextRantingId && (scope.is_pp || scope.ranting_ids.includes(contextRantingId))) {
+  // Jangan batasi ke satu ranting untuk PP/Superadmin agar dropdown bisa tampil semua ranting
+  if (
+    contextRantingId &&
+    !canSeeAllRanting &&
+    scope.ranting_ids.includes(contextRantingId)
+  ) {
     query = query.eq("id", contextRantingId);
   }
 
@@ -87,9 +101,23 @@ export async function GET(req: NextRequest) {
     );
   }
   if (districtId) {
-    query = query.or(
-      `district_id.eq.${districtId},district_id.is.null`
-    );
+    const districtNum = parseInt(districtId, 10);
+    const district6 =
+      districtId.length > 6 ? parseInt(districtId.slice(0, 6), 10) : null;
+    if (
+      !Number.isNaN(districtNum) &&
+      district6 != null &&
+      !Number.isNaN(district6) &&
+      district6 !== districtNum
+    ) {
+      query = query.or(
+        `district_id.eq.${districtNum},district_id.eq.${district6},district_id.is.null`
+      );
+    } else if (!Number.isNaN(districtNum)) {
+      query = query.or(
+        `district_id.eq.${districtNum},district_id.is.null`
+      );
+    }
   }
 
   let { data, error } = await query;

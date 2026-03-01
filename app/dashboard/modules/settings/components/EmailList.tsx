@@ -14,6 +14,7 @@ export interface UserRow {
   user_id: string;
   email: string;
   nama: string | null;
+  cabang: string | null;
   nik: string | null;
   telepon: string | null;
   jenis_kelamin: string | null;
@@ -21,6 +22,7 @@ export interface UserRow {
   nama_ayah: string | null;
   nama_ibu: string | null;
   pekerjaan_ortu: string | null;
+  alamat: string | null;
   app_role: string | null;
   structural_level: number | null;
   structural_role: string | null;
@@ -39,20 +41,11 @@ export interface UserRow {
 interface EmailListProps {
   sessionEmail: string | null;
   selectedUser: UserRow | null;
-  onSelectUser: (user: UserRow) => void;
+  onSelectUser: (user: UserRow | null) => void;
 }
 
 const PAGE_SIZE = 6;
 const ROOT_EMAIL = "karateinkaisby@gmail.com";
-
-const resolveCabang = (
-  provinceId?: number | null,
-  regencyId?: number | null,
-) => {
-  if (provinceId === 35 && regencyId === 3578) return "Jawa Timur – Surabaya";
-  if (provinceId === 35) return "Jawa Timur";
-  return "-";
-};
 
 function apiRowToUserRow(r: Record<string, unknown>): UserRow {
   return {
@@ -60,6 +53,7 @@ function apiRowToUserRow(r: Record<string, unknown>): UserRow {
     user_id: String(r.user_id ?? r.id ?? ""),
     email: String(r.email ?? ""),
     nama: (r.nama as string) ?? null,
+    cabang: (r.cabang as string) ?? null,
     nik: (r.nik as string) ?? null,
     telepon: (r.telepon as string) ?? null,
     jenis_kelamin: (r.jenis_kelamin as string) ?? null,
@@ -67,6 +61,7 @@ function apiRowToUserRow(r: Record<string, unknown>): UserRow {
     nama_ayah: (r.nama_ayah as string) ?? null,
     nama_ibu: (r.nama_ibu as string) ?? null,
     pekerjaan_ortu: (r.pekerjaan_ortu as string) ?? null,
+    alamat: (r.alamat as string) ?? null,
     app_role: (r.app_role as string) ?? null,
     structural_level: (r.structural_level as number) ?? null,
     structural_role: (r.structural_role as string) ?? null,
@@ -93,6 +88,15 @@ export default function EmailList({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  /** Status terakhir API /api/users untuk cek DB saat daftar kosong */
+  const [apiStatus, setApiStatus] = useState<{
+    status: number;
+    count: number;
+    ok: boolean;
+    message?: string;
+  } | null>(null);
 
   const contextRantingId =
     selectedContext &&
@@ -113,14 +117,24 @@ export default function EmailList({
           ? `/api/users?context_ranting_id=${encodeURIComponent(contextRantingId)}`
           : "/api/users";
         const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) {
-          if (mounted) setUsers([]);
-          return;
+        const data = (await res.json()) as Record<string, unknown>[] | { message?: string };
+        const list = Array.isArray(data) ? data : [];
+        const errMsg = !Array.isArray(data) && data?.message ? String(data.message) : undefined;
+        if (mounted) {
+          setApiStatus({
+            status: res.status,
+            count: list.length,
+            ok: res.ok,
+            ...(errMsg && { message: errMsg }),
+          });
+          setUsers(list.map((r) => apiRowToUserRow(r as Record<string, unknown>)));
         }
-        const data = (await res.json()) as Record<string, unknown>[];
-        if (mounted) setUsers((data ?? []).map(apiRowToUserRow));
+        if (!res.ok) return;
       } catch {
-        if (mounted) setUsers([]);
+        if (mounted) {
+          setApiStatus({ status: 0, count: 0, ok: false });
+          setUsers([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -148,7 +162,7 @@ export default function EmailList({
       (u) =>
         u.email.toLowerCase().includes(q) ||
         (u.nama ?? "").toLowerCase().includes(q) ||
-        resolveCabang(u.province_id, u.regency_id).toLowerCase().includes(q),
+        (u.cabang ?? "").toLowerCase().includes(q),
     );
   }, [users, search]);
 
@@ -238,7 +252,7 @@ export default function EmailList({
                     </td>
 
                     <td className="p-3">
-                      {resolveCabang(u.province_id, u.regency_id)}
+                      {u.cabang ?? "-"}
                     </td>
 
                     <td className="p-3 text-center">
@@ -295,26 +309,21 @@ export default function EmailList({
 
                     <td className="p-3 text-center">
                       <button
-                        disabled={active}
-                        onClick={async (e) => {
+                        disabled={
+                          u.email === ROOT_EMAIL || u.email === sessionEmail
+                        }
+                        onClick={(e) => {
                           e.stopPropagation();
-
-                          await supabase
-                            .from("profiles")
-                            .update({ profile_completed: false })
-                            .eq("user_id", u.user_id);
-
-                          setUsers((prev) =>
-                            prev.map((x) =>
-                              x.user_id === u.user_id
-                                ? { ...x, profile_completed: false }
-                                : x,
-                            ),
-                          );
+                          if (
+                            u.email === ROOT_EMAIL ||
+                            u.email === sessionEmail
+                          )
+                            return;
+                          setUserToDelete(u);
                         }}
-                        className="px-3 py-1 text-xs rounded bg-blue-600/70 disabled:opacity-50"
+                        className="px-3 py-1 text-xs rounded bg-red-600/70 hover:bg-red-500/70 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {active ? "Aktif" : "Atur"}
+                        Hapus
                       </button>
                     </td>
                   </tr>
@@ -325,7 +334,20 @@ export default function EmailList({
         </div>
 
         {filteredUsers.length === 0 && (
-          <div className="p-4 text-center text-white/50">Tidak ada data</div>
+          <div className="p-4 text-center text-white/50 space-y-2">
+            <p>Tidak ada data</p>
+            {apiStatus && (
+              <div className="text-xs text-white/40 bg-white/5 rounded px-3 py-2 text-left font-mono">
+                <p>Cek DB / API:</p>
+                <p>Status: {apiStatus.status} {apiStatus.status === 403 ? "(Forbidden — pastikan profiles.app_role = SUPERADMIN)" : apiStatus.status === 401 ? "(Unauthorized — login ulang)" : apiStatus.status === 500 ? "(Server error)" : apiStatus.status === 0 ? "(Network/error)" : ""}</p>
+                {apiStatus.message && <p>Pesan: {apiStatus.message}</p>}
+                <p>Jumlah dari API: {apiStatus.count} pengguna</p>
+              </div>
+            )}
+            <p className="text-xs text-white/40">
+              Pastikan login sebagai Superadmin. Jika daftar kosong, bisa karena belum ada pengguna terdaftar atau API /api/users tidak mengembalikan data.
+            </p>
+          </div>
         )}
       </div>
 
@@ -333,6 +355,60 @@ export default function EmailList({
       <div className="text-xs text-white/40 text-right">
         Halaman {page} / {totalPages}
       </div>
+
+      {/* Modal konfirmasi hapus */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-[200000] bg-black/60 flex items-center justify-center">
+          <div className="w-full max-w-sm rounded-lg p-5 bg-zinc-900 border border-zinc-600 shadow-xl">
+            <h3 className="text-white font-medium mb-2">Hapus pengguna</h3>
+            <p className="text-sm text-white/70 mb-4">
+              Yakin menghapus {userToDelete.email}
+              {userToDelete.nama ? ` (${userToDelete.nama})` : ""}?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={deleting}
+                className="text-white/70 hover:text-white disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!userToDelete) return;
+                  setDeleting(true);
+                  try {
+                    const res = await fetch(
+                      `/api/users/${encodeURIComponent(userToDelete.user_id)}`,
+                      { method: "DELETE", credentials: "include" }
+                    );
+                    if (res.ok) {
+                      setUsers((prev) =>
+                        prev.filter((x) => x.user_id !== userToDelete.user_id)
+                      );
+                      if (selectedUser?.user_id === userToDelete.user_id) {
+                        onSelectUser(null);
+                      }
+                      setUserToDelete(null);
+                    } else {
+                      const data = await res.json().catch(() => ({}));
+                      alert(data?.message ?? "Gagal menghapus pengguna.");
+                    }
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-500 text-white px-4 py-1 rounded disabled:opacity-50"
+              >
+                {deleting ? "Menghapus…" : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

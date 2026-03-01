@@ -39,7 +39,7 @@ export function useMenuCRUD() {
         null;
 
       setIsSuperadmin(
-        (rootEmail && email && email === rootEmail) || appRole === "SUPERADMIN",
+        (rootEmail && email && email === rootEmail) || (appRole ?? "").toUpperCase() === "SUPERADMIN",
       );
     } catch (e: any) {
       setError(e.message);

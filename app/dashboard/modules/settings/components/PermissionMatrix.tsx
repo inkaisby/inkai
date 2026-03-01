@@ -96,6 +96,7 @@ export default function PermissionMatrix({
    * =============================== */
   return (
     <div className="flex flex-col h-full min-h-0">
+      <p className="text-xs text-white/50 shrink-0 pb-1">Akses per menu: centang Baca / Tambah / Ubah / Hapus</p>
       {/* ===============================
        * TOOLBAR (FIXED)
        * =============================== */}

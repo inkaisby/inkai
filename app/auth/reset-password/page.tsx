@@ -1,13 +1,18 @@
 "use client";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import Image from "next/image";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 export default function ResetPasswordPage() {
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -19,7 +24,12 @@ export default function ResetPasswordPage() {
     });
 
     if (error) {
-      setErrMsg(error.message);
+      const msg = (error.message || "").toLowerCase();
+      setErrMsg(
+        msg.includes("rate limit") || msg.includes("rate_limit")
+          ? "Batas pengiriman email tercapai. Coba lagi dalam 1 jam, atau cek inbox/spam untuk link reset yang mungkin sudah terkirim."
+          : error.message,
+      );
       setLoading(false);
       return;
     }
@@ -44,7 +54,11 @@ export default function ResetPasswordPage() {
           </h1>
         </div>
 
-        {!sent ? (
+        {!mounted ? (
+          <div className="text-sm text-white/70 py-6 text-center">
+            Memuat form...
+          </div>
+        ) : !sent ? (
           <form onSubmit={handleSubmit}>
             <p className="text-sm text-white/80 mb-4">
               Masukkan email Anda untuk menerima link reset password.

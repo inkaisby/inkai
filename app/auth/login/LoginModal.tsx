@@ -25,6 +25,9 @@ export default function LoginModal({
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   // ===== RESTORE EMAIL + AUTO FOCUS =====
   useEffect(() => {
@@ -76,6 +79,16 @@ export default function LoginModal({
       });
 
       if (error || !data.session) {
+        const isEmailNotConfirmed =
+          error?.message?.toLowerCase().includes("email not confirmed") ||
+          error?.message?.toLowerCase().includes("email_not_confirmed");
+        if (isEmailNotConfirmed) {
+          setErrorMsg("Email belum dikonfirmasi. Cek inbox atau kirim ulang link aktivasi di bawah.");
+          setEmailNotConfirmed(email);
+          setResendSuccess(false);
+          setLoading(false);
+          return;
+        }
         throw new Error("INVALID_CREDENTIALS");
       }
 
@@ -116,6 +129,7 @@ export default function LoginModal({
             ? "Email/Username dan Password wajib diisi."
             : "Email / Username atau Password salah.",
       );
+      setEmailNotConfirmed(null);
 
       // ===== LOGIN LOG (NON-BLOCKING) =====
       try {
@@ -132,7 +146,33 @@ export default function LoginModal({
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setResendSuccess(false);
     handleLogin();
+  };
+
+  const handleResendActivation = async () => {
+    if (!emailNotConfirmed || resendLoading) return;
+    setResendLoading(true);
+    setErrorMsg("");
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: emailNotConfirmed,
+      });
+      if (error) {
+        const msg = (error.message || "").toLowerCase();
+        setErrorMsg(
+          msg.includes("rate limit") || msg.includes("rate_limit")
+            ? "Batas pengiriman email tercapai. Coba lagi dalam 1 jam, atau cek inbox/spam untuk link konfirmasi."
+            : error.message || "Gagal mengirim ulang. Coba lagi nanti.",
+        );
+        return;
+      }
+      setResendSuccess(true);
+      setErrorMsg("");
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   return (
@@ -171,7 +211,11 @@ export default function LoginModal({
             type="text"
             placeholder="Email atau Username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setEmailNotConfirmed(null);
+              setResendSuccess(false);
+            }}
             autoComplete="username"
             disabled={loading}
             aria-invalid={!!errorMsg}
@@ -219,9 +263,9 @@ export default function LoginModal({
               <span>Ingat saya</span>
             </label>
 
-            <Link href="/auth/reset-password" className="inkai-forgot">
+            <a href="/auth/reset-password" className="inkai-forgot">
               Lupa password?
-            </Link>
+            </a>
           </div>
 
           {errorMsg && (
@@ -230,9 +274,26 @@ export default function LoginModal({
             </div>
           )}
 
+          {emailNotConfirmed && (
+            <div className="inkai-resend">
+              <button
+                type="button"
+                onClick={handleResendActivation}
+                disabled={resendLoading}
+                className="inkai-resend-btn"
+              >
+                {resendLoading ? "Mengirim..." : "Kirim ulang email aktivasi"}
+              </button>
+              {resendSuccess && (
+                <p className="inkai-resend-ok">Email aktivasi terkirim. Cek inbox (dan folder spam) Anda.</p>
+              )}
+            </div>
+          )}
+
           <button type="submit" className="inkai-button" disabled={loading}>
             {loading ? "Memproses..." : "Login"}
           </button>
+
           <p className="inkai-register">
             <span className="inkai-register-text">Belum punya akun? </span>
             <Link href="/auth/register" className="inkai-register-cta">
@@ -352,16 +413,26 @@ export default function LoginModal({
           justify-content: space-between;
           align-items: center;
           font-size: 14px;
+          gap: 12px;
         }
         .inkai-remember {
           display: flex;
           gap: 8px;
           align-items: center;
           color: #cfe;
+          flex-shrink: 0;
         }
         .inkai-forgot {
           color: #9ff;
           text-decoration: underline;
+          cursor: pointer;
+          position: relative;
+          z-index: 2;
+          padding: 6px 4px;
+          margin: -6px -4px;
+        }
+        .inkai-forgot:hover {
+          color: #b3ffff;
         }
         .inkai-error {
           color: #ff6b6b;
@@ -381,6 +452,34 @@ export default function LoginModal({
         .inkai-button:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+        }
+        .inkai-resend {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .inkai-resend-btn {
+          padding: 10px 16px;
+          border-radius: 10px;
+          background: rgba(0, 255, 255, 0.15);
+          border: 1px solid rgba(0, 255, 255, 0.4);
+          color: #9ff;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .inkai-resend-btn:hover:not(:disabled) {
+          background: rgba(0, 255, 255, 0.25);
+        }
+        .inkai-resend-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+        .inkai-resend-ok {
+          margin: 0;
+          font-size: 13px;
+          color: #6ee7b7;
         }
         .inkai-admin {
           margin-top: 12px;

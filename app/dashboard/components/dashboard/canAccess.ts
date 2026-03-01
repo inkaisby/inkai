@@ -40,7 +40,7 @@ export function canAccessMenu(
 
   // Superadmin / root selalu bisa akses semua menu
   if (ROOT_EMAIL && email && email === ROOT_EMAIL) return true;
-  if (user.app_role === "SUPERADMIN") return true;
+  if ((user.app_role ?? "").toUpperCase() === "SUPERADMIN") return true;
 
   // User belum disetujui (email_allowed = false): hanya boleh lihat Dashboard
   if (user.email_allowed === false) {
