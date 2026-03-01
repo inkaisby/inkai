@@ -75,7 +75,7 @@ export default function RegisterForm() {
       }
 
       setSuccessModal(true);
-      setTimeout(() => router.push("/login"), 1800);
+      setTimeout(() => router.push("/"), 1800);
     } catch (err) {
       console.error("UNEXPECTED ERROR:", err); // ⬅️ tambahan opsional
       triggerError("Terjadi kesalahan sistem.");
