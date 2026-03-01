@@ -26,6 +26,7 @@ END $$;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP TRIGGER IF EXISTS handle_new_user_trigger ON auth.users;
 
+-- Jangan RAISE agar pendaftaran auth tetap sukses; profil bisa dibuat nanti lewat /api/me fallback
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -42,8 +43,8 @@ EXCEPTION
   WHEN unique_violation THEN
     RETURN new;
   WHEN OTHERS THEN
-    RAISE WARNING 'handle_new_user: %', SQLERRM;
-    RAISE;
+    RAISE WARNING 'handle_new_user (signup tetap lanjut): %', SQLERRM;
+    RETURN new;
 END;
 $$;
 

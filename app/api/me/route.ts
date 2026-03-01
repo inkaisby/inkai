@@ -41,13 +41,30 @@ export async function GET() {
 
   const admin = createSupabaseAdminClient();
 
-  const { data: profileRow } = await admin
+  let { data: profileRow } = await admin
     .from("profiles")
     .select(
       "id, user_id, nama, email, email_allowed, app_role, nik, telepon, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path"
     )
     .eq("user_id", user.id)
     .maybeSingle();
+
+  // Fallback: jika trigger signup gagal, buat profil saat pertama kali /api/me
+  if (!profileRow) {
+    const { data: inserted } = await admin
+      .from("profiles")
+      .insert({
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        email: user.email ?? "",
+        nama: user.email ?? "",
+        app_role: "USER",
+        email_allowed: true,
+      })
+      .select("id, user_id, nama, email, email_allowed, app_role, nik, telepon, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path")
+      .single();
+    if (inserted) profileRow = inserted;
+  }
 
   const { data: structural } = await admin.rpc("get_user_structural_roles", {
     p_user_id: user.id,
