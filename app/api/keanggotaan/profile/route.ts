@@ -3,12 +3,17 @@
  * Profil anggota untuk kartu digital (termasuk avatar URL).
  * Memakai admin client agar avatar_path selalu terbaca.
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, createSupabaseSessionClient } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
+
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rateLimitRes = checkApiRateLimit(req, "keanggotaan-profile", { max: 60, windowMs: 60_000 });
+  if (rateLimitRes) return rateLimitRes;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -39,7 +44,7 @@ export async function GET() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (errUser) {
+  if (errUser && process.env.NODE_ENV === "development") {
     console.warn("[keanggotaan/profile] admin by user_id:", errUser.message);
   }
   if (!errUser && byUserId) {
@@ -53,7 +58,7 @@ export async function GET() {
       .eq("id", user.id)
       .maybeSingle();
 
-    if (errId) {
+    if (errId && process.env.NODE_ENV === "development") {
       console.warn("[keanggotaan/profile] admin by id:", errId.message);
     }
     if (!errId && byId) profile = byId;
@@ -109,17 +114,14 @@ export async function GET() {
   }
 
   if (!profile) {
-    // Debug: coba raw query untuk pastikan koneksi DB
-    const { data: rawCheck, error: rawErr } = await admin
-      .from("profiles")
-      .select("id, user_id, nama")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    console.warn("[keanggotaan/profile] 404 user_id:", user.id, "rawCheck:", rawCheck ? "FOUND" : "null", "rawErr:", rawErr?.message ?? "none");
-
     const body: { message: string; debug?: string } = { message: "Profile tidak ditemukan" };
     if (process.env.NODE_ENV === "development") {
-      body.debug = `user_id: ${user.id}. rawErr: ${rawErr?.message ?? "null"}. rawCheck: ${rawCheck ? JSON.stringify(rawCheck) : "null"}`;
+      const { data: rawCheck, error: rawErr } = await admin
+        .from("profiles")
+        .select("id, user_id, nama")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      body.debug = `user_id: ${user.id}. rawErr: ${rawErr?.message ?? "null"}. rawCheck: ${rawCheck ? "FOUND" : "null"}`;
     }
     return NextResponse.json(body, { status: 404 });
   }

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
 
 export async function POST(req: Request) {
+  const rateLimitRes = checkApiRateLimit(req, "auth-set-session", { max: 20, windowMs: 60_000 });
+  if (rateLimitRes) return rateLimitRes;
+
   const { access_token, refresh_token } = await req.json();
 
   if (!access_token || !refresh_token) {

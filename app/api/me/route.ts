@@ -1,7 +1,8 @@
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
+import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
 
@@ -33,7 +34,10 @@ function isProfileCompleted(row: Record<string, unknown> | null): boolean {
   return true;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rateLimitRes = checkApiRateLimit(req, "api-me", { max: 60, windowMs: 60_000 });
+  if (rateLimitRes) return rateLimitRes;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ user: null }, { status: 401 });

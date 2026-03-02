@@ -8,10 +8,14 @@
  * - Tabel `kyu`, `dan`, `pelatihan` punya RLS policy yang hanya mengizinkan akses baris
  *   dengan `profile_id` yang terkait ke profil user yang login.
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, createSupabaseSessionClient } from "@/app/lib/supabase/session";
+import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rateLimitRes = checkApiRateLimit(req, "keanggotaan-riwayat", { max: 60, windowMs: 60_000 });
+  if (rateLimitRes) return rateLimitRes;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
