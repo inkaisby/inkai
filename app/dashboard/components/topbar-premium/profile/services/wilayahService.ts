@@ -85,22 +85,26 @@ async function safeFetch<T = unknown>(
   }
 
   const fetchUrl = getWilayahUrl(url);
-  try {
+
+  async function doFetch(): Promise<T[]> {
     const res = await fetch(fetchUrl, {
-      cache: "force-cache",
+      cache: "no-store",
       signal: options?.signal,
     });
 
     if (!res.ok) {
-      console.warn("Wilayah fetch failed:", url);
+      console.warn("Wilayah fetch failed:", url, res.status);
       return [];
     }
 
     const json = await res.json();
     const arr = Array.isArray(json) ? json : [];
-    // Jangan cache hasil kosong agar下次 bisa retry (mis. setelah pakai hotspot)
     if (arr.length > 0) setCache(cacheKey, arr);
     return arr as T[];
+  }
+
+  try {
+    return await doFetch();
   } catch (err: unknown) {
     const name = err && typeof err === "object" && "name" in err ? (err as { name: string }).name : undefined;
     if (name === "AbortError") return [];

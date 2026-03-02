@@ -1,6 +1,7 @@
 import { fetchWilayahJson } from "../fetchWilayah";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const normId = (x: string | number | undefined | null): string =>
   x == null ? "" : String(x).replace(/\./g, "").trim();

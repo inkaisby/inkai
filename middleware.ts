@@ -20,18 +20,21 @@ export async function middleware(req: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            res.cookies.set(name, value, { ...options, path: "/" });
+            const opts = { ...options, path: "/" };
+            res.cookies.set(name, value, opts);
+            req.cookies.set(name, value, opts);
           });
         },
       },
     }
   );
 
+  // getUser() memvalidasi JWT dan memicu refresh token; getSession() tidak.
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session && req.nextUrl.pathname.startsWith("/dashboard")) {
+  if (!user && req.nextUrl.pathname.startsWith("/dashboard")) {
     const loginUrl = new URL("/", req.url);
     loginUrl.searchParams.set("returnTo", req.nextUrl.pathname);
     const redirectRes = NextResponse.redirect(loginUrl);

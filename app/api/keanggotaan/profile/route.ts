@@ -9,6 +9,7 @@ import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   const rateLimitRes = checkApiRateLimit(req, "keanggotaan-profile", { max: 60, windowMs: 60_000 });
@@ -16,7 +17,12 @@ export async function GET(req: NextRequest) {
 
   const user = await getSessionUser();
   if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const body: { message: string; hint?: string } = { message: "Unauthorized" };
+    if (process.env.VERCEL) {
+      body.hint =
+        "Session tidak terbaca. Pastikan: 1) Sudah login di domain ini, 2) Supabase Dashboard > Auth > URL Configuration: Site URL dan Redirect URLs mencakup domain Vercel.";
+    }
+    return NextResponse.json(body, { status: 401 });
   }
 
   const admin = createSupabaseAdminClient();
