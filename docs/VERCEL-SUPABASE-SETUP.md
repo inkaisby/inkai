@@ -53,3 +53,12 @@ Jika masih bermasalah, buka:
 - **401** + `hint` → kemungkinan masalah session/konfigurasi Supabase
 - **404** → session OK, tapi profil tidak ditemukan di DB
 - **200** → API berjalan normal
+
+## 7. Error "Deploying outputs... internal error"
+
+Jika build selesai tapi gagal di tahap "Deploying outputs":
+
+1. **Coba deploy via CLI** – `npx vercel --prod` (login dulu jika perlu)
+2. **Analisis ukuran** – Tambah env var di Vercel: `VERCEL_ANALYZE_BUILD_OUTPUT=1`, redeploy, cek log untuk file besar
+3. **Proyek baru** – Buat project Vercel baru, connect repo yang sama, deploy
+4. **Hubungi Vercel** – https://vercel.com/help dengan deployment ID (mis. `1fvY7PSpE`)
