@@ -4,8 +4,9 @@
  * Memakai admin client agar avatar_path selalu terbaca.
  */
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/app/lib/supabase/session";
+import { getSessionUser, createSupabaseSessionClient } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -25,21 +26,11 @@ export async function GET() {
     dan?: number | null;
     avatar_path?: string | null;
     ranting_id?: string | null;
-    ranting?: { id: string; nama?: string } | { id: string; nama?: string }[] | null;
   };
   let profile: ProfileRow | null = null;
 
-  const selectFields = `
-    id,
-    user_id,
-    nama,
-    nomor,
-    status,
-    dan,
-    avatar_path,
-    ranting_id,
-    ranting:ranting_id (id, nama)
-  `;
+  // Select minimal untuk hindari error jika kolom tidak ada
+  const selectFields = "id, user_id, nama, avatar_path, ranting_id";
 
   // Cari profil: user_id ATAU id = auth.id (legacy)
   const { data: byUserId, error: errUser } = await admin
@@ -48,6 +39,9 @@ export async function GET() {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (errUser) {
+    console.warn("[keanggotaan/profile] admin by user_id:", errUser.message);
+  }
   if (!errUser && byUserId) {
     profile = byUserId;
   }
@@ -59,7 +53,29 @@ export async function GET() {
       .eq("id", user.id)
       .maybeSingle();
 
+    if (errId) {
+      console.warn("[keanggotaan/profile] admin by id:", errId.message);
+    }
     if (!errId && byId) profile = byId;
+  }
+
+  // Fallback: coba pakai session client (RLS) jika admin tidak ketemu
+  if (!profile) {
+    const sessionSupabase = await createSupabaseSessionClient();
+    const { data: bySession } = await sessionSupabase
+      .from("profiles")
+      .select(selectFields)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (bySession) profile = bySession;
+    if (!profile) {
+      const { data: byIdSession } = await sessionSupabase
+        .from("profiles")
+        .select(selectFields)
+        .eq("id", user.id)
+        .maybeSingle();
+      if (byIdSession) profile = byIdSession;
+    }
   }
 
   // Fallback: buat profil minimal jika belum ada (sama seperti /api/me)
@@ -77,10 +93,12 @@ export async function GET() {
       .select(selectFields)
       .single();
 
+    if (insertErr) {
+      console.warn("[keanggotaan/profile] insert:", insertErr.code, insertErr.message);
+    }
     if (!insertErr && inserted) {
       profile = inserted;
     } else if (insertErr?.code === "23505") {
-      // Unique violation: profil mungkin baru dibuat oleh request lain, coba fetch lagi
       const { data: retry } = await admin
         .from("profiles")
         .select(selectFields)
@@ -91,25 +109,24 @@ export async function GET() {
   }
 
   if (!profile) {
-    return NextResponse.json(
-      { message: "Profile tidak ditemukan" },
-      { status: 404 },
-    );
+    // Debug: coba raw query untuk pastikan koneksi DB
+    const { data: rawCheck, error: rawErr } = await admin
+      .from("profiles")
+      .select("id, user_id, nama")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    console.warn("[keanggotaan/profile] 404 user_id:", user.id, "rawCheck:", rawCheck ? "FOUND" : "null", "rawErr:", rawErr?.message ?? "none");
+
+    const body: { message: string; debug?: string } = { message: "Profile tidak ditemukan" };
+    if (process.env.NODE_ENV === "development") {
+      body.debug = `user_id: ${user.id}. rawErr: ${rawErr?.message ?? "null"}. rawCheck: ${rawCheck ? JSON.stringify(rawCheck) : "null"}`;
+    }
+    return NextResponse.json(body, { status: 404 });
   }
 
-  // Ranting: dari join atau fallback fetch jika join kosong tapi ranting_id ada
+  // Ranting: fetch dari tabel ranting
   let rantingOne: { id: string; nama: string } | null = null;
-  const rantingRaw = profile.ranting as
-    | { id: string; nama?: string }
-    | { id: string; nama?: string }[]
-    | null;
-  if (rantingRaw) {
-    const r = Array.isArray(rantingRaw) ? rantingRaw[0] : rantingRaw;
-    if (r?.id) {
-      rantingOne = { id: String(r.id), nama: String(r.nama ?? "") };
-    }
-  }
-  if ((!rantingOne || !rantingOne.nama) && profile.ranting_id) {
+  if (profile.ranting_id) {
     const { data: r } = await admin
       .from("ranting")
       .select("id, nama")
@@ -130,9 +147,9 @@ export async function GET() {
     id: profile.id,
     user_id: profile.user_id,
     nama: profile.nama ?? "",
-    nomor: profile.nomor ?? undefined,
-    status: profile.status ?? undefined,
-    dan: profile.dan ?? null,
+    nomor: (profile as { nomor?: string | null }).nomor ?? undefined,
+    status: (profile as { status?: string | null }).status ?? undefined,
+    dan: (profile as { dan?: number | null }).dan ?? null,
     ranting: rantingOne
       ? { id: rantingOne.id, nama: rantingOne.nama }
       : { id: "-", nama: "-" },

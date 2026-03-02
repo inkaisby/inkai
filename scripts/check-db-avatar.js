@@ -30,7 +30,30 @@ async function main() {
     return;
   }
 
-  // 2. Ambil sample profil (id, user_id, nama, avatar_path)
+  // 2. Cek profil spesifik dari argumen (untuk debug 404)
+  const targetId = process.argv[2]; // node check-db-avatar.js 7ae0a3f1-af15-4d14-80c3-42282fc9a867
+  if (targetId) {
+    const { data: p, error: e } = await admin
+      .from("profiles")
+      .select("id, user_id, nama, avatar_path, ranting_id")
+      .or(`user_id.eq.${targetId},id.eq.${targetId}`)
+      .limit(1)
+      .maybeSingle();
+    if (e) {
+      console.error("Error cek profil:", e.message);
+      return;
+    }
+    if (p) {
+      console.log("Profil DITEMUKAN untuk", targetId);
+      console.log(JSON.stringify(p, null, 2));
+    } else {
+      console.log("Profil TIDAK DITEMUKAN untuk", targetId);
+      console.log("Pastikan NEXT_PUBLIC_SUPABASE_URL di .env.local sama dengan project yang punya data.");
+    }
+    return;
+  }
+
+  // 3. Ambil sample profil (id, user_id, nama, avatar_path)
   const { data: profiles, error } = await admin
     .from("profiles")
     .select("id, user_id, nama, avatar_path")
