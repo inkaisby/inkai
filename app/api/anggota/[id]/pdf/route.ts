@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
@@ -42,7 +43,11 @@ export async function GET(
     </html>
   `;
 
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: "shell",
+  });
   const page = await browser.newPage();
   await page.setContent(html);
   const pdf = await page.pdf({ format: "A6" });
