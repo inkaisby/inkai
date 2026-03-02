@@ -79,10 +79,16 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
       try {
         const res = await fetch("/api/me", { credentials: "include" });
         if (!res.ok || cancelled) return;
-        const json = await res.json();
-        const profileRole = (json?.profile?.app_role as string) ?? null;
+        let json: { profile?: { app_role?: string }; scope?: UserScope } = {};
+        try {
+          const text = await res.text();
+          if (text.trim()) json = JSON.parse(text) as typeof json;
+        } catch {
+          return;
+        }
+        const profileRole = json?.profile?.app_role ?? null;
         if (!cancelled) setAppRole(profileRole);
-        const sc: UserScope | undefined = json?.scope;
+        const sc = json?.scope;
         if (!sc || cancelled) {
           setScope(null);
           setContextOptions([{ value: "all", label: "Semua", type: "all" }]);
@@ -101,8 +107,20 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
         ]);
         if (cancelled) return;
 
-        const rantingList = rantRes.ok ? ((await rantRes.json()) as { id: string; nama: string }[]) : [];
-        const cabangList = cabRes.ok ? ((await cabRes.json()) as { id: string; nama: string }[]) : [];
+        let rantingList: { id: string; nama: string }[] = [];
+        let cabangList: { id: string; nama: string }[] = [];
+        try {
+          if (rantRes.ok) {
+            const t = await rantRes.text();
+            if (t.trim()) rantingList = JSON.parse(t) as { id: string; nama: string }[];
+          }
+          if (cabRes.ok) {
+            const t = await cabRes.text();
+            if (t.trim()) cabangList = JSON.parse(t) as { id: string; nama: string }[];
+          }
+        } catch {
+          // ignore parse error
+        }
 
         const options: ScopeContextOption[] = [
           { value: "all", label: "Semua", type: "all" },

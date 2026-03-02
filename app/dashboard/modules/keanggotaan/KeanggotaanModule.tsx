@@ -84,6 +84,7 @@ export default function KeanggotaanModule() {
     status: data?.status,
     dan: data?.dan ?? null,
     ranting: data?.ranting ?? { id: "-", nama: "-" },
+    avatarUrl: data?.avatarUrl ?? null,
     kyu: kyu ?? [],
     sertifikasi: pelatihan ?? [],
   };

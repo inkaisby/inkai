@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Sidebar dashboard: layout statis (logo + nav vertikal), item menu 100% dari DB.
+ * Sumber: GET /api/sidebar/menus → tabel menus (scope = sidebar, is_active = true).
+ * RBAC: canAccessMenu filter per user (app_role, structural_level, functional_role).
+ */
 import { useEffect, useState, useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import * as Icons from "lucide-react";
@@ -70,7 +75,13 @@ export default function Sidebar() {
     const load = async () => {
       const res = await fetch("/api/sidebar/menus", { credentials: "include" });
       if (!res.ok) return;
-      const json = await res.json();
+      let json: { user?: SessionUserAccess; menus?: unknown[] } = {};
+      try {
+        const text = await res.text();
+        if (text.trim()) json = JSON.parse(text) as { user?: SessionUserAccess; menus?: unknown[] };
+      } catch {
+        return;
+      }
 
       const builtUser: SessionUserAccess = json.user ?? null;
       setSessionUser(builtUser);
@@ -89,11 +100,12 @@ export default function Sidebar() {
   }, []);
 
   /* ===================== FILTER MENUS ===================== */
+  // Layout sidebar statis; item hanya dari API (DB). Sembunyikan hanya jika is_active === false.
   const visibleMenus = useMemo(() => {
     if (!sessionUser) return [];
 
     return menus
-      .filter((m) => m.is_active && m.scope === "sidebar")
+      .filter((m) => m.scope === "sidebar" && m.is_active !== false)
       .filter((m) => {
         const access: MenuAccess = {
           key: m.key,

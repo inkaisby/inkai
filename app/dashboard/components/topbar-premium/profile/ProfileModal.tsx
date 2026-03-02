@@ -80,7 +80,7 @@ const ProfileSchema = z.object({
 
 /* ================= COMPONENT ================= */
 export default function ProfileModal() {
-  const { isOpen, close } = useProfileModal();
+  const { isOpen, close, requireComplete } = useProfileModal();
 
   const {
     profile,
@@ -206,21 +206,17 @@ export default function ProfileModal() {
     false,
   );
 
-  /* ================= FORCE-OPEN LISTENER ================= */
-  useEffect(() => {
-    const handler = () => useProfileModal.getState().open();
-    window.addEventListener("force-open-profile-modal", handler);
-    return () => window.removeEventListener("force-open-profile-modal", handler);
-  }, []);
-
   /* ================= CLOSE REQUEST ================= */
   const handleCloseRequest = () => {
     if (validation.success) {
       close();
-    } else {
-      toast.error("Profil belum lengkap. Lengkapi untuk akses penuh.");
-      close(); // Tetap izinkan tutup agar user bisa akses sidebar/topbar
+      return;
     }
+    if (requireComplete) {
+      toast.error("Profil belum lengkap. Lengkapi data untuk melanjutkan.");
+      return;
+    }
+    close();
   };
 
   /* ================= CAN NEXT (step-specific validation) ================= */
@@ -266,17 +262,20 @@ export default function ProfileModal() {
     <AnimatePresence>
       <motion.div className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/60">
         <motion.div className="relative w-full max-w-[900px] max-h-[90vh] mx-4 sm:mx-6 rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20">
-          <button
-            onClick={handleCloseRequest}
-            className="absolute right-4 top-4 text-cyan-300"
-            aria-label="Tutup"
-          >
-            <X size={22} />
-          </button>
+          {!requireComplete && (
+            <button
+              onClick={handleCloseRequest}
+              className="absolute right-4 top-4 text-cyan-300 hover:text-white"
+              aria-label="Tutup"
+            >
+              <X size={22} />
+            </button>
+          )}
 
           <ProfileHeader
             currentStep={currentStep}
             onCloseRequest={handleCloseRequest}
+            hideClose={requireComplete}
           />
           <CompletionScore profile={profile} />
           <WizardStepper step={currentStep} maxStep={maxStep} />

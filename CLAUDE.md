@@ -15,8 +15,8 @@ Konteks proyek ini dipakai agar **Claude Code** dan **Cursor** punya pemahaman y
 - `app/auth/` – Login, register, reset-password, reset/update
 - `app/dashboard/` – Layout dashboard, Sidebar (menu RBAC), topbar-premium, modul per fitur
 - `app/dashboard/modules/` – Satu folder per fitur: keanggotaan, siswa, user, absensi, jadwal, penilaian, keuangan, event, settings
-- `app/api/` – Route handlers: auth, users, wilayah (provinces/regencies/districts/villages), ranting, keanggotaan, menu-permissions, profile, reset
-- `app/config/menuConfig.ts` – Definisi menu (key, scope, requiresRead, superadminOnly)
+- `app/api/` – Route handlers: auth, users, wilayah (provinces/regencies/districts/villages), ranting, keanggotaan, menu-permissions, profile, reset, sidebar/menus
+- Menu sidebar & akses: dari DB (tabel `menus`), API `/api/sidebar/menus`; RBAC di `canAccess.ts` (UNIVERSAL_MENU_KEYS, dll.)
 - `app/lib/` – supabaseBrowser, supabaseAdmin, supabasePermissions, wilayah-data/wilayah-static
 - `components/` – UI bersama (shadcn-style), providers
 - `middleware.ts` – Supabase session; redirect ke login jika belum auth dan akses `/dashboard`

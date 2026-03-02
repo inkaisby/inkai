@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
+import { isValidUuid } from "@/app/lib/security/validateUuid";
 
 /* ======================
    UTIL
@@ -117,7 +118,7 @@ export async function DELETE(
   const supabase = createSupabaseAdminClient();
   const { id: userId } = await params;
 
-  if (!userId) {
+  if (!userId || !isValidUuid(userId)) {
     return badRequest("User ID tidak valid");
   }
 

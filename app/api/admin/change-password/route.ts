@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
+import { isValidUuid } from "@/app/lib/security/validateUuid";
 
 /**
  * POST: Ubah password user (hanya Superadmin).
@@ -24,9 +25,9 @@ export async function POST(req: NextRequest) {
     const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
     const newPassword = typeof body?.newPassword === "string" ? body.newPassword : "";
 
-    if (!userId) {
+    if (!userId || !isValidUuid(userId)) {
       return NextResponse.json(
-        { message: "userId wajib" },
+        { message: "userId tidak valid" },
         { status: 400 }
       );
     }

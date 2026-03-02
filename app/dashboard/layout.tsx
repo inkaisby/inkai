@@ -8,6 +8,7 @@ import TopbarContainer from "./components/topbar-premium/TopbarContainer";
 import ProfileModal from "./components/topbar-premium/profile/ProfileModal";
 import SettingsModalProvider from "./components/topbar-premium/profile/settings/modal/SettingsModalProvider";
 import { ScopeProvider } from "./components/topbar-premium/context/ScopeContext";
+import useProfileModal from "./components/topbar-premium/profile/useProfileModal";
 export default function DashboardLayout({
   children,
 }: {
@@ -29,7 +30,14 @@ export default function DashboardLayout({
     const runGate = async () => {
       const res = await fetch("/api/me", { credentials: "include" });
       if (!res.ok) return;
-      const json = await res.json();
+      type MeProfile = { email_allowed?: boolean; profile_completed?: boolean };
+      let json: { profile?: MeProfile } = {};
+      try {
+        const text = await res.text();
+        if (text.trim()) json = JSON.parse(text) as { profile?: MeProfile };
+      } catch {
+        return;
+      }
       const profile = json?.profile ?? null;
 
       if (!active) return;
@@ -43,7 +51,7 @@ export default function DashboardLayout({
       }
 
       if (!profile.profile_completed) {
-        window.dispatchEvent(new Event("force-open-profile-modal"));
+        useProfileModal.getState().openForced();
       }
     };
 

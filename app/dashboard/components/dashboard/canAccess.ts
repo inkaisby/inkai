@@ -1,5 +1,16 @@
 // app/dashboard/components/dashboard/canAccess.ts
 
+/**
+ * Menu yang tampil ke SEMUA user (tanpa syarat wilayah / level struktural / role fungsional).
+ * Isi konten di dalam halaman tetap bisa berbeda per level/fungsional (filter data di masing-masing module).
+ */
+const UNIVERSAL_MENU_KEYS = new Set<string>([
+  "dashboard",
+  "keanggotaan",
+  "ujian",
+  "event",
+]);
+
 /* ================= TYPES ================= */
 
 export type MenuAccess = {
@@ -12,6 +23,7 @@ export type MenuAccess = {
 
 export type SessionUserAccess = {
   email?: string;
+  /** true = akun disetujui/aktif (akses sesuai role); false = akun ditangguhkan (hanya lihat Dashboard). Sumber: profiles.email_allowed. */
   email_allowed?: boolean;
   app_role?: string | null;
 
@@ -42,7 +54,12 @@ export function canAccessMenu(
   if (ROOT_EMAIL && email && email === ROOT_EMAIL) return true;
   if ((user.app_role ?? "").toUpperCase() === "SUPERADMIN") return true;
 
-  // User belum disetujui (email_allowed = false): hanya boleh lihat Dashboard
+  // Menu universal: tampil ke SEMUA user (termasuk yang email_allowed = false)
+  if (menu.key && UNIVERSAL_MENU_KEYS.has(menu.key)) {
+    return true;
+  }
+
+  // Akun ditangguhkan (email_allowed = false): selain menu universal, hanya Dashboard
   if (user.email_allowed === false) {
     return menu.key === "dashboard";
   }

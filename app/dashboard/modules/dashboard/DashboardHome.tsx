@@ -146,7 +146,15 @@ export default function DashboardHome() {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/ranting", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : []))
+      .then(async (res) => {
+        if (!res.ok) return [];
+        try {
+          const text = await res.text();
+          return text.trim() ? (JSON.parse(text) as RantingItem[]) : [];
+        } catch {
+          return [];
+        }
+      })
       .then((data: RantingItem[]) => {
         if (!cancelled && Array.isArray(data)) setRantingList(data);
       })

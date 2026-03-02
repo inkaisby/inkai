@@ -36,6 +36,7 @@ export async function GET() {
 
   const scope = await getUserScope(admin, user.id);
 
+  // Sidebar: daftar 100% dari DB (tabel menus, scope = sidebar). Sama dengan MenuList di Pengaturan.
   const { data: menus } = await admin
     .from("menus")
     .select(

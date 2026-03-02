@@ -62,7 +62,7 @@ Saat klik NotificationNode: `openNotifications()` (set `open=true`) dan `onClick
 
 ---
 
-### 3.3 Title Dinamis Tidak Pakai menuConfig
+### 3.3 Title Dinamis (berdasarkan pathname)
 
 ```tsx
 const title = useMemo(() => {
@@ -71,12 +71,7 @@ const title = useMemo(() => {
 }, [pathname]);
 ```
 
-**Masalah:** 
-- `/dashboard/settings` → "SETTINGS" (harusnya "Pengaturan")
-- `/dashboard/keanggotaan` → "KEANGGOTAAN" (OK)
-- Nama dari `menuConfig` (Indonesia) tidak dipakai.
-
-**Rekomendasi:** Import `menuConfig`, cari item yang `key === segments[1]`, pakai `item.name`. Fallback ke `key.replace(/-/g, " ").toUpperCase()` jika tidak ketemu.
+**Catatan:** Title dari key path (e.g. "SETTINGS", "KEANGGOTAAN"). Jika ingin label Indonesia (e.g. "Pengaturan"), bisa lookup nama dari data menu yang sudah di-load (e.g. dari context/API sidebar) by key; tidak ada file menuConfig (sudah dihapus, menu dari DB).
 
 ---
 
@@ -134,7 +129,7 @@ onClick={() =>
 | Prioritas | Item | Usaha |
 |-----------|------|-------|
 | Tinggi | 3.1 setState dalam effect | Tambah eslint-disable dengan komentar, atau refactor |
-| Sedang | 3.3 Title pakai menuConfig | Import menuConfig, lookup by key |
+| Sedang | 3.3 Title dari label menu | Lookup nama by key dari data menu (sidebar/context) jika perlu |
 | Sedang | 3.4 aria-label pada select | Satu baris |
 | Rendah | 3.2 showNotification | Simplify ke always-mount jika mau |
 | Rendah | 3.5 Hapus import komentar | Bersihkan dead code |
@@ -144,7 +139,7 @@ onClick={() =>
 ## 5. Checklist Perbaikan
 
 - [ ] Handle ESLint set-state-in-effect (disable atau refactor)
-- [ ] Title dari menuConfig
+- [ ] (Opsional) Title dari label menu by key
 - [ ] aria-label pada select konteks
 - [ ] Hapus atau aktifkan ProfileModal/SettingsModalProvider
 - [ ] (Opsional) Simplify showNotification

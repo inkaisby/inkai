@@ -15,6 +15,8 @@ export type Anggota = {
   dan?: number | null;     // tingkat DAN
 
   ranting: Ranting;        // hasil JOIN dari ranting_id (WAJIB ADA)
+  /** URL foto profil dari storage (avatar_path → getPublicUrl) */
+  avatarUrl?: string | null;
 };
 
 export type KyuItem = {

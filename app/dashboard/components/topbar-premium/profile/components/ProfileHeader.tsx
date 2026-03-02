@@ -5,11 +5,14 @@ import React from "react";
 interface ProfileHeaderProps {
   currentStep: number;
   onCloseRequest: () => void;
+  /** Sembunyikan tombol Tutup saat profil dipaksa lengkapi */
+  hideClose?: boolean;
 }
 
 export default function ProfileHeader({
   currentStep,
   onCloseRequest,
+  hideClose,
 }: ProfileHeaderProps) {
 
   const titles = {
@@ -48,20 +51,22 @@ export default function ProfileHeader({
       </div>
 
       {/* BUTTON TUTUP */}
-      <button
-        onClick={onCloseRequest}
-        className="
-          px-4 py-1.5 
-          text-cyan-300 hover:text-black
-          bg-cyan-500/20 hover:bg-cyan-300
-          border border-cyan-500/30
-          rounded-md
-          transition font-medium
-          shadow-[0_0_10px_rgba(0,255,255,0.3)]
-        "
-      >
-        Tutup
-      </button>
+      {!hideClose && (
+        <button
+          onClick={onCloseRequest}
+          className="
+            px-4 py-1.5 
+            text-cyan-300 hover:text-black
+            bg-cyan-500/20 hover:bg-cyan-300
+            border border-cyan-500/30
+            rounded-md
+            transition font-medium
+            shadow-[0_0_10px_rgba(0,255,255,0.3)]
+          "
+        >
+          Tutup
+        </button>
+      )}
     </div>
   );
 }

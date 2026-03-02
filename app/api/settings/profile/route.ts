@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
+import { isValidUuid } from "@/app/lib/security/validateUuid";
 
 const ALLOWED_KEYS = [
   "nama",
@@ -47,9 +48,9 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
     const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
-    if (!userId) {
+    if (!userId || !isValidUuid(userId)) {
       return NextResponse.json(
-        { message: "user_id wajib" },
+        { message: "user_id tidak valid" },
         { status: 400 }
       );
     }
