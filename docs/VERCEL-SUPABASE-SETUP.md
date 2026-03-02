@@ -40,9 +40,9 @@ Middleware memakai `getUser()` (bukan `getSession()`) agar token di-refresh dan 
 - Pastikan middleware matcher mencakup `/api/:path*`
 - Pastikan `setAll` menulis cookie ke response dan request
 
-## 5. PDF (Puppeteer)
+## 5. PDF (jsPDF)
 
-Route `/api/anggota/[id]/pdf` memakai `puppeteer-core` + `@sparticuz/chromium` (bukan `puppeteer` penuh) agar sesuai batas 250MB fungsi Vercel. Jika deploy gagal dengan "internal error", pastikan `puppeteer` tidak ada di `package.json`.
+Route `/api/anggota/[id]/pdf` memakai `jspdf` (bukan Puppeteer/Chromium) agar ringan dan deploy Vercel lancar. Jangan tambahkan `puppeteer` atau `@sparticuz/chromium` ke `package.json`.
 
 ## 6. Cek Response API
 

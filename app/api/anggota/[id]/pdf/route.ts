@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
+import { jsPDF } from "jspdf";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
@@ -33,27 +32,23 @@ export async function GET(
     .eq("user_id", id)
     .single();
 
-  const html = `
-    <html>
-      <body style="font-family:sans-serif">
-        <h3>${data?.nama ?? ""}</h3>
-        <p>${data?.user_id ?? ""}</p>
-        <p>Ranting: ${(data?.ranting as { nama?: string } | null)?.nama ?? ""}</p>
-      </body>
-    </html>
-  `;
+  const nama = data?.nama ?? "";
+  const userId = data?.user_id ?? "";
+  const rantingNama = (data?.ranting as { nama?: string } | null)?.nama ?? "";
 
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    executablePath: await chromium.executablePath(),
-    headless: "shell",
-  });
-  const page = await browser.newPage();
-  await page.setContent(html);
-  const pdf = await page.pdf({ format: "A6" });
-  await browser.close();
+  const doc = new jsPDF({ format: "a6", unit: "mm" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(nama, 10, 15);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(userId, 10, 25);
+  doc.text(`Ranting: ${rantingNama}`, 10, 35);
 
-  return new NextResponse(pdf as unknown as BodyInit, {
+  const pdfBuffer = doc.output("arraybuffer");
+  const pdfBytes = new Uint8Array(pdfBuffer);
+
+  return new NextResponse(pdfBytes, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": "inline; filename=kartu-anggota.pdf",
