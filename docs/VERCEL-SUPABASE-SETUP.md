@@ -56,9 +56,11 @@ Jika masih bermasalah, buka:
 
 ## 7. Error "Deploying outputs... internal error"
 
-Jika build selesai tapi gagal di tahap "Deploying outputs":
+Jika build selesai tapi gagal di tahap "Deploying outputs" (bukan error kode):
 
-1. **Coba deploy via CLI** – `npx vercel --prod` (login dulu jika perlu)
-2. **Analisis ukuran** – Tambah env var di Vercel: `VERCEL_ANALYZE_BUILD_OUTPUT=1`, redeploy, cek log untuk file besar
-3. **Proyek baru** – Buat project Vercel baru, connect repo yang sama, deploy
-4. **Hubungi Vercel** – https://vercel.com/help dengan deployment ID (mis. `1fvY7PSpE`)
+1. **Deploy via CLI** – `npx vercel login` lalu `npx vercel --prod`
+2. **Proyek baru** – Buat project Vercel baru, connect repo yang sama, deploy
+3. **Analisis ukuran** – Env var: `VERCEL_ANALYZE_BUILD_OUTPUT=1`, redeploy, cek log
+4. **Hubungi Vercel Support** – https://vercel.com/help
+   - Sertakan **Deployment ID** (dari Deployments → klik deployment → URL atau detail)
+   - Sertakan log: "Build Completed in /vercel/output [Xm], Deploying outputs..., internal error"
