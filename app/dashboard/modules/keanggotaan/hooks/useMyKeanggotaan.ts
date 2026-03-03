@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import { waitForSessionReady } from "@/app/lib/auth/sessionReady";
+import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
 
 import { User } from "@supabase/supabase-js";
 import { Anggota } from "../types/Anggota";
@@ -41,7 +42,6 @@ export function useMyKeanggotaan() {
       } = await supabase.auth.getUser();
 
       if (error || !user) {
-        console.log("[useMyKeanggotaan] Auth gagal atau tidak login:", error?.message ?? "no user");
         setUser(null);
         setLoading(false);
         return;
@@ -49,35 +49,36 @@ export function useMyKeanggotaan() {
 
       setUser(user);
 
-      // Profil dari API (admin client) agar avatar_path/avatarUrl selalu terbaca
-      const profileRes = await fetch("/api/keanggotaan/profile", {
-        credentials: "include",
-      });
+      // Pakai cache prefetch (dari hover menu) bila ada agar tampil cepat
+      const cachedProfile = getPrefetch<Anggota>("keanggotaan-profile");
+      const cachedRiwayat = getPrefetch<{ kyu?: KyuItem[]; dan?: DanRow[]; pelatihan?: PelatihanRow[] }>("keanggotaan-riwayat");
+      if (cachedProfile) {
+        setData(cachedProfile);
+        if (cachedRiwayat) {
+          setKyu(Array.isArray(cachedRiwayat.kyu) ? cachedRiwayat.kyu : []);
+          setDan(Array.isArray(cachedRiwayat.dan) ? cachedRiwayat.dan : []);
+          setPelatihan(Array.isArray(cachedRiwayat.pelatihan) ? cachedRiwayat.pelatihan : []);
+        }
+        setLoading(false);
+      }
+
+      const profileRes = await fetch("/api/keanggotaan/profile", { credentials: "include" });
 
       if (profileRes.ok) {
         const mapped = (await profileRes.json()) as Anggota;
         setData(mapped);
 
-        /* Pamungkas: ambil riwayat KYU, DAN, Pelatihan lewat API server (service role) agar tidak kena permission denied */
         try {
           const res = await fetch("/api/keanggotaan/riwayat", { credentials: "include" });
           if (res.ok) {
             const json = await res.json();
-            const kyuList: KyuItem[] = Array.isArray(json.kyu) ? json.kyu : [];
-            const danList: DanRow[] = Array.isArray(json.dan) ? json.dan : [];
-            const pelatihanList: PelatihanRow[] = Array.isArray(json.pelatihan) ? json.pelatihan : [];
-            setKyu(kyuList);
-            setDan(danList);
-            setPelatihan(pelatihanList);
-          } else {
-            console.warn("[useMyKeanggotaan] API riwayat:", res.status, await res.text());
+            setKyu(Array.isArray(json.kyu) ? json.kyu : []);
+            setDan(Array.isArray(json.dan) ? json.dan : []);
+            setPelatihan(Array.isArray(json.pelatihan) ? json.pelatihan : []);
           }
-        } catch (e) {
-          console.warn("[useMyKeanggotaan] API riwayat error:", e);
+        } catch {
+          // ignore
         }
-      } else {
-        const errText = await profileRes.text().catch(() => "");
-        console.warn("[useMyKeanggotaan] Profile API:", profileRes.status, errText);
       }
 
       setLoading(false);

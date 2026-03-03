@@ -1,5 +1,19 @@
 # Setup untuk Deploy Vercel
 
+## Opsi Redeploy & Cek Sesuai
+
+| Cara | Kapan dipakai | Sudah sesuai jika |
+|------|----------------|-------------------|
+| **Git push** | Setiap push ke branch yang terhubung (mis. `master`) | Vercel → Settings → Git → Production Branch = `master` (atau branch yang Anda pakai) |
+| **Redeploy (dengan cache)** | Build gagal aneh / mau coba lagi tanpa ubah kode | Deployments → ⋮ → Redeploy → pakai cache |
+| **Redeploy (tanpa cache)** | Setelah ubah env vars, atau mau build bersih | Deployments → ⋮ → Redeploy → **Redeploy without cache** ✓ |
+| **CLI** | Deploy manual dari lokal | `npx vercel login` lalu `npx vercel --prod`; project yang ter-link benar (`.vercel/project.json`) |
+
+**Cek singkat:**
+- **Domain:** Settings → Domains → production = `https://inkai-eight.vercel.app` (atau domain Anda)
+- **Env vars:** Settings → Environment Variables → Production & Preview centang, nilai terisi
+- **Supabase URL config:** Site URL & Redirect URLs di Supabase = domain Vercel di atas
+
 ## Masalah umum
 
 1. **API keanggotaan/profile tidak terbaca** – session/konfigurasi Supabase

@@ -64,6 +64,14 @@ Dengan ini, setiap klik menu langsung memberikan feedback visual (skeleton) saat
 
 ---
 
+## Perbaikan Lanjutan: Bootstrap Satu Fetch (Diterapkan)
+
+- **Satu panggilan** `/api/sidebar/menus` mengembalikan `user` + `menus` + `profile_completed`. Layout memanggil ini sekali, mengisi **bootstrap store** (Zustand) dengan TTL 5 menit.
+- **Layout** memakai bootstrap untuk auth gate (profile_completed, email_allowed); tidak lagi memanggil `/api/me` terpisah.
+- **Sidebar** hanya membaca dari store (tanpa fetch sendiri).
+- **Settings** dan **ScopeContext** memakai session/scope dari store; tidak memanggil `/api/me` untuk session.
+- Dampak: refresh/navigasi hanya satu round-trip untuk chrome (session + menu), lalu konten halaman load. Duplikasi `/api/me` dihilangkan.
+
 ## Rekomendasi Lanjutan (Opsional)
 
 1. **Dynamic import untuk halaman berat**  

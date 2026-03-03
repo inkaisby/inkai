@@ -2,7 +2,7 @@
 
 /**
  * Sidebar dashboard: layout statis (logo + nav vertikal), item menu 100% dari DB.
- * Sumber: GET /api/sidebar/menus → tabel menus (scope = sidebar, is_active = true).
+ * Data dari bootstrap store (satu fetch di layout → /api/sidebar/menus).
  * RBAC: canAccessMenu filter per user (app_role, structural_level, functional_role).
  */
 import { useEffect, useState, useMemo } from "react";
@@ -13,6 +13,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { canAccessMenu } from "./canAccess";
 import type { SessionUserAccess, MenuAccess } from "./canAccess";
+import { useBootstrapStore } from "../../store/bootstrapStore";
+import { prefetchForRoute } from "../../lib/prefetchCache";
 
 interface MenuRow {
   id: string;
@@ -32,13 +34,22 @@ interface MenuRow {
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { data: bootstrap, loading: bootstrapLoading } = useBootstrapStore();
 
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
-  const [menus, setMenus] = useState<MenuRow[]>([]);
-  const [sessionUser, setSessionUser] = useState<SessionUserAccess | null>(
-    null,
-  );
+
+  const sessionUser = bootstrap?.user ?? null;
+  const menus: MenuRow[] = useMemo(() => {
+    const raw = bootstrap?.menus ?? [];
+    return raw.map((m: Record<string, unknown>) => ({
+      ...m,
+      required_structural_level:
+        m.required_structural_level != null
+          ? Number(m.required_structural_level)
+          : null,
+    })) as MenuRow[];
+  }, [bootstrap?.menus]);
 
   const iconMap = Icons as unknown as Record<string, LucideIcon>;
 
@@ -68,35 +79,6 @@ export default function Sidebar() {
     return () => {
       window.removeEventListener("toggle-sidebar", handler);
     };
-  }, []);
-
-  /* ===================== LOAD SESSION + MENUS ===================== */
-  useEffect(() => {
-    const load = async () => {
-      const res = await fetch("/api/sidebar/menus", { credentials: "include" });
-      if (!res.ok) return;
-      let json: { user?: SessionUserAccess; menus?: unknown[] } = {};
-      try {
-        const text = await res.text();
-        if (text.trim()) json = JSON.parse(text) as { user?: SessionUserAccess; menus?: unknown[] };
-      } catch {
-        return;
-      }
-
-      const builtUser: SessionUserAccess = json.user ?? null;
-      setSessionUser(builtUser);
-
-      const normalized = (json.menus ?? []).map((m: any) => ({
-        ...m,
-        required_structural_level:
-          m.required_structural_level != null
-            ? Number(m.required_structural_level)
-            : null,
-      }));
-      setMenus(normalized);
-    };
-
-    load();
   }, []);
 
   /* ===================== FILTER MENUS ===================== */
@@ -152,7 +134,10 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-1 px-1 mt-4">
-        {visibleMenus.length === 0 && (
+        {bootstrapLoading && !sessionUser && (
+          <div className="text-xs text-white/40 px-3 py-2 animate-pulse">Memuat menu…</div>
+        )}
+        {!bootstrapLoading && visibleMenus.length === 0 && (
           <div className="text-xs text-white/40 px-3 py-2">Tidak ada menu</div>
         )}
 
@@ -171,6 +156,7 @@ export default function Sidebar() {
             <Link
               key={m.id}
               href={href}
+              onMouseEnter={() => prefetchForRoute(m.key)}
               className={`flex items-center gap-3 px-3 py-2 rounded-md
                 ${
                   active

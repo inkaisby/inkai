@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import SettingsView from "../modules/settings/SettingsModule";
+import { useBootstrapStore } from "../store/bootstrapStore";
 
 const SUPERADMIN_EMAIL = "karateinkaisby@gmail.com";
 
 export default function SettingsPage() {
+  const { data: bootstrap, loading: bootstrapLoading } = useBootstrapStore();
+
   /* ===============================
-   * SESSION + APP_ROLE
+   * SESSION + APP_ROLE (dari bootstrap store, tanpa fetch /api/me)
    * =============================== */
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-  const [appRole, setAppRole] = useState<string | null>(null);
+  const sessionEmail = bootstrap?.user?.email ?? null;
+  const appRole = bootstrap?.user?.app_role ?? null;
+  const loading = bootstrapLoading;
 
   /* ===============================
    * UI STATE
    * =============================== */
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   /* ===============================
@@ -24,25 +26,6 @@ export default function SettingsPage() {
    * =============================== */
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Record<string, unknown>>({});
-
-  /* ===============================
-   * LOAD SESSION
-   * =============================== */
-  useEffect(() => {
-    const loadSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSessionEmail(data.session?.user?.email ?? null);
-
-      const res = await fetch("/api/me", { credentials: "include" });
-      if (res.ok) {
-        const json = (await res.json()) as { profile?: { app_role?: string } };
-        setAppRole(json?.profile?.app_role ?? null);
-      }
-      setLoading(false);
-    };
-
-    loadSession();
-  }, []);
 
   /* ===============================
    * LOAD PERMISSIONS BY EMAIL

@@ -9,12 +9,15 @@ import ProfileModal from "./components/topbar-premium/profile/ProfileModal";
 import SettingsModalProvider from "./components/topbar-premium/profile/settings/modal/SettingsModalProvider";
 import { ScopeProvider } from "./components/topbar-premium/context/ScopeContext";
 import useProfileModal from "./components/topbar-premium/profile/useProfileModal";
+import { useBootstrapStore, type BootstrapData } from "./store/bootstrapStore";
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { setBootstrap, setLoading, getValid, rehydrateFromStorage } = useBootstrapStore();
 
   const hideSidebar =
     pathname.startsWith("/dashboard/auth") ||
@@ -22,45 +25,60 @@ export default function DashboardLayout({
     pathname.startsWith("/dashboard/fullscreen");
 
   /* ======================================================
-   * AUTHORIZATION GATE (TANPA REDIRECT)
+   * BOOTSTRAP: satu fetch session + menu, isi store, jalankan auth gate
    * ====================================================== */
   useEffect(() => {
     let active = true;
 
-    const runGate = async () => {
-      const res = await fetch("/api/me", { credentials: "include" });
-      if (!res.ok) return;
-      type MeProfile = { email_allowed?: boolean; profile_completed?: boolean };
-      let json: { profile?: MeProfile } = {};
+    const run = async () => {
+      rehydrateFromStorage();
+      const cached = getValid();
+      if (cached) {
+        if (!cached.user?.email_allowed) return;
+        if (!cached.profile_completed) {
+          useProfileModal.getState().openForced();
+        }
+        return;
+      }
+
+      setLoading(true);
+      const res = await fetch("/api/sidebar/menus", { credentials: "include" });
+      if (!active) return;
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
+      let json: {
+        user?: { email_allowed?: boolean; [k: string]: unknown };
+        menus?: unknown[];
+        profile_completed?: boolean;
+      } = {};
       try {
         const text = await res.text();
-        if (text.trim()) json = JSON.parse(text) as { profile?: MeProfile };
+        if (text.trim()) json = JSON.parse(text);
       } catch {
-        return;
-      }
-      const profile = json?.profile ?? null;
-
-      if (!active) return;
-
-      if (!profile) {
+        setLoading(false);
         return;
       }
 
-      if (!profile.email_allowed) {
-        return;
-      }
-
-      if (!profile.profile_completed) {
-        useProfileModal.getState().openForced();
+      const data: BootstrapData = {
+        user: (json.user ?? null) as BootstrapData["user"],
+        menus: json.menus ?? [],
+        profile_completed: json.profile_completed ?? false,
+      };
+      if (active) {
+        setBootstrap(data);
+        if (data.user?.email_allowed !== false && !data.profile_completed) {
+          useProfileModal.getState().openForced();
+        }
       }
     };
 
-    runGate();
-
+    run();
     return () => {
       active = false;
     };
-  }, []);
+  }, [getValid, setBootstrap, setLoading, rehydrateFromStorage]);
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">

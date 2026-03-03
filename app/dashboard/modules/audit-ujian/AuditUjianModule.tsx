@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
 
 type UjianRow = {
   id: string;
@@ -36,6 +37,12 @@ export default function AuditUjianModule() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const cached = getPrefetch<Ringkasan>("audit-ujian-ringkasan");
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+    }
 
     fetch("/api/audit-ujian/ringkasan", { credentials: "include" })
       .then((res) => {

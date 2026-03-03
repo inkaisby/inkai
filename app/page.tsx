@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import LoginModal from "@/app/auth/login/LoginModal";
 import JarvisLoader from "@/components/JarvisLoader";
+import { useBootstrapStore, type BootstrapData } from "@/app/dashboard/store/bootstrapStore";
 
 function HomeContent() {
   const router = useRouter();
@@ -28,6 +29,18 @@ function HomeContent() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setPhase("boot");
+        fetch("/api/sidebar/menus", { credentials: "include" })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((json: { user?: unknown; menus?: unknown[]; profile_completed?: boolean } | null) => {
+            if (json) {
+              useBootstrapStore.getState().setBootstrap({
+                user: (json.user ?? null) as BootstrapData["user"],
+                menus: json.menus ?? [],
+                profile_completed: json.profile_completed ?? false,
+              });
+            }
+          })
+          .catch(() => {});
         setTimeout(() => {
           router.replace(returnTo);
           router.refresh();

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
+import { useBootstrapStore, type BootstrapData } from "@/app/dashboard/store/bootstrapStore";
 
 const ID_USERNAME = "login-username";
 const ID_PASSWORD = "login-password";
@@ -110,6 +111,21 @@ export default function LoginModal({
       } else {
         localStorage.removeItem("inkai:last_email");
         localStorage.setItem("inkai:remember", "0");
+      }
+
+      // ===== PREFETCH BOOTSTRAP (agar dashboard langsung dapat menu/session) =====
+      try {
+        const res = await fetch("/api/sidebar/menus", { credentials: "include" });
+        if (res.ok) {
+          const json = (await res.json()) as { user?: unknown; menus?: unknown[]; profile_completed?: boolean };
+          useBootstrapStore.getState().setBootstrap({
+            user: (json.user ?? null) as BootstrapData["user"],
+            menus: json.menus ?? [],
+            profile_completed: json.profile_completed ?? false,
+          });
+        }
+      } catch {
+        // ignore; dashboard akan fetch sendiri
       }
 
       onSuccess?.();

@@ -5,34 +5,7 @@ import { getSessionUser } from "@/app/lib/supabase/session";
 import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
-
-/** Kriteria sama dengan useCompletionScore: semua field wajib terisi + avatar. */
-function isProfileCompleted(row: Record<string, unknown> | null): boolean {
-  if (!row) return false;
-  const required = [
-    "nik",
-    "nama",
-    "email",
-    "telepon",
-    "jenis_kelamin",
-    "tanggal_lahir",
-    "nama_ayah",
-    "nama_ibu",
-    "pekerjaan_ortu",
-    "alamat",
-    "province_id",
-    "regency_id",
-    "district_id",
-    "village_id",
-    "ranting_id",
-    "avatar_path",
-  ];
-  for (const key of required) {
-    const v = row[key];
-    if (v === null || v === undefined || String(v).trim() === "") return false;
-  }
-  return true;
-}
+import { isProfileCompleted } from "@/app/lib/profileCompleted";
 
 export async function GET(req: NextRequest) {
   const rateLimitRes = checkApiRateLimit(req, "api-me", { max: 60, windowMs: 60_000 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useBootstrapStore } from "../../../../store/bootstrapStore";
 
 export type MenuRow = {
   id: string;
@@ -18,34 +19,17 @@ export type MenuRow = {
 };
 
 export function useMenuCRUD() {
+  const { data: bootstrap } = useBootstrapStore();
   const [menus, setMenus] = useState<MenuRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSuperadmin, setIsSuperadmin] = useState<boolean | null>(null);
 
-  /* ================= FETCH USER ROLE ================= */
-  const fetchUserRole = useCallback(async () => {
-    try {
-      const res = await fetch("/api/me", { credentials: "include" });
-      if (!res.ok) {
-        setIsSuperadmin(false);
-        return;
-      }
-      const json = await res.json();
-      const appRole = json?.profile?.app_role ?? null;
-      const email = (json?.user?.email as string | null)?.toLowerCase() ?? null;
-      const rootEmail =
-        (process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL as string | undefined)?.toLowerCase() ??
-        null;
-
-      setIsSuperadmin(
-        (rootEmail && email && email === rootEmail) || (appRole ?? "").toUpperCase() === "SUPERADMIN",
-      );
-    } catch (e: any) {
-      setError(e.message);
-      setIsSuperadmin(false);
-    }
-  }, []);
+  const rootEmail =
+    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_INKAI_ROOT_EMAIL as string | undefined)?.toLowerCase() ?? null;
+  const email = bootstrap?.user?.email?.toLowerCase() ?? null;
+  const appRole = bootstrap?.user?.app_role ?? null;
+  const isSuperadmin =
+    (rootEmail && email && email === rootEmail) || (appRole ?? "").toUpperCase() === "SUPERADMIN";
 
   /* ================= FETCH MENUS ================= */
   const fetchMenus = useCallback(async () => {
@@ -137,26 +121,24 @@ const deleteMenu = async (id: string) => {
 
 
   /* ================= INIT ================= */
-useEffect(() => {
-  let mounted = true;
+  useEffect(() => {
+    let mounted = true;
 
-  const init = async () => {
-    try {
-      await fetchUserRole();
-      await fetchMenus();
-    } catch (e: any) {
-      if (mounted) setError(e.message);
-    } finally {
-      if (mounted) setLoading(false);
-    }
-  };
+    const init = async () => {
+      try {
+        await fetchMenus();
+      } catch (e: unknown) {
+        if (mounted) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
 
-  init();
-
-  return () => {
-    mounted = false;
-  };
-}, [fetchUserRole, fetchMenus]);
+    init();
+    return () => {
+      mounted = false;
+    };
+  }, [fetchMenus]);
 
 
   return {

@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
@@ -10,24 +10,60 @@ import { useRouter } from "next/navigation";
 
 import useProfileModal from "../profile/useProfileModal";
 import useSettingsModal from "../profile/settings/state/useSettingsModal";
+import { useBootstrapStore } from "../../../store/bootstrapStore";
+
+const ROLE_MAP: Record<string, string> = {
+  SUPERADMIN: "Superadmin",
+  ADMIN: "Admin",
+  USER: "User",
+  KETUA_PP: "Ketua PP",
+  KETUA_CABANG: "Ketua Cabang",
+  KETUA_RANTING: "Ketua Ranting",
+  PENGPROV: "Pengprov",
+  SEKRETARIS: "Sekretaris",
+  BENDAHARA: "Bendahara",
+};
+
+function formatRole(r: string) {
+  return ROLE_MAP[r] ?? r.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default function AvatarMenu() {
-
   const router = useRouter();
+  const { data: bootstrap } = useBootstrapStore();
 
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [roleLabel, setRoleLabel] = useState<string | null>(null);
-
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const { open: openProfileModal } = useProfileModal();
   const { open: openSettingsModal } = useSettingsModal();
 
-  /* ===============================
-   * Supabase Session Listener
-   * =============================== */
+  const displayName = useMemo(() => {
+    const nama = bootstrap?.user?.nama;
+    if (nama && String(nama).trim() !== "") return String(nama).trim();
+    return bootstrap?.user?.email ?? null;
+  }, [bootstrap?.user?.nama, bootstrap?.user?.email]);
+
+  const roleLabel = useMemo(() => {
+    const u = bootstrap?.user;
+    if (!u) return null;
+    const appRole = u.app_role;
+    if ((appRole ?? "").toUpperCase() === "SUPERADMIN") return "Superadmin";
+    const structural = (u.structural_roles ?? []) as Array<{
+      role_name?: string;
+      structural_level?: number;
+      active?: boolean;
+    }>;
+    const activeStructural = structural.filter((r) => r.active !== false);
+    const top = activeStructural.sort(
+      (a, b) => (b.structural_level ?? 0) - (a.structural_level ?? 0)
+    )[0];
+    if (top?.role_name) return formatRole(top.role_name);
+    if (appRole) return formatRole(appRole);
+    return null;
+  }, [bootstrap?.user?.app_role, bootstrap?.user?.structural_roles]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session ?? null);
@@ -41,73 +77,6 @@ export default function AvatarMenu() {
       listener.subscription.unsubscribe();
     };
   }, []);
-
-  /* ===============================
-   * Load nama dari profile (via /api/me)
-   * =============================== */
-  useEffect(() => {
-    if (!session?.user) {
-      setDisplayName(null);
-      setRoleLabel(null);
-      return;
-    }
-
-    let mounted = true;
-    fetch("/api/me", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!mounted) return;
-        const nama = data?.profile?.nama;
-        setDisplayName(
-          nama && String(nama).trim() !== "" ? String(nama).trim() : null
-        );
-
-        const appRole = data?.profile?.app_role;
-        const structural = (data?.structural_roles ?? []) as Array<{
-          role_name?: string;
-          structural_level?: number;
-          active?: boolean;
-        }>;
-        const activeStructural = structural.filter((r) => r.active !== false);
-        const topStructural = activeStructural.sort(
-          (a, b) => (b.structural_level ?? 0) - (a.structural_level ?? 0)
-        )[0];
-
-        const roleMap: Record<string, string> = {
-          SUPERADMIN: "Superadmin",
-          ADMIN: "Admin",
-          USER: "User",
-          KETUA_PP: "Ketua PP",
-          KETUA_CABANG: "Ketua Cabang",
-          KETUA_RANTING: "Ketua Ranting",
-          PENGPROV: "Pengprov",
-          SEKRETARIS: "Sekretaris",
-          BENDAHARA: "Bendahara",
-        };
-        const fmt = (r: string) =>
-          roleMap[r] ?? r.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-
-        if ((appRole ?? "").toUpperCase() === "SUPERADMIN") {
-          setRoleLabel("Superadmin");
-        } else if (topStructural?.role_name) {
-          setRoleLabel(fmt(topStructural.role_name));
-        } else if (appRole) {
-          setRoleLabel(fmt(appRole));
-        } else {
-          setRoleLabel(null);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setDisplayName(null);
-          setRoleLabel(null);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [session?.user?.id]);
 
   const avatarUrl =
     session?.user?.user_metadata?.avatar_url ||
