@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   let byUserId: ProfileRow | null = null;
   const resUser = await runSelect(selectMinimal);
   errUser = resUser.error ?? null;
-  byUserId = resUser.data as ProfileRow | null;
+  byUserId = resUser.data as unknown as ProfileRow | null;
 
   if (!errUser && byUserId) {
     profile = byUserId;
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       .select(selectMinimal)
       .eq("id", user.id)
       .maybeSingle();
-    if (!resId.error && resId.data) profile = resId.data as ProfileRow;
+    if (!resId.error && resId.data) profile = resId.data as unknown as ProfileRow;
   }
 
   // Fallback: session client (RLS)
@@ -74,14 +74,14 @@ export async function GET(req: NextRequest) {
       .select(selectMinimal)
       .eq("user_id", user.id)
       .maybeSingle();
-    if (bySession) profile = bySession as ProfileRow;
+    if (bySession) profile = bySession as unknown as ProfileRow;
     if (!profile) {
       const { data: byIdSession } = await sessionSupabase
         .from("profiles")
         .select(selectMinimal)
         .eq("id", user.id)
         .maybeSingle();
-      if (byIdSession) profile = byIdSession as ProfileRow;
+      if (byIdSession) profile = byIdSession as unknown as ProfileRow;
     }
   }
 
@@ -117,14 +117,14 @@ export async function GET(req: NextRequest) {
       console.warn("[keanggotaan/profile] insert:", insertErr.code, insertErr.message);
     }
     if (!insertErr && inserted) {
-      profile = inserted as ProfileRow;
+      profile = inserted as unknown as ProfileRow;
     } else if (insertErr?.code === "23505") {
       const { data: retry } = await admin
         .from("profiles")
         .select(selectMinimal)
         .eq("user_id", user.id)
         .maybeSingle();
-      if (retry) profile = retry as ProfileRow;
+      if (retry) profile = retry as unknown as ProfileRow;
     }
   }
 
