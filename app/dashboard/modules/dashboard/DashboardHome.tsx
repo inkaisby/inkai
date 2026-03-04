@@ -177,10 +177,10 @@ export default function DashboardHome() {
   };
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 sm:space-y-8 pb-6 sm:pb-8">
       {/* Header — elegan, satu aksen */}
       <div>
-        <h1 className="text-2xl font-semibold text-white tracking-wide">
+        <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-wide">
           Dashboard
         </h1>
         <p className="text-sm text-white/60 mt-1">
@@ -191,12 +191,12 @@ export default function DashboardHome() {
       {/* Stories — teal/amber/slate halus, tidak ramai */}
       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
         <h2 className="text-sm font-medium text-white/90 mb-3">Stories — Ranting / Dojo</h2>
-        <div className="flex gap-4 overflow-x-auto pb-1 -mx-1">
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-1 -mx-1">
           {rantingLoading ? (
-            <div className="flex gap-4">
+            <div className="flex gap-3 sm:gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex-shrink-0 w-16 animate-pulse">
-                  <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10" />
+                <div key={i} className="flex-shrink-0 w-[72px] sm:w-16 animate-pulse">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/10" />
                   <div className="h-3 mt-2 w-12 bg-white/10 rounded" />
                 </div>
               ))}
@@ -211,12 +211,12 @@ export default function DashboardHome() {
                   href={getInstagramUrl(r)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-shrink-0 flex flex-col items-center gap-2 no-underline group"
+                  className="flex-shrink-0 flex flex-col items-center gap-1.5 sm:gap-2 no-underline group min-w-[72px] sm:min-w-0"
                 >
-                  <div className={`w-14 h-14 rounded-full border-2 ${ring} bg-white/5 flex items-center justify-center text-white/90 font-medium text-lg group-hover:bg-white/10 transition-colors`}>
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 ${ring} bg-white/5 flex items-center justify-center text-white/90 font-medium text-base sm:text-lg group-hover:bg-white/10 transition-colors`}>
                     {r.nama?.charAt(0)?.toUpperCase() ?? "?"}
                   </div>
-                  <span className="text-xs text-white/70 max-w-[64px] truncate text-center">
+                  <span className="text-[11px] sm:text-xs text-white/70 max-w-[72px] sm:max-w-[64px] truncate text-center px-0.5" title={r.nama}>
                     {r.nama}
                   </span>
                 </a>

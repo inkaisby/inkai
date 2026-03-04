@@ -109,14 +109,34 @@ export default function Sidebar() {
     });
   }, [visibleMenus, router]);
 
+  const closeSidebar = () => {
+    setIsOpen(false);
+    localStorage.setItem("sidebar:isOpen", "false");
+  };
+
   if (!mounted) return null;
 
   /* ===================== UI ===================== */
   return (
-    <aside
-      className={`h-screen bg-[#020617] border-r border-cyan-500/40 z-30
-      transition-all duration-200 ${isOpen ? "w-56" : "w-16"}`}
-    >
+    <>
+      {/* Backdrop hanya di mobile: tutup sidebar saat tap di luar */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={closeSidebar}
+        onKeyDown={(e) => e.key === "Enter" && closeSidebar()}
+        className="fixed inset-0 z-20 bg-black/60 lg:hidden"
+        style={{
+          visibility: isOpen ? "visible" : "hidden",
+          pointerEvents: isOpen ? "auto" : "none",
+        }}
+        aria-label="Tutup menu"
+      />
+      <aside
+        className={`fixed lg:relative inset-y-0 left-0 z-30 h-screen bg-[#020617] border-r border-cyan-500/40
+        transition-all duration-200 w-56
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-16"}`}
+      >
       <div className="h-16 flex items-center justify-center border-b border-cyan-500/30">
         <Image
           src="/logo/inkai-logo.png"
@@ -171,5 +191,6 @@ export default function Sidebar() {
         })}
       </nav>
     </aside>
+    </>
   );
 }

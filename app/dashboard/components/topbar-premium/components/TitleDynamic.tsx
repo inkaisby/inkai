@@ -10,9 +10,10 @@ export default function TitleDynamic({ title }: { title: string }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
       className="
-        text-xl font-semibold text-cyan-200
+        text-lg sm:text-xl font-semibold text-cyan-200 truncate
         drop-shadow-[0_0_6px_rgba(0,255,255,0.5)]
       "
+      title={title}
     >
       {title}
       <span className="text-cyan-300/90 font-normal">

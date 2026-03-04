@@ -63,7 +63,7 @@ function TopbarContent() {
         {/* <HologramScanline /> */}
         {/* <GoldCyanFX /> */}
 
-        <div className="flex items-center gap-3 z-10">
+        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-24 sm:pr-28">
           <button
             type="button"
             onClick={() =>
@@ -71,13 +71,15 @@ function TopbarContent() {
                 new CustomEvent("toggle-sidebar", { detail: true }),
               )
             }
-            className="p-2 rounded text-cyan-300 hover:text-white transition cursor-pointer"
+            className="flex-shrink-0 p-2 rounded text-cyan-300 hover:text-white transition cursor-pointer"
             aria-label="Toggle sidebar"
           >
             <Menu size={20} />
           </button>
 
-          <TitleDynamic title={title} />
+          <div className="min-w-0 flex-1 truncate">
+            <TitleDynamic title={title} />
+          </div>
 
           {showKonteks && !scopeLoading && (
             <div className="flex items-center gap-2 ml-2">

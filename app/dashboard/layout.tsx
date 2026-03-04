@@ -89,7 +89,7 @@ export default function DashboardLayout({
           <TopbarContainer />
           <ProfileModal />
           <SettingsModalProvider />
-          <main className="flex-1 overflow-auto p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-4 sm:p-6 min-w-0">{children}</main>
         </div>
       </ScopeProvider>
     </div>
