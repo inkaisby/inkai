@@ -151,7 +151,7 @@ export default function RantingModule() {
         </div>
         <button
           type="button"
-          onClick={handleOpenForm}
+          onClick={() => handleOpenForm()}
           className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition-colors"
         >
           + Tambah Ranting
