@@ -7,11 +7,11 @@ import {
   Trophy,
   CreditCard,
   MapPin,
-  FileText,
-  Printer,
   Building2,
+  PlusCircle,
+  Trash2,
+  Info,
 } from "lucide-react";
-import jsPDF from "jspdf";
 
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 
@@ -54,7 +54,7 @@ export default function HomeBaseModule() {
   const { scope, app_role } = useScope();
   const [rantingList, setRantingList] = useState<RantingRow[]>([]);
   const [rantingLoading, setRantingLoading] = useState(true);
-  const [provinsiList, setProvinsiList] = useState<ProvinsiOption[]>([]);
+  const [, setProvinsiList] = useState<ProvinsiOption[]>([]);
   const [cabangList, setCabangList] = useState<CabangOption[]>([]);
   /** Filter manual: daftar kabupaten/kota (regency) untuk search */
   const [wilayahOptions, setWilayahOptions] = useState<WilayahOption[]>([]);
@@ -68,7 +68,11 @@ export default function HomeBaseModule() {
   const [selectedRanting, setSelectedRanting] = useState<RantingRow | null>(
     null,
   );
+  const [rantingSearch, setRantingSearch] = useState("");
   const [rantingModalOpen, setRantingModalOpen] = useState(false);
+  const [rantingFormMode, setRantingFormMode] = useState<"edit" | "create">(
+    "edit",
+  );
   const [rantingForm, setRantingForm] = useState<{
     nama: string;
     aktif: boolean;
@@ -77,6 +81,11 @@ export default function HomeBaseModule() {
     regency_id: string;
     district_id: string;
     instagram_url: string;
+    alamat: string;
+    ketua_nama: string;
+    sekretaris_nama: string;
+    bendahara_nama: string;
+    pelatih_nama: string;
   }>({
     nama: "",
     aktif: true,
@@ -85,6 +94,11 @@ export default function HomeBaseModule() {
     regency_id: "",
     district_id: "",
     instagram_url: "",
+    alamat: "",
+    ketua_nama: "",
+    sekretaris_nama: "",
+    bendahara_nama: "",
+    pelatih_nama: "",
   });
   const [rantingFormError, setRantingFormError] = useState<string | null>(null);
   const [rantingFormSaving, setRantingFormSaving] = useState(false);
@@ -108,7 +122,6 @@ export default function HomeBaseModule() {
   }, []);
 
   const handleRantingFormSubmit = useCallback(() => {
-    if (!selectedRanting) return;
     const nama = rantingForm.nama.trim();
     if (!nama) {
       setRantingFormError("Nama ranting wajib diisi.");
@@ -116,18 +129,29 @@ export default function HomeBaseModule() {
     }
     setRantingFormError(null);
     setRantingFormSaving(true);
-    const body = {
-      id: selectedRanting.id,
+    const base = {
       nama,
       aktif: rantingForm.aktif,
       cabang_id: rantingForm.cabang_id || null,
-      province_id: rantingForm.province_id ? parseInt(rantingForm.province_id, 10) : null,
-      regency_id: rantingForm.regency_id ? parseInt(rantingForm.regency_id, 10) : null,
-      district_id: rantingForm.district_id ? parseInt(rantingForm.district_id, 10) : null,
+      province_id: rantingForm.province_id
+        ? parseInt(rantingForm.province_id, 10)
+        : null,
+      regency_id: rantingForm.regency_id
+        ? parseInt(rantingForm.regency_id, 10)
+        : null,
+      district_id: rantingForm.district_id
+        ? parseInt(rantingForm.district_id, 10)
+        : null,
       instagram_url: rantingForm.instagram_url.trim() || null,
     };
-    fetch("/api/ranting", {
-      method: "PATCH",
+
+    const isEdit = rantingFormMode === "edit" && selectedRanting;
+    const url = "/api/ranting";
+    const method = isEdit ? "PATCH" : "POST";
+    const body = isEdit ? { id: selectedRanting!.id, ...base } : base;
+
+    fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify(body),
@@ -141,20 +165,18 @@ export default function HomeBaseModule() {
       .then(() => {
         loadRanting();
         setRantingModalOpen(false);
-        setSelectedRanting((prev) =>
-          prev
-            ? {
-                ...prev,
-                nama: body.nama,
-                aktif: body.aktif,
-                cabang_id: body.cabang_id,
-                province_id: body.province_id,
-                regency_id: body.regency_id,
-                district_id: body.district_id,
-                instagram_url: body.instagram_url,
-              }
-            : null,
-        );
+        if (isEdit) {
+          setSelectedRanting((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  ...base,
+                }
+              : null,
+          );
+        } else {
+          setSelectedRanting(null);
+        }
       })
       .catch((err: Error) => {
         setRantingFormError(err.message || "Gagal menyimpan.");
@@ -162,7 +184,7 @@ export default function HomeBaseModule() {
       .finally(() => {
         setRantingFormSaving(false);
       });
-  }, [selectedRanting, rantingForm, loadRanting]);
+  }, [rantingForm, rantingFormMode, selectedRanting, loadRanting]);
 
   // Demo data kwitansi; nanti bisa diganti hasil fetch dari API pembayaran
   const [payments] = useState<PaymentRow[]>([
@@ -251,10 +273,18 @@ export default function HomeBaseModule() {
     };
   }, []);
 
-  // Load kabupaten/kota (regencies) untuk filter manual — gabung dari semua provinsi
+  // Load kabupaten/kota (regencies) untuk filter manual — berdasarkan province_id di ranting
   useEffect(() => {
     let cancelled = false;
-    if (provinsiList.length === 0) {
+    const provinceIds = Array.from(
+      new Set(
+        rantingList
+          .map((r) => r.province_id)
+          .filter((id): id is number => id != null),
+      ),
+    );
+
+    if (provinceIds.length === 0) {
       Promise.resolve().then(() => {
         if (!cancelled) setWilayahOptions([]);
       });
@@ -262,33 +292,39 @@ export default function HomeBaseModule() {
         cancelled = true;
       };
     }
+
     const load = async () => {
       const all: WilayahOption[] = [];
-      for (const p of provinsiList) {
+      for (const pid of provinceIds) {
         try {
           const res = await fetch(
-            `/api/wilayah/regencies?provinceId=${encodeURIComponent(p.id)}`,
-            { credentials: "include" },
+            `/api/wilayah/regencies?provinceId=${encodeURIComponent(String(pid))}`,
           );
           if (!res.ok) continue;
           const data = await res.json();
           const arr = Array.isArray(data) ? data : [];
           for (const r of arr) {
-            const id = String((r as { id?: string }).id ?? (r as { code?: string }).code ?? "");
-            const name = (r as { name?: string }).name ?? (r as { nama?: string }).nama ?? id;
+            const id = String(
+              (r as { id?: string }).id ?? (r as { code?: string }).code ?? "",
+            );
+            const name =
+              (r as { name?: string }).name ??
+              (r as { nama?: string }).nama ??
+              id;
             if (id) all.push({ id, name });
           }
         } catch {
-          // skip provinsi
+          // skip province
         }
       }
       if (!cancelled) setWilayahOptions(all);
     };
+
     load();
     return () => {
       cancelled = true;
     };
-  }, [provinsiList]);
+  }, [rantingList]);
 
   const wilayahLabel = useMemo(() => {
     if (!scope) return "Wilayah belum ter-set";
@@ -316,54 +352,76 @@ export default function HomeBaseModule() {
     );
   }, [rantingList, selectedRegencyId]);
 
+  /** Satu baris per cabang (per kabupaten/kota) untuk tabel atas */
+  const cabangRows = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        displayName: string;
+        isActive: boolean;
+        representative: RantingRow;
+      }
+    >();
+
+    filteredRanting.forEach((r) => {
+      const key = String(r.regency_id ?? r.cabang_id ?? r.id);
+      if (!key) return;
+
+      const cabangName = cabangList.find((c) => c.id === r.cabang_id)?.nama;
+      const namaKabupaten = wilayahOptions.find(
+        (w) => w.id === String(r.regency_id ?? ""),
+      )?.name;
+      const cabangDisplay = cabangName ?? namaKabupaten ?? "—";
+
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          displayName: cabangDisplay,
+          isActive: r.aktif,
+          representative: r,
+        });
+      } else if (r.aktif && !existing.isActive) {
+        existing.isActive = true;
+      }
+    });
+
+    return Array.from(map.values());
+  }, [filteredRanting, cabangList, wilayahOptions]);
+
+  /** Ranting di panel (cabang terpilih) + search nama ranting */
+  const panelRanting = useMemo(() => {
+    if (!selectedRanting) return [] as RantingRow[];
+    const base = rantingList.filter(
+      (r) =>
+        String(r.regency_id ?? "") === String(selectedRanting.regency_id ?? ""),
+    );
+    const q = rantingSearch.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter((r) => r.nama.toLowerCase().includes(q));
+  }, [rantingList, selectedRanting, rantingSearch]);
+
+  /** Nama cabang yang aktif di form (untuk modal tambah/ubah) */
+  const currentCabangName = useMemo(() => {
+    const cabangName = cabangList.find(
+      (c) => c.id === rantingForm.cabang_id,
+    )?.nama;
+    const namaKabupaten = wilayahOptions.find(
+      (w) => w.id === String(rantingForm.regency_id || selectedRegencyId || ""),
+    )?.name;
+    return cabangName ?? namaKabupaten ?? selectedRegencyName ?? "—";
+  }, [
+    cabangList,
+    wilayahOptions,
+    rantingForm.cabang_id,
+    rantingForm.regency_id,
+    selectedRegencyId,
+    selectedRegencyName,
+  ]);
+
   const totalRanting = rantingList.length;
   const totalRantingAktif = rantingList.filter((r) => r.aktif).length;
 
   const isSuperadmin = (app_role ?? "").toUpperCase() === "SUPERADMIN";
-
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(v);
-
-  const handlePrintReceipt = (row: PaymentRow) => {
-    const doc = new jsPDF();
-    const marginX = 20;
-    let y = 20;
-
-    doc.setFontSize(14);
-    doc.text("KWITANSI PEMBAYARAN", marginX, y);
-    y += 8;
-
-    doc.setFontSize(10);
-    doc.text(`Nomor : ${row.id}`, marginX, y);
-    y += 6;
-    doc.text(
-      `Tanggal : ${new Date(row.tanggal).toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })}`,
-      marginX,
-      y,
-    );
-    y += 10;
-
-    doc.text(`Sudah terima dari : ${row.nama}`, marginX, y);
-    y += 6;
-    doc.text(`Untuk pembayaran : ${row.jenis} - ${row.event}`, marginX, y);
-    y += 6;
-    doc.text(`Sejumlah : ${formatCurrency(row.nominal)}`, marginX, y);
-    y += 10;
-
-    doc.text("Petugas,", marginX + 120, y);
-    y += 20;
-    doc.text("__________________", marginX + 110, y);
-
-    doc.save(`${row.id}-kwitansi.pdf`);
-  };
 
   return (
     <div className="space-y-8 pb-8">
@@ -452,7 +510,7 @@ export default function HomeBaseModule() {
               <div className="flex items-center gap-2">
                 <Building2 size={18} className="text-teal-300" />
                 <h2 className="text-sm font-medium text-white/90">
-                  Ranting per kabupaten/kota
+                  Cabang per kabupaten/kota
                 </h2>
               </div>
               {/* Filter manual: search kabupaten/kota (Kota Surabaya, Sidoarjo, Gresik, dll) */}
@@ -485,26 +543,28 @@ export default function HomeBaseModule() {
                     Hapus filter
                   </button>
                 )}
-                {filteredWilayahOptions.length > 0 && wilayahSearch.trim() && !selectedRegencyId && (
-                  <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-white/15 bg-[#0f172a] py-1 text-xs shadow-lg">
-                    {filteredWilayahOptions.map((w) => (
-                      <li key={w.id}>
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-white/90 hover:bg-white/10"
-                          onClick={() => {
-                            setSelectedRegencyId(w.id);
-                            setSelectedRegencyName(w.name);
-                            setWilayahSearch(w.name);
-                            setSelectedRanting(null);
-                          }}
-                        >
-                          {w.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {filteredWilayahOptions.length > 0 &&
+                  wilayahSearch.trim() &&
+                  !selectedRegencyId && (
+                    <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-white/15 bg-[#0f172a] py-1 text-xs shadow-lg">
+                      {filteredWilayahOptions.map((w) => (
+                        <li key={w.id}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-white/90 hover:bg-white/10"
+                            onClick={() => {
+                              setSelectedRegencyId(w.id);
+                              setSelectedRegencyName(w.name);
+                              setWilayahSearch(w.name);
+                              setSelectedRanting(null);
+                            }}
+                          >
+                            {w.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
               </div>
               {selectedRegencyName && (
                 <p className="text-[11px] text-teal-300">
@@ -517,7 +577,7 @@ export default function HomeBaseModule() {
             ) : filteredRanting.length === 0 ? (
               <p className="text-xs text-white/50">
                 {selectedRegencyId
-                  ? `Tidak ada ranting di ${selectedRegencyName ?? "wilayah ini"}.`
+                  ? "Cabang ini belum memiliki ranting."
                   : "Pilih kabupaten/kota di atas atau tampilkan semua ranting di bawah."}
               </p>
             ) : (
@@ -531,67 +591,87 @@ export default function HomeBaseModule() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRanting.slice(0, 12).map((r) => {
-                      const cabangName = cabangList.find(
-                        (c) => c.id === r.cabang_id,
-                      )?.nama;
-                      // Nama cabang diambil dari nama kabupaten (regency_id = id_kabupaten)
-                      const namaKabupaten = wilayahOptions.find(
-                        (w) => w.id === String(r.regency_id ?? ""),
-                      )?.name;
-                      const cabangDisplay = cabangName ?? namaKabupaten ?? "—";
-                      return (
+                    {cabangRows.map((row) => (
                       <tr
-                        key={r.id}
+                        key={row.representative.id}
                         className={`border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/[0.06] ${
-                          selectedRanting?.id === r.id
+                          selectedRanting &&
+                          String(selectedRanting.regency_id ?? "") ===
+                            String(row.representative.regency_id ?? "")
                             ? "bg-white/[0.06]"
                             : "bg-transparent"
                         }`}
-                        onClick={() => setSelectedRanting(r)}
+                        onClick={() => setSelectedRanting(row.representative)}
                       >
-                        <td className="py-2 pr-4 text-white/90">{cabangDisplay}</td>
+                        <td className="py-2 pr-4 text-white/90">
+                          {row.displayName}
+                        </td>
                         <td className="py-2 pr-4">
                           <span
                             className={
-                              r.aktif
+                              row.isActive
                                 ? "text-emerald-400"
                                 : "text-white/40 italic"
                             }
                           >
-                            {r.aktif ? "Aktif" : "Nonaktif"}
+                            {row.isActive ? "Aktif" : "Nonaktif"}
                           </span>
                         </td>
-                        <td className="py-2 text-white/60">
-                          {r.instagram_url ? (
-                            <a
-                              href={r.instagram_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-teal-300 hover:text-teal-200 underline-offset-2 hover:underline"
-                            >
-                              {r.instagram_url
-                                .replace(/^https?:\/\//, "")
-                                .slice(0, 30)}
-                              …
-                            </a>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
+                        <td className="py-2 text-white/60">—</td>
                       </tr>
-                      );
-                    })}
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
 
             {selectedRanting && (
-              <div className="mt-4 rounded-lg border border-teal-500/30 bg-teal-500/5 p-4 text-xs text-white/80 space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold text-teal-200">
-                    Detail Ranting: {selectedRanting.nama}
+              <div className="mt-4 rounded-lg border border-teal-500/30 bg-teal-500/5 p-4 text-xs text-white/80 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-teal-200">
+                        Ranting di cabang ini
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRantingFormMode("create");
+                          setRantingForm({
+                            nama: "",
+                            aktif: true,
+                            cabang_id: String(selectedRanting.cabang_id ?? ""),
+                            province_id: String(
+                              selectedRanting.province_id ?? "",
+                            ),
+                            regency_id: String(
+                              selectedRanting.regency_id ?? "",
+                            ),
+                            district_id: "",
+                            instagram_url: "",
+                            alamat: "",
+                            ketua_nama: "",
+                            sekretaris_nama: "",
+                            bendahara_nama: "",
+                            pelatih_nama: "",
+                          });
+                          setRantingFormError(null);
+                          setRantingModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full border border-teal-500/40 px-2 py-1 text-[10px] text-teal-200 hover:bg-teal-500/10"
+                      >
+                        <PlusCircle size={11} />
+                        Tambah ranting
+                      </button>
+                    </div>
+                    <div className="text-[11px] text-white/60">
+                      Cabang:{" "}
+                      <span className="font-medium text-teal-100">
+                        {panelRanting.length > 0
+                          ? (panelRanting[0]?.regency_id ?? "—")
+                          : (selectedRegencyName ?? "—")}
+                      </span>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -601,41 +681,134 @@ export default function HomeBaseModule() {
                     Tutup
                   </button>
                 </div>
-                <div>Aktif: {selectedRanting.aktif ? "Ya" : "Tidak"}</div>
-                <div>
-                  Wilayah: Provinsi ID{" "}
-                  {selectedRanting.province_id ?? "—"}, Kab/Kota ID{" "}
-                  {selectedRanting.regency_id ?? "—"}, Kec ID{" "}
-                  {selectedRanting.district_id ?? "—"}
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={rantingSearch}
+                    onChange={(e) => setRantingSearch(e.target.value)}
+                    placeholder="Cari ranting di cabang ini…"
+                    className="w-full rounded-md border border-white/20 bg-black/40 px-2 py-1.5 text-[11px] text-white placeholder:text-white/40 focus:border-teal-400/70 focus:outline-none"
+                  />
+                  <div className="text-[11px] text-white/50 whitespace-nowrap">
+                    {panelRanting.length} ranting
+                  </div>
                 </div>
-                <div>
-                  Instagram:{" "}
-                  {selectedRanting.instagram_url
-                    ? selectedRanting.instagram_url
-                    : "—"}
-                </div>
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!selectedRanting) return;
-                      setRantingForm({
-                        nama: selectedRanting.nama ?? "",
-                        aktif: selectedRanting.aktif ?? true,
-                        cabang_id: String(selectedRanting.cabang_id ?? ""),
-                        province_id: String(selectedRanting.province_id ?? ""),
-                        regency_id: String(selectedRanting.regency_id ?? ""),
-                        district_id: String(selectedRanting.district_id ?? ""),
-                        instagram_url: selectedRanting.instagram_url ?? "",
-                      });
-                      setRantingFormError(null);
-                      setRantingModalOpen(true);
-                    }}
-                    className="inline-flex items-center gap-1 text-[11px] text-teal-300 hover:text-teal-200 no-underline bg-transparent border-0 cursor-pointer p-0"
-                  >
-                    Ubah detail ranting →
-                  </button>
-                </div>
+
+                {panelRanting.length === 0 ? (
+                  <p className="text-[11px] text-white/60">
+                    Cabang ini belum memiliki ranting.
+                  </p>
+                ) : (
+                  <div className="border border-teal-500/30 rounded-md overflow-hidden">
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-teal-500/10 text-teal-100">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left">
+                            Nama ranting
+                          </th>
+                          <th className="px-2 py-1.5 text-left w-20">Status</th>
+                          <th className="px-2 py-1.5 text-right w-20">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {panelRanting.map((r) => (
+                          <tr
+                            key={r.id}
+                            className="border-t border-teal-500/20 hover:bg-teal-500/5"
+                          >
+                            <td className="px-2 py-1.5 text-white/90">
+                              {r.nama}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <span
+                                className={
+                                  r.aktif
+                                    ? "text-emerald-300"
+                                    : "text-white/45 italic"
+                                }
+                              >
+                                {r.aktif ? "Aktif" : "Nonaktif"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 text-right space-x-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedRanting(r);
+                                  setRantingFormMode("edit");
+                                  setRantingForm({
+                                    nama: r.nama ?? "",
+                                    aktif: r.aktif ?? true,
+                                    cabang_id: String(r.cabang_id ?? ""),
+                                    province_id: String(r.province_id ?? ""),
+                                    regency_id: String(r.regency_id ?? ""),
+                                    district_id: String(r.district_id ?? ""),
+                                    instagram_url: r.instagram_url ?? "",
+                                    alamat: "",
+                                    ketua_nama: "",
+                                    sekretaris_nama: "",
+                                    bendahara_nama: "",
+                                    pelatih_nama: "",
+                                  });
+                                  setRantingFormError(null);
+                                  setRantingModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-full border border-teal-500/50 px-2 py-0.5 text-[10px] text-teal-200 hover:bg-teal-500/10"
+                                title="Lihat detail & ubah"
+                              >
+                                <Info size={10} />
+                                Detail & Ubah
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const ok = window.confirm(
+                                    `Hapus ranting \"${r.nama}\"?`,
+                                  );
+                                  if (!ok) return;
+                                  try {
+                                    const res = await fetch(
+                                      `/api/ranting?id=${encodeURIComponent(
+                                        r.id,
+                                      )}`,
+                                      {
+                                        method: "DELETE",
+                                        credentials: "include",
+                                      },
+                                    );
+                                    if (!res.ok) {
+                                      console.error(
+                                        "[HomeBase] Gagal hapus ranting",
+                                        await res.text(),
+                                      );
+                                      return;
+                                    }
+                                    setRantingList((prev) =>
+                                      prev.filter((x) => x.id !== r.id),
+                                    );
+                                    if (selectedRanting.id === r.id) {
+                                      setSelectedRanting(null);
+                                    }
+                                  } catch (e) {
+                                    console.error(
+                                      "[HomeBase] Error hapus ranting",
+                                      e,
+                                    );
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 rounded-full border border-red-500/60 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                              >
+                                <Trash2 size={10} />
+                                Hapus
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -644,9 +817,7 @@ export default function HomeBaseModule() {
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
             <div className="flex items-center gap-2">
               <UserCheck size={18} className="text-emerald-300" />
-              <h2 className="text-sm font-medium text-white/90">
-                Keanggotaan
-              </h2>
+              <h2 className="text-sm font-medium text-white/90">Keanggotaan</h2>
             </div>
             <p className="text-xs text-white/55">
               Ringkasan anggota di ranting/cabang Anda. Detail lengkap ada di
@@ -695,82 +866,49 @@ export default function HomeBaseModule() {
             </p>
           </div>
 
-          {/* KWITANSI PEMBAYARAN */}
+          {/* KWITANSI PEMBAYARAN – RINGKASAN UNTUK HOME BASE */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <FileText size={18} className="text-teal-300" />
-                <h2 className="text-sm font-medium text-white/90">
-                  Kwitansi Pembayaran
-                </h2>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <CreditCard size={18} className="text-teal-300" />
+                  <h2 className="text-sm font-medium text-white/90">
+                    Kwitansi Pembayaran
+                  </h2>
+                </div>
+                <p className="text-xs text-white/55">
+                  Ringkasan aktivitas pembayaran di wilayah Anda. Detail lengkap
+                  dan cetak kwitansi ada di modul Keuangan.
+                </p>
               </div>
             </div>
-            <p className="text-xs text-white/55">
-              Cetak kwitansi pembayaran event, ujian, atau iuran. Saat ini
-              memakai contoh data; nanti bisa dihubungkan ke tabel pembayaran.
-            </p>
-            <div className="border border-white/10 rounded-lg overflow-hidden">
-              <table className="w-full text-[11px]">
-                <thead className="bg-white/5">
-                  <tr className="text-white/60">
-                    <th className="px-3 py-2 text-left w-24">Tanggal</th>
-                    <th className="px-3 py-2 text-left">Nama</th>
-                    <th className="px-3 py-2 text-left">Jenis</th>
-                    <th className="px-3 py-2 text-right w-24">Nominal</th>
-                    <th className="px-3 py-2 text-right w-20">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="border-t border-white/5 hover:bg-white/[0.04]"
-                    >
-                      <td className="px-3 py-2 text-white/60">
-                        {new Date(p.tanggal).toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-3 py-2 text-white/90">{p.nama}</td>
-                      <td className="px-3 py-2 text-white/70">
-                        {p.jenis} — {p.event}
-                      </td>
-                      <td className="px-3 py-2 text-right text-amber-300">
-                        {formatCurrency(p.nominal)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handlePrintReceipt(p)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded border border-teal-500/60 text-teal-200 hover:bg-teal-500/10"
-                        >
-                          <Printer size={12} />
-                          Cetak
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {payments.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-3 py-3 text-center text-white/50 text-xs"
-                      >
-                        Belum ada data pembayaran.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="flex items-center justify-between text-xs text-white/70">
+              <div>
+                <div className="text-[11px] text-white/50">
+                  Contoh data demo — nantinya bisa diisi dari tabel pembayaran.
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] uppercase tracking-wide text-white/40">
+                  Total demo kwitansi
+                </div>
+                <div className="text-lg font-semibold text-slate-100">
+                  {payments.length}
+                </div>
+              </div>
             </div>
+            <a
+              href="/dashboard/keuangan"
+              className="inline-flex items-center gap-1.5 text-xs text-teal-300 hover:text-teal-200 no-underline"
+            >
+              Buka modul Keuangan untuk kelola kwitansi →
+            </a>
           </div>
         </div>
       </div>
 
-      {/* Modal ubah detail ranting */}
-      {rantingModalOpen && selectedRanting && (
+      {/* Modal tambah / ubah ranting */}
+      {rantingModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
           onClick={() => !rantingFormSaving && setRantingModalOpen(false)}
@@ -783,8 +921,13 @@ export default function HomeBaseModule() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <h2 id="ranting-modal-title" className="text-sm font-semibold text-teal-200">
-                Ubah detail ranting
+              <h2
+                id="ranting-modal-title"
+                className="text-sm font-semibold text-teal-200"
+              >
+                {rantingFormMode === "edit"
+                  ? "Detail & ubah ranting"
+                  : "Tambah ranting baru"}
               </h2>
               <button
                 type="button"
@@ -807,8 +950,38 @@ export default function HomeBaseModule() {
                   {rantingFormError}
                 </p>
               )}
+              {rantingFormMode === "edit" && selectedRanting && (
+                <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-[11px] text-white/85 space-y-1">
+                  <div className="font-medium text-teal-200 mb-1">
+                    Ringkasan ranting (lihat & edit di bawah)
+                  </div>
+                  <div>
+                    <span className="text-white/60">Status: </span>
+                    <span
+                      className={
+                        selectedRanting.aktif
+                          ? "text-emerald-300"
+                          : "text-white/50 italic"
+                      }
+                    >
+                      {selectedRanting.aktif ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </div>
+                  <div>
+                    Wilayah: Provinsi ID {selectedRanting.province_id ?? "—"}
+                    , Kab/Kota ID {selectedRanting.regency_id ?? "—"}, Kec ID{" "}
+                    {selectedRanting.district_id ?? "—"}
+                  </div>
+                  <div>
+                    <span className="text-white/60">Instagram: </span>
+                    {selectedRanting.instagram_url || "—"}
+                  </div>
+                </div>
+              )}
               <div>
-                <label className="block text-xs text-white/70 mb-1">Nama ranting</label>
+                <label className="block text-xs text-white/70 mb-1">
+                  Nama ranting
+                </label>
                 <input
                   type="text"
                   value={rantingForm.nama}
@@ -829,79 +1002,105 @@ export default function HomeBaseModule() {
                   }
                   className="rounded border-white/30 text-teal-500 focus:ring-teal-500/50"
                 />
-                <label htmlFor="ranting-aktif" className="text-xs text-white/80">
+                <label
+                  htmlFor="ranting-aktif"
+                  className="text-xs text-white/80"
+                >
                   Aktif
                 </label>
               </div>
               <div>
-                <label className="block text-xs text-white/70 mb-1">Cabang</label>
-                <select
-                  value={rantingForm.cabang_id}
-                  onChange={(e) =>
-                    setRantingForm((f) => ({ ...f, cabang_id: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-teal-500/60 focus:outline-none"
-                >
-                  <option value="">— Pilih cabang —</option>
-                  {cabangList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nama}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs text-white/70 mb-1">
+                  Cabang
+                </label>
+                <div className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white/85">
+                  {currentCabangName}
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs text-white/70 mb-1">
+                  Alamat ranting
+                </label>
+                <textarea
+                  value={rantingForm.alamat}
+                  onChange={(e) =>
+                    setRantingForm((f) => ({ ...f, alamat: e.target.value }))
+                  }
+                  className="w-full min-h-[110px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none resize-y"
+                  placeholder={`1. Alamat dojo utama, ${currentCabangName}\n2. Catatan akses lokasi...\n3. ...`}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-white/70 mb-1">Provinsi ID</label>
+                  <label className="block text-xs text-white/70 mb-1">
+                    Nama ketua ranting
+                  </label>
                   <input
                     type="text"
-                    inputMode="numeric"
-                    value={rantingForm.province_id}
+                    value={rantingForm.ketua_nama}
                     onChange={(e) =>
                       setRantingForm((f) => ({
                         ...f,
-                        province_id: e.target.value,
+                        ketua_nama: e.target.value,
                       }))
                     }
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none"
-                    placeholder="ID"
+                    className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none"
+                    placeholder="Nama ketua"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-white/70 mb-1">Kab/Kota ID</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={rantingForm.regency_id}
+                  <label className="block text-xs text-white/70 mb-1">
+                    Nama sekretaris ranting
+                  </label>
+                  <textarea
+                    value={rantingForm.sekretaris_nama}
                     onChange={(e) =>
                       setRantingForm((f) => ({
                         ...f,
-                        regency_id: e.target.value,
+                        sekretaris_nama: e.target.value,
                       }))
                     }
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none"
-                    placeholder="ID"
+                    className="w-full min-h-[80px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none resize-y"
+                    placeholder="Daftar nama sekretaris ranting..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-white/70 mb-1">Kec ID</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={rantingForm.district_id}
+                  <label className="block text-xs text-white/70 mb-1">
+                    Nama bendahara ranting
+                  </label>
+                  <textarea
+                    value={rantingForm.bendahara_nama}
                     onChange={(e) =>
                       setRantingForm((f) => ({
                         ...f,
-                        district_id: e.target.value,
+                        bendahara_nama: e.target.value,
                       }))
                     }
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none"
-                    placeholder="ID"
+                    className="w-full min-h-[80px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none resize-y"
+                    placeholder="Daftar nama bendahara ranting..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/70 mb-1">
+                    Nama pelatih ranting
+                  </label>
+                  <textarea
+                    value={rantingForm.pelatih_nama}
+                    onChange={(e) =>
+                      setRantingForm((f) => ({
+                        ...f,
+                        pelatih_nama: e.target.value,
+                      }))
+                    }
+                    className="w-full min-h-[80px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-teal-500/60 focus:outline-none resize-y"
+                    placeholder="Daftar nama pelatih ranting..."
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-white/70 mb-1">Instagram URL</label>
+                <label className="block text-xs text-white/70 mb-1">
+                  Instagram URL
+                </label>
                 <input
                   type="url"
                   value={rantingForm.instagram_url}
@@ -918,7 +1117,9 @@ export default function HomeBaseModule() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => !rantingFormSaving && setRantingModalOpen(false)}
+                  onClick={() =>
+                    !rantingFormSaving && setRantingModalOpen(false)
+                  }
                   className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
                 >
                   Batal
@@ -935,7 +1136,7 @@ export default function HomeBaseModule() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
-
