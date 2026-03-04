@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
@@ -261,5 +261,21 @@ export default function UpdatePasswordPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-black/60 backdrop-blur-xl text-white px-6">
+          <div className="bg-black/40 p-8 rounded-2xl border border-cyan-400/40 w-[380px] shadow-xl text-center text-white/70 text-sm">
+            Memverifikasi link reset…
+          </div>
+        </div>
+      }
+    >
+      <UpdatePasswordForm />
+    </Suspense>
   );
 }
