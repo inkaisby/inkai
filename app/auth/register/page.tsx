@@ -50,7 +50,7 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
       });
@@ -72,7 +72,7 @@ export default function RegisterForm() {
 
         if (msg.includes("rate limit") || msg.includes("rate_limit")) {
           triggerError(
-            "Batas pengiriman email sementara tercapai. Coba lagi dalam 1 jam, atau cek inbox/spam untuk link konfirmasi yang mungkin sudah terkirim.",
+            "Batas pengiriman sementara tercapai. Coba lagi nanti.",
           );
           return;
         }
@@ -81,6 +81,11 @@ export default function RegisterForm() {
         return;
       }
 
+      // Tanpa konfirmasi email: jika Supabase mengembalikan session, langsung ke dashboard
+      if (data.session) {
+        router.replace("/dashboard");
+        return;
+      }
       setSuccessModal(true);
     } catch (err) {
       console.error("UNEXPECTED ERROR:", err); // ⬅️ tambahan opsional
@@ -96,18 +101,15 @@ export default function RegisterForm() {
           <div className="bg-[#1a1a1d] p-6 rounded-xl border border-white/10 text-center max-w-md mx-4">
             <div className="text-[#00c3ff] text-4xl mb-3">✓</div>
             <p className="text-lg font-semibold mb-2">Pendaftaran berhasil!</p>
-            <p className="text-sm text-white/90 mb-2">
-              Cek email yang terdaftar: <strong className="text-cyan-300 break-all">{form.email}</strong>
-            </p>
-            <p className="text-sm text-white/80">
-              Klik link <strong>Konfirmasi email</strong> di email tersebut untuk mengaktifkan akun. Cek juga folder spam jika belum muncul.
+            <p className="text-sm text-white/80 mb-4">
+              Akun Anda siap dipakai. Silakan masuk dengan email dan kata sandi yang baru didaftarkan.
             </p>
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="mt-4 px-5 py-2.5 bg-cyan-400 text-black font-semibold rounded-lg hover:bg-cyan-300 transition-colors"
+              className="mt-2 px-5 py-2.5 bg-cyan-400 text-black font-semibold rounded-lg hover:bg-cyan-300 transition-colors"
             >
-              Ke beranda
+              Ke halaman masuk
             </button>
           </div>
         </div>

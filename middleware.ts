@@ -32,7 +32,27 @@ export async function middleware(req: NextRequest) {
   // getUser() memvalidasi JWT dan memicu refresh token; getSession() tidak.
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  // Invalid/expired refresh token: clear session agar tidak loop error
+  const isRefreshTokenError =
+    authError?.message?.includes("Refresh Token") ||
+    authError?.message?.includes("refresh_token") ||
+    authError?.message?.toLowerCase().includes("refresh token not found");
+  if (authError && isRefreshTokenError) {
+    await supabase.auth.signOut();
+    if (req.nextUrl.pathname.startsWith("/dashboard")) {
+      const loginUrl = new URL("/", req.url);
+      loginUrl.searchParams.set("returnTo", req.nextUrl.pathname);
+      const redirectRes = NextResponse.redirect(loginUrl);
+      res.cookies.getAll().forEach(({ name, value }) => {
+        redirectRes.cookies.set(name, value, { path: "/" });
+      });
+      return redirectRes;
+    }
+    return res;
+  }
 
   if (!user && req.nextUrl.pathname.startsWith("/dashboard")) {
     const loginUrl = new URL("/", req.url);
