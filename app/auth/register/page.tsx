@@ -97,8 +97,8 @@ export default function RegisterForm() {
     <>
       {/* SUCCESS MODAL */}
       {successModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#1a1a1d] p-6 rounded-xl border border-white/10 text-center max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a1d] p-5 sm:p-6 rounded-t-xl sm:rounded-xl border border-white/10 text-center w-full max-w-md">
             <div className="text-[#00c3ff] text-4xl mb-3">✓</div>
             <p className="text-lg font-semibold mb-2">Pendaftaran berhasil!</p>
             <p className="text-sm text-white/80 mb-4">
@@ -107,7 +107,7 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="mt-2 px-5 py-2.5 bg-cyan-400 text-black font-semibold rounded-lg hover:bg-cyan-300 transition-colors"
+              className="mt-2 min-h-[44px] px-5 py-2.5 bg-cyan-400 text-black font-semibold rounded-lg hover:bg-cyan-300 transition-colors"
             >
               Ke halaman masuk
             </button>

@@ -21,19 +21,18 @@ export default function SettingsModal() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-[100000] flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/60"
     >
       <motion.div
         initial={{ scale: 0.95, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
         className="
-          relative            /* ⬅️ WAJIB: anchor untuk toast */
-          w-full max-w-lg rounded-xl p-6
-          bg-[#0e0e0e]/95 backdrop-blur
-          border border-cyan-400/30
+          relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl p-4 sm:p-6
+          bg-[#0e0e0e]/95 backdrop-blur border border-cyan-400/30
           shadow-[0_0_40px_-10px_rgba(0,255,255,0.6)]
         "
+        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         {/* ===========================
             TOAST (SCOPED TO MODAL)

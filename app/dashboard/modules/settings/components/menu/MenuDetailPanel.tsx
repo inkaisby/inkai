@@ -11,12 +11,13 @@ export default function MenuDetailPanel({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60"
       onClick={onClose}
     >
       <div
-        className="w-[420px] rounded-lg border border-white/10 bg-[#0b1220] p-4 space-y-3"
+        className="w-full max-w-[420px] max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl border border-white/10 bg-[#0b1220] p-4 space-y-3"
         onClick={(e) => e.stopPropagation()}
+        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold">Detail Menu</div>

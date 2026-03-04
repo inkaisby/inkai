@@ -285,8 +285,8 @@ export default function ProfileModal() {
   /* ================= RENDER ================= */
   return (
     <AnimatePresence>
-      <motion.div className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/60">
-        <motion.div className="relative w-full max-w-[900px] max-h-[90vh] mx-4 sm:mx-6 rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20">
+      <motion.div className="fixed inset-0 z-[200000] flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/60">
+        <motion.div className="relative w-full max-w-[900px] max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20 overflow-hidden flex flex-col">
           {!requireComplete && (
             <button
               onClick={handleCloseRequest}

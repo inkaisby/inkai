@@ -358,8 +358,8 @@ export default function EmailList({
 
       {/* Modal konfirmasi hapus */}
       {userToDelete && (
-        <div className="fixed inset-0 z-[200000] bg-black/60 flex items-center justify-center">
-          <div className="w-full max-w-sm rounded-lg p-5 bg-zinc-900 border border-zinc-600 shadow-xl">
+        <div className="fixed inset-0 z-[200000] bg-black/60 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-t-xl sm:rounded-xl p-5 bg-zinc-900 border border-zinc-600 shadow-xl">
             <h3 className="text-white font-medium mb-2">Hapus pengguna</h3>
             <p className="text-sm text-white/70 mb-4">
               Yakin menghapus {userToDelete.email}
@@ -370,7 +370,7 @@ export default function EmailList({
                 type="button"
                 onClick={() => setUserToDelete(null)}
                 disabled={deleting}
-                className="text-white/70 hover:text-white disabled:opacity-50"
+                className="min-h-[44px] px-4 py-2 rounded-lg text-white/70 hover:text-white disabled:opacity-50"
               >
                 Batal
               </button>
@@ -401,7 +401,7 @@ export default function EmailList({
                   }
                 }}
                 disabled={deleting}
-                className="bg-red-600 hover:bg-red-500 text-white px-4 py-1 rounded disabled:opacity-50"
+                className="min-h-[44px] px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium disabled:opacity-50"
               >
                 {deleting ? "Menghapus…" : "Hapus"}
               </button>

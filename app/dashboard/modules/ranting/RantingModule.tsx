@@ -282,12 +282,13 @@ export default function RantingModule() {
 
       {openForm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/60"
           onClick={() => !submitting && setOpenForm(false)}
         >
           <div
-            className="w-full max-w-md rounded-lg border border-white/10 bg-[#0b1220] p-6 shadow-xl"
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl border border-white/10 bg-[#0b1220] p-4 sm:p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
+            style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
           >
             <h2 className="text-lg font-semibold text-white mb-4">
               Tambah Ranting (isi manual)

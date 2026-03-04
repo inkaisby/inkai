@@ -161,11 +161,11 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
       {saving && <JarvisLoader label="Menyimpan..." />}
 
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md"
         onClick={onClose}
       >
         <div
-          className="w-[880px] max-h-[94vh] flex flex-col rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f172a] to-[#0b1220] shadow-2xl shadow-black/60"
+          className="w-full max-w-[880px] max-h-[90vh] sm:max-h-[94vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f172a] to-[#0b1220] shadow-2xl shadow-black/60 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* HEADER */}
@@ -188,9 +188,9 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
           </div>
 
           {/* BODY */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
             <Section title="Informasi Dasar">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <InputField
                   icon="Type"
                   label="Nama Menu"
@@ -230,7 +230,7 @@ export default function MenuForm({ open, onClose, initial, onSubmit }: Props) {
               </div>
             </Section>
             <Section title="Access Control">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <SelectField
                   icon="Layers"
                   label="Required Structural Level"

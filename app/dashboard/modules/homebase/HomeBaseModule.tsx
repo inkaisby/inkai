@@ -910,17 +910,17 @@ export default function HomeBaseModule() {
       {/* Modal tambah / ubah ranting */}
       {rantingModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60"
           onClick={() => !rantingFormSaving && setRantingModalOpen(false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="ranting-modal-title"
         >
           <div
-            className="w-full max-w-md rounded-xl border border-teal-500/30 bg-[#0f172a] shadow-xl text-white"
+            className="w-full max-w-md max-h-[90vh] sm:max-h-[85vh] rounded-t-xl sm:rounded-xl border border-teal-500/30 bg-[#0f172a] shadow-xl text-white flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 flex-shrink-0">
               <h2
                 id="ranting-modal-title"
                 className="text-sm font-semibold text-teal-200"
@@ -939,7 +939,8 @@ export default function HomeBaseModule() {
               </button>
             </div>
             <form
-              className="p-4 space-y-3"
+              className="p-4 sm:p-6 space-y-3 overflow-y-auto flex-1 min-h-0 overscroll-contain"
+              style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
               onSubmit={(e) => {
                 e.preventDefault();
                 handleRantingFormSubmit();
@@ -1114,20 +1115,20 @@ export default function HomeBaseModule() {
                   placeholder="https://instagram.com/..."
                 />
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-2 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() =>
                     !rantingFormSaving && setRantingModalOpen(false)
                   }
-                  className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+                  className="flex-1 min-h-[44px] rounded-lg border border-white/20 px-3 py-2.5 text-xs sm:text-sm text-white/80 hover:bg-white/5"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={rantingFormSaving}
-                  className="flex-1 rounded-lg bg-teal-500/80 hover:bg-teal-500 text-white px-3 py-2 text-xs font-medium disabled:opacity-50"
+                  className="flex-1 min-h-[44px] rounded-lg bg-teal-500/80 hover:bg-teal-500 text-white px-3 py-2.5 text-xs sm:text-sm font-medium disabled:opacity-50"
                 >
                   {rantingFormSaving ? "Menyimpan…" : "Simpan"}
                 </button>
