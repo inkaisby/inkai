@@ -21,6 +21,7 @@ type SertifikatItem = {
   nama: string;
   tanggal: string;
   kategori: string;
+  fileUrl?: string;
 };
 
 type PelatihanForm = {
@@ -40,12 +41,16 @@ const EMPTY_FORM: PelatihanForm = {
   file: null,
 };
 
-type PelatihanInitialData = { id: string; nama: string; tanggal: string; kategori: string }[];
+type PelatihanInitialData = { id: string; nama: string; tanggal: string; kategori: string; fileUrl?: string }[];
+
+const API_PELATIHAN = "/api/keanggotaan/riwayat/pelatihan";
 
 export default function TabPelatihan({
   initialData = [],
+  onRefetch,
 }: {
   initialData?: PelatihanInitialData;
+  onRefetch?: () => void | Promise<void>;
 } = {}) {
   /* ===============================
      STATE (isi awal dari DB via initialData)
@@ -55,6 +60,7 @@ export default function TabPelatihan({
   const [edit, setEdit] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   /* ===============================
      ACTIONS
@@ -79,9 +85,30 @@ export default function TabPelatihan({
     setError(null);
   }
 
-  function handleDelete(idx: number) {
+  async function handleDelete(idx: number) {
     if (!confirm("Hapus data pelatihan ini?")) return;
-    setData((prev) => prev.filter((_, i) => i !== idx));
+    const item = data[idx];
+    if (!item?.id) {
+      setData((prev) => prev.filter((_, i) => i !== idx));
+      onRefetch?.();
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_PELATIHAN}/${item.id}`, { method: "DELETE", credentials: "include" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || "Gagal menghapus pelatihan");
+        return;
+      }
+      setData((prev) => prev.filter((_, i) => i !== idx));
+      onRefetch?.();
+    } catch {
+      setError("Gagal menghapus pelatihan");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -113,48 +140,100 @@ export default function TabPelatihan({
   }, [form.file]);
 
   /* ===============================
-     SAVE
+     SAVE (persist ke DB)
   =============================== */
-  function handleSave() {
+  async function handleSave() {
     if (!form.nama || !form.tanggal) {
       setError("Nama dan tanggal pelatihan wajib diisi.");
       return;
     }
-    if (!form.file && editingIndex === null) {
-      setError("Sertifikat wajib diunggah.");
-      return;
-    }
 
-    if (editingIndex === null) {
-      // CREATE
-      setData((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
+    setError(null);
+    setSubmitting(true);
+    try {
+      const hasFile = form.file && form.file.size > 0;
+      let res: Response;
+      if (hasFile) {
+        const fd = new FormData();
+        fd.set("nama", form.nama);
+        fd.set("tanggal", form.tanggal);
+        fd.set("kategori", form.kategori);
+        fd.set("file", form.file);
+        if (editingIndex === null) {
+          res = await fetch(API_PELATIHAN, { method: "POST", body: fd, credentials: "include" });
+        } else {
+          const id = data[editingIndex]?.id;
+          if (!id) {
+            setError("Data pelatihan tidak valid.");
+            setSubmitting(false);
+            return;
+          }
+          res = await fetch(`${API_PELATIHAN}/${id}`, { method: "PATCH", body: fd, credentials: "include" });
+        }
+      } else {
+        const body = {
           nama: form.nama,
           tanggal: form.tanggal,
           kategori: form.kategori,
-        },
-      ]);
-    } else {
-      // UPDATE
-      setData((prev) =>
-        prev.map((s, i) =>
-          i === editingIndex
-            ? {
-                ...s,
-                nama: form.nama,
-                tanggal: form.tanggal,
-                kategori: form.kategori,
-              }
-            : s,
-        ),
-      );
-    }
+        };
+        if (editingIndex === null) {
+          res = await fetch(API_PELATIHAN, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            credentials: "include",
+          });
+        } else {
+          const id = data[editingIndex]?.id;
+          if (!id) {
+            setError("Data pelatihan tidak valid.");
+            setSubmitting(false);
+            return;
+          }
+          res = await fetch(`${API_PELATIHAN}/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            credentials: "include",
+          });
+        }
+      }
 
-    setEdit(false);
-    setEditingIndex(null);
-    setForm(EMPTY_FORM);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || "Gagal menyimpan pelatihan");
+        return;
+      }
+
+      if (editingIndex === null) {
+        setData((prev) => [
+          ...prev,
+          {
+            id: json.id,
+            nama: json.nama,
+            tanggal: json.tanggal,
+            kategori: json.kategori,
+            fileUrl: json.fileUrl,
+          },
+        ]);
+      } else {
+        setData((prev) =>
+          prev.map((s, i) =>
+            i === editingIndex
+              ? { ...s, nama: json.nama, tanggal: json.tanggal, kategori: json.kategori, fileUrl: json.fileUrl ?? s.fileUrl }
+              : s,
+          ),
+        );
+      }
+      setEdit(false);
+      setEditingIndex(null);
+      setForm(EMPTY_FORM);
+      onRefetch?.();
+    } catch {
+      setError("Gagal menyimpan pelatihan");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -181,7 +260,17 @@ export default function TabPelatihan({
                 <p className="text-xs text-slate-400">{s.tanggal}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {s.fileUrl && (
+                  <a
+                    href={s.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 hover:underline"
+                  >
+                    Lihat sertifikat
+                  </a>
+                )}
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300">
                   {s.kategori}
                 </span>
@@ -288,10 +377,12 @@ export default function TabPelatihan({
               Batal
             </button>
             <button
+              type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 rounded text-xs bg-emerald-400 text-slate-900"
+              disabled={submitting}
+              className="px-3 py-1.5 rounded text-xs bg-emerald-400 text-slate-900 disabled:opacity-60"
             >
-              Simpan
+              {submitting ? "Menyimpan…" : "Simpan"}
             </button>
           </div>
         </div>

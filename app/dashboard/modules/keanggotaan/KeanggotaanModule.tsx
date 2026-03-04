@@ -36,7 +36,7 @@ type AnggotaKeanggotaan = Anggota & {
 const VALID_TABS: TabKey[] = ["kyu", "dan", "pelatihan", "pindah"];
 
 export default function KeanggotaanModule() {
-  const { data, loading, kyu, dan, pelatihan } = useMyKeanggotaan();
+  const { data, loading, kyu, dan, pelatihan, refetchRiwayat } = useMyKeanggotaan();
   const { tab, setTab } = useKeanggotaanTabs();
 
   const searchParams = useSearchParams();
@@ -90,42 +90,50 @@ export default function KeanggotaanModule() {
   };
 
   /* ===============================
-     RENDER (key agar UI update saat data dari DB ready)
+     RENDER
+     - Tanpa key di root agar tidak remount seluruh modul saat data load (lebih soft).
+     - Semua tab di-render, hanya yang aktif tampil (hidden untuk yang lain) agar:
+       state form/riwayat tidak hilang dan Pindah Ranting tidak refetch tiap ganti tab.
   =============================== */
   return (
-    <div className="pb-12 flex justify-center" key={data?.id ?? "loading"}>
+    <div className="pb-12 flex justify-center">
       <div className="w-full max-w-5xl">
         <div className="mt-6">
           <div className="relative z-10 px-6 -mt-2">
             <DigitalCardPreview anggota={anggota} />
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 print:hidden">
             <TabNavigation tab={tab} onChange={handleTabChange} />
           </div>
 
-          <div className="mt-4">
-            {tab === "kyu" && (
+          <div className="mt-4 print:hidden">
+            <div className={tab === "kyu" ? "" : "hidden"} role="tabpanel" aria-hidden={tab !== "kyu"}>
               <TabKyu
-                key={`kyu-${data?.id ?? ""}-${(kyu ?? []).length}-${kyu?.[0]?.id ?? ""}`}
+                key={`kyu-${data?.id ?? ""}`}
                 initialData={kyu ?? []}
                 anggota={anggota}
+                onRefetch={refetchRiwayat}
               />
-            )}
-            {tab === "dan" && (
+            </div>
+            <div className={tab === "dan" ? "" : "hidden"} role="tabpanel" aria-hidden={tab !== "dan"}>
               <TabDan
-                key={`dan-${data?.id ?? ""}-${(dan ?? []).length}-${dan?.[0]?.dan ?? ""}`}
+                key={`dan-${data?.id ?? ""}`}
                 initialData={dan ?? []}
                 anggota={anggota}
+                onRefetch={refetchRiwayat}
               />
-            )}
-            {tab === "pelatihan" && (
+            </div>
+            <div className={tab === "pelatihan" ? "" : "hidden"} role="tabpanel" aria-hidden={tab !== "pelatihan"}>
               <TabPelatihan
-                key={`pelatihan-${data?.id ?? ""}-${(pelatihan ?? []).length}-${pelatihan?.[0]?.id ?? ""}`}
+                key={`pelatihan-${data?.id ?? ""}`}
                 initialData={pelatihan ?? []}
+                onRefetch={refetchRiwayat}
               />
-            )}
-            {tab === "pindah" && <TabPindahRanting anggota={anggota} />}
+            </div>
+            <div className={tab === "pindah" ? "" : "hidden"} role="tabpanel" aria-hidden={tab !== "pindah"}>
+              <TabPindahRanting anggota={anggota} />
+            </div>
           </div>
         </div>
       </div>

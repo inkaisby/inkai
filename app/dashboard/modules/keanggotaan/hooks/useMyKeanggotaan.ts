@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import { waitForSessionReady } from "@/app/lib/auth/sessionReady";
 import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
@@ -11,9 +11,11 @@ import type { KyuItem } from "../types/Anggota";
 
 /** Satu baris DAN dari DB */
 export type DanRow = {
+  id?: string;
   dan: number;
   tanggal?: string;
   mshNumber?: string;
+  fileUrl?: string;
 };
 
 /** Satu baris pelatihan/sertifikasi dari DB */
@@ -22,6 +24,7 @@ export type PelatihanRow = {
   nama: string;
   tanggal: string;
   kategori: string;
+  fileUrl?: string;
 };
 
 export function useMyKeanggotaan() {
@@ -31,6 +34,20 @@ export function useMyKeanggotaan() {
   const [dan, setDan] = useState<DanRow[]>([]);
   const [pelatihan, setPelatihan] = useState<PelatihanRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadRiwayat = useCallback(async () => {
+    try {
+      const res = await fetch("/api/keanggotaan/riwayat", { credentials: "include" });
+      if (res.ok) {
+        const json = await res.json();
+        setKyu(Array.isArray(json.kyu) ? json.kyu : []);
+        setDan(Array.isArray(json.dan) ? json.dan : []);
+        setPelatihan(Array.isArray(json.pelatihan) ? json.pelatihan : []);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -49,7 +66,6 @@ export function useMyKeanggotaan() {
 
       setUser(user);
 
-      // Pakai cache prefetch (dari hover menu) bila ada agar tampil cepat
       const cachedProfile = getPrefetch<Anggota>("keanggotaan-profile");
       const cachedRiwayat = getPrefetch<{ kyu?: KyuItem[]; dan?: DanRow[]; pelatihan?: PelatihanRow[] }>("keanggotaan-riwayat");
       if (cachedProfile) {
@@ -67,25 +83,14 @@ export function useMyKeanggotaan() {
       if (profileRes.ok) {
         const mapped = (await profileRes.json()) as Anggota;
         setData(mapped);
-
-        try {
-          const res = await fetch("/api/keanggotaan/riwayat", { credentials: "include" });
-          if (res.ok) {
-            const json = await res.json();
-            setKyu(Array.isArray(json.kyu) ? json.kyu : []);
-            setDan(Array.isArray(json.dan) ? json.dan : []);
-            setPelatihan(Array.isArray(json.pelatihan) ? json.pelatihan : []);
-          }
-        } catch {
-          // ignore
-        }
+        await loadRiwayat();
       }
 
       setLoading(false);
     };
 
     load();
-  }, []);
+  }, [loadRiwayat]);
 
-  return { user, data, loading, kyu, dan, pelatihan };
+  return { user, data, loading, kyu, dan, pelatihan, refetchRiwayat: loadRiwayat };
 }

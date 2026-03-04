@@ -62,12 +62,16 @@ const EMPTY_FORM: KyuForm = {
   file: null,
 };
 
+const API_KYU = "/api/keanggotaan/riwayat/kyu";
+
 export default function TabKyu({
   initialData = [],
   anggota,
+  onRefetch,
 }: {
   initialData?: KyuWithMeta[];
   anggota?: Anggota;
+  onRefetch?: () => void | Promise<void>;
 }) {
   /* ===============================
      STATE (isi awal dari DB; parent pakai key agar remount saat data load)
@@ -78,6 +82,7 @@ export default function TabKyu({
   const [edit, setEdit] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const hasAnggota =
     typeof anggota?.nama === "string" && anggota.nama.trim().length > 0;
@@ -106,9 +111,30 @@ export default function TabKyu({
     setError(null);
   }
 
-  function handleDelete(idx: number) {
+  async function handleDelete(idx: number) {
     if (!confirm("Hapus data KYU ini?")) return;
-    setData((prev) => prev.filter((_, i) => i !== idx));
+    const item = data[idx];
+    if (!item?.id) {
+      setData((prev) => prev.filter((_, i) => i !== idx));
+      onRefetch?.();
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_KYU}/${item.id}`, { method: "DELETE", credentials: "include" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || "Gagal menghapus KYU");
+        return;
+      }
+      setData((prev) => prev.filter((_, i) => i !== idx));
+      onRefetch?.();
+    } catch {
+      setError("Gagal menghapus KYU");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -144,9 +170,9 @@ export default function TabKyu({
   }, [previewUrl]);
 
   /* ===============================
-     SAVE
+     SAVE (persist ke DB)
   =============================== */
-  function handleSave() {
+  async function handleSave() {
     if (!hasAnggota) {
       setError("Data anggota belum lengkap.");
       return;
@@ -155,43 +181,103 @@ export default function TabKyu({
       setError("No. dan tanggal ijazah wajib diisi.");
       return;
     }
-    if (!form.file && editingIndex === null) {
-      setError("Ijazah KYU wajib diunggah.");
-      return;
-    }
 
-    if (editingIndex === null) {
-      setData((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
+    setError(null);
+    setSubmitting(true);
+    try {
+      const hasFile = form.file && form.file.size > 0;
+      let res: Response;
+      if (hasFile) {
+        const fd = new FormData();
+        fd.set("level", String(form.level));
+        fd.set("no_ijazah", form.noIjazah);
+        fd.set("tanggal_ijazah", form.tanggalIjazah);
+        fd.set("file", form.file);
+        if (editingIndex === null) {
+          res = await fetch(API_KYU, { method: "POST", body: fd, credentials: "include" });
+        } else {
+          const id = data[editingIndex]?.id;
+          if (!id) {
+            setError("Data KYU tidak valid.");
+            setSubmitting(false);
+            return;
+          }
+          res = await fetch(`${API_KYU}/${id}`, { method: "PATCH", body: fd, credentials: "include" });
+        }
+      } else {
+        const body = {
           level: form.level,
-          warna: form.warna,
-          noIjazah: form.noIjazah,
-          tanggalIjazah: form.tanggalIjazah,
-          verified: false,
-          file: form.file,
-        },
-      ]);
-    } else {
-      setData((prev) =>
-        prev.map((k, i) =>
-          i === editingIndex
-            ? {
-                ...k,
-                level: form.level,
-                warna: form.warna,
-                noIjazah: form.noIjazah,
-                tanggalIjazah: form.tanggalIjazah,
-              }
-            : k,
-        ),
-      );
-    }
+          no_ijazah: form.noIjazah,
+          tanggal_ijazah: form.tanggalIjazah,
+        };
+        if (editingIndex === null) {
+          res = await fetch(API_KYU, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            credentials: "include",
+          });
+        } else {
+          const id = data[editingIndex]?.id;
+          if (!id) {
+            setError("Data KYU tidak valid.");
+            setSubmitting(false);
+            return;
+          }
+          res = await fetch(`${API_KYU}/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            credentials: "include",
+          });
+        }
+      }
 
-    setEdit(false);
-    setEditingIndex(null);
-    setForm(EMPTY_FORM);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || "Gagal menyimpan KYU");
+        return;
+      }
+
+      if (editingIndex === null) {
+        setData((prev) => [
+          ...prev,
+          {
+            id: json.id,
+            level: json.level,
+            warna: KYU_WARNA_MAP[json.level],
+            noIjazah: json.noIjazah,
+            tanggalIjazah: json.tanggalIjazah,
+            fileUrl: json.fileUrl,
+            verified: false,
+            file: form.file,
+          },
+        ]);
+      } else {
+        setData((prev) =>
+          prev.map((k, i) =>
+            i === editingIndex
+              ? {
+                  ...k,
+                  level: json.level,
+                  warna: KYU_WARNA_MAP[json.level],
+                  noIjazah: json.noIjazah,
+                  tanggalIjazah: json.tanggalIjazah,
+                  fileUrl: json.fileUrl ?? k.fileUrl,
+                }
+              : k,
+          ),
+        );
+      }
+      setEdit(false);
+      setEditingIndex(null);
+      setForm(EMPTY_FORM);
+      onRefetch?.();
+    } catch {
+      setError("Gagal menyimpan KYU");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -220,7 +306,17 @@ export default function TabKyu({
                 </p>
               </div>
 
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center flex-wrap">
+                {k.fileUrl && (
+                  <a
+                    href={k.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 hover:underline"
+                  >
+                    Lihat ijazah
+                  </a>
+                )}
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full ${
                     k.verified
@@ -348,10 +444,12 @@ export default function TabKyu({
               Batal
             </button>
             <button
+              type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 text-xs rounded bg-cyan-400 text-slate-900"
+              disabled={submitting}
+              className="px-3 py-1.5 text-xs rounded bg-cyan-400 text-slate-900 disabled:opacity-60"
             >
-              Simpan
+              {submitting ? "Menyimpan…" : "Simpan"}
             </button>
           </div>
         </div>

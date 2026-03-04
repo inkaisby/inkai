@@ -1,16 +1,14 @@
 /**
  * GET /api/keanggotaan/riwayat
  * Mengambil riwayat KYU, DAN, Pelatihan untuk user yang login.
- * Versi ini memakai client session + RLS, bukan service role.
- *
- * SYARAT di Supabase (disarankan):
- * - Tabel `profiles` punya RLS policy yang mengizinkan user melihat profil miliknya sendiri.
- * - Tabel `kyu`, `dan`, `pelatihan` punya RLS policy yang hanya mengizinkan akses baris
- *   dengan `profile_id` yang terkait ke profil user yang login.
+ * Memakai admin client agar konsisten dengan endpoint lain.
+ * Mengembalikan fileUrl untuk setiap item yang punya file_path.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser, createSupabaseSessionClient } from "@/app/lib/supabase/session";
+import { getSessionUser } from "@/app/lib/supabase/session";
+import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
+import { getPublicUrl } from "@/app/lib/storage/ijazah";
 
 export async function GET(req: NextRequest) {
   const rateLimitRes = checkApiRateLimit(req, "keanggotaan-riwayat", { max: 60, windowMs: 60_000 });
@@ -21,9 +19,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createSupabaseSessionClient();
+  const admin = createSupabaseAdminClient();
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("id")
     .eq("user_id", user.id)
@@ -39,46 +37,50 @@ export async function GET(req: NextRequest) {
   const profileId = String(profile.id);
 
   const [kyuRes, danRes, pelatihanRes] = await Promise.all([
-    supabase
+    admin
       .from("kyu")
-      .select("id, level, no_ijazah, tanggal_ijazah")
+      .select("id, level, no_ijazah, tanggal_ijazah, file_path")
       .eq("profile_id", profileId)
       .order("level", { ascending: false }),
-    supabase
+    admin
       .from("dan")
-      .select("dan, tanggal, msh_number")
+      .select("id, dan, tanggal, msh_number, file_path")
       .eq("profile_id", profileId)
       .order("dan", { ascending: false }),
-    supabase
+    admin
       .from("pelatihan")
-      .select("id, nama, tanggal, kategori")
+      .select("id, nama, tanggal, kategori, file_path")
       .eq("profile_id", profileId)
       .order("tanggal", { ascending: false }),
   ]);
 
   const kyu = (kyuRes.data ?? []).map(
-    (r: { id: string; level: number; no_ijazah?: string; tanggal_ijazah?: string }) => ({
+    (r: { id: string; level: number; no_ijazah?: string; tanggal_ijazah?: string; file_path?: string | null }) => ({
       id: String(r.id),
       level: Number(r.level),
       noIjazah: r.no_ijazah ?? undefined,
       tanggalIjazah: r.tanggal_ijazah ?? undefined,
+      fileUrl: getPublicUrl(r.file_path ?? null) ?? undefined,
     }),
   );
 
   const dan = (danRes.data ?? []).map(
-    (r: { dan: number; tanggal?: string; msh_number?: string }) => ({
+    (r: { id: string; dan: number; tanggal?: string; msh_number?: string; file_path?: string | null }) => ({
+      id: String(r.id),
       dan: Number(r.dan),
       tanggal: r.tanggal ?? undefined,
       mshNumber: r.msh_number ?? undefined,
+      fileUrl: getPublicUrl(r.file_path ?? null) ?? undefined,
     }),
   );
 
   const pelatihan = (pelatihanRes.data ?? []).map(
-    (r: { id: string; nama?: string; tanggal?: string; kategori?: string }) => ({
+    (r: { id: string; nama?: string; tanggal?: string; kategori?: string; file_path?: string | null }) => ({
       id: String(r.id),
       nama: String(r.nama ?? ""),
       tanggal: String(r.tanggal ?? ""),
       kategori: String(r.kategori ?? "PELATIHAN"),
+      fileUrl: getPublicUrl(r.file_path ?? null) ?? undefined,
     }),
   );
 

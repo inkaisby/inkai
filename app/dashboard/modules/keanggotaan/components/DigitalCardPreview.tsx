@@ -5,6 +5,18 @@ import { QRCodeSVG } from "qrcode.react";
 import { Anggota } from "../types/Anggota";
 
 export default function DigitalCardPreview({ anggota }: { anggota: Anggota }) {
+  const userId = anggota.user_id && anggota.user_id !== "session-only" ? anggota.user_id : null;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handlePDF = () => {
+    if (!userId) return;
+    const url = `/api/anggota/${encodeURIComponent(userId)}/pdf`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const qrValue =
     anggota.nomor ?? anggota.id
       ? `INKAI:${anggota.nomor ?? ""}|${anggota.id}`
@@ -72,8 +84,10 @@ export default function DigitalCardPreview({ anggota }: { anggota: Anggota }) {
         </div>
 
         {/* Tombol aksi */}
-        <div className="px-5 pb-5 flex gap-3">
+        <div className="px-5 pb-5 flex gap-3 print:hidden">
           <button
+            type="button"
+            onClick={handlePrint}
             className="
               flex-1
               bg-amber-600 hover:bg-amber-500
@@ -85,6 +99,9 @@ export default function DigitalCardPreview({ anggota }: { anggota: Anggota }) {
             🖨️ Print
           </button>
           <button
+            type="button"
+            onClick={handlePDF}
+            disabled={!userId}
             className="
               flex-1
               bg-slate-800/80 hover:bg-slate-700/80
@@ -92,6 +109,7 @@ export default function DigitalCardPreview({ anggota }: { anggota: Anggota }) {
               py-2.5 rounded-lg
               border border-amber-500/30
               transition-colors
+              disabled:opacity-50 disabled:cursor-not-allowed
             "
           >
             📄 PDF

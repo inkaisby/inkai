@@ -25,6 +25,8 @@ export type KyuItem = {
   warna?: string;
   noIjazah?: string;
   tanggalIjazah?: string;
+  /** URL publik file ijazah di Storage (dari API riwayat). */
+  fileUrl?: string;
 };
 
 /** Bentuk data untuk list/table keanggotaan (ranting sebagai string). */

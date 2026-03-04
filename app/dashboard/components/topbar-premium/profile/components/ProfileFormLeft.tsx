@@ -16,6 +16,8 @@ interface Props {
   // 🔑 dari parent (ProfileModal)
   nikChecking?: boolean;
   nikExists: boolean;
+  /** Hanya admin yang boleh mengisi No. Anggota */
+  canEditNomor?: boolean;
 }
 
 export default function ProfileFormLeft({
@@ -25,6 +27,7 @@ export default function ProfileFormLeft({
   errors,
   nikChecking = false,
   nikExists,
+  canEditNomor = false,
 }: Props) {
   if (step !== 1) return null;
 
@@ -71,6 +74,31 @@ export default function ProfileFormLeft({
         onChange={(v) => update("nama", v)}
         error={errors.nama}
         dataField="nama"
+      />
+
+      {/* ================= NO. ANGGOTA (hanya admin yang boleh mengisi) ================= */}
+      <BlockInput
+        label="No. Anggota"
+        value={profile.nomor}
+        onChange={(v) => update("nomor", v)}
+        error={errors.nomor}
+        dataField="nomor"
+        placeholder="Nomor keanggotaan (hanya admin yang dapat mengisi)"
+        disabled={!canEditNomor}
+      />
+
+      {/* ================= STATUS KEANGGOTAAN ================= */}
+      <BlockSelect
+        label="Status Keanggotaan"
+        value={profile.status}
+        onChange={(v) => update("status", v)}
+        options={[
+          { label: "— Pilih status —", value: "" },
+          { label: "Aktif", value: "AKTIF" },
+          { label: "Nonaktif", value: "NONAKTIF" },
+        ]}
+        error={errors.status}
+        dataField="status"
       />
 
       {/* ================= EMAIL ================= */}

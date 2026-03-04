@@ -20,9 +20,11 @@ const DAN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
    TYPES
 ================================ */
 type DanItem = {
+  id?: string;
   dan: number;
   tanggal?: string;
   mshNumber?: string;
+  fileUrl?: string;
 };
 
 type DanWithMeta = DanItem & {
@@ -46,14 +48,18 @@ const EMPTY_FORM: DanForm = {
   file: null,
 };
 
-type DanInitialData = { dan: number; tanggal?: string; mshNumber?: string }[];
+type DanInitialData = { id?: string; dan: number; tanggal?: string; mshNumber?: string }[];
+
+const API_DAN = "/api/keanggotaan/riwayat/dan";
 
 export default function TabDan({
   anggota,
   initialData = [],
+  onRefetch,
 }: {
   anggota?: Anggota;
   initialData?: DanInitialData;
+  onRefetch?: () => void | Promise<void>;
 }) {
   /* ===============================
      GUARD
@@ -67,13 +73,14 @@ export default function TabDan({
      STATE (isi awal dari DB via initialData)
   =============================== */
   const [data, setData] = useState<DanWithMeta[]>(
-    () => (initialData ?? []).map((d) => ({ dan: d.dan, tanggal: d.tanggal, mshNumber: d.mshNumber }))
+    () => (initialData ?? []).map((d) => ({ id: d.id, dan: d.dan, tanggal: d.tanggal, mshNumber: d.mshNumber, fileUrl: (d as { fileUrl?: string }).fileUrl }))
   );
 
   const [form, setForm] = useState<DanForm>(EMPTY_FORM);
   const [edit, setEdit] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   /* ===============================
      HELPERS
@@ -111,9 +118,30 @@ export default function TabDan({
     setError(null);
   }
 
-  function handleDelete(idx: number) {
+  async function handleDelete(idx: number) {
     if (!confirm("Hapus riwayat DAN ini?")) return;
-    setData((prev) => prev.filter((_, i) => i !== idx));
+    const item = data[idx];
+    if (!item?.id) {
+      setData((prev) => prev.filter((_, i) => i !== idx));
+      onRefetch?.();
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_DAN}/${item.id}`, { method: "DELETE", credentials: "include" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || "Gagal menghapus DAN");
+        return;
+      }
+      setData((prev) => prev.filter((_, i) => i !== idx));
+      onRefetch?.();
+    } catch {
+      setError("Gagal menghapus DAN");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -150,9 +178,9 @@ export default function TabDan({
   }, [previewUrl]);
 
   /* ===============================
-     SAVE (INI KUNCI UTAMA)
+     SAVE (persist ke DB)
   =============================== */
-  function handleSave() {
+  async function handleSave() {
     if (!hasAnggota) {
       setError("Data anggota belum lengkap.");
       return;
@@ -161,41 +189,94 @@ export default function TabDan({
       setError("Tanggal penetapan wajib diisi.");
       return;
     }
-    if (!form.file && editingIndex === null) {
-      setError("Ijazah DAN wajib diunggah.");
-      return;
-    }
 
-    if (editingIndex === null) {
-      // CREATE
-      setData((prev) => [
-        ...prev,
-        {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const hasFile = form.file && form.file.size > 0;
+      let res: Response;
+      if (hasFile) {
+        const fd = new FormData();
+        fd.set("dan", String(form.dan));
+        fd.set("tanggal", form.tanggal);
+        fd.set("msh_number", form.mshNumber ?? "");
+        fd.set("file", form.file);
+        if (editingIndex === null) {
+          res = await fetch(API_DAN, { method: "POST", body: fd, credentials: "include" });
+        } else {
+          const id = data[editingIndex]?.id;
+          if (!id) {
+            setError("Data DAN tidak valid.");
+            setSubmitting(false);
+            return;
+          }
+          res = await fetch(`${API_DAN}/${id}`, { method: "PATCH", body: fd, credentials: "include" });
+        }
+      } else {
+        const body = {
           dan: form.dan,
           tanggal: form.tanggal,
-          mshNumber: form.mshNumber,
-          verified: false,
-        },
-      ]);
-    } else {
-      // UPDATE
-      setData((prev) =>
-        prev.map((d, i) =>
-          i === editingIndex
-            ? {
-                ...d,
-                dan: form.dan,
-                tanggal: form.tanggal,
-                mshNumber: form.mshNumber,
-              }
-            : d,
-        ),
-      );
-    }
+          msh_number: form.mshNumber,
+        };
+        if (editingIndex === null) {
+          res = await fetch(API_DAN, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            credentials: "include",
+          });
+        } else {
+          const id = data[editingIndex]?.id;
+          if (!id) {
+            setError("Data DAN tidak valid.");
+            setSubmitting(false);
+            return;
+          }
+          res = await fetch(`${API_DAN}/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            credentials: "include",
+          });
+        }
+      }
 
-    setEdit(false);
-    setEditingIndex(null);
-    setForm(EMPTY_FORM);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || "Gagal menyimpan DAN");
+        return;
+      }
+
+      if (editingIndex === null) {
+        setData((prev) => [
+          ...prev,
+          {
+            id: json.id,
+            dan: json.dan,
+            tanggal: json.tanggal,
+            mshNumber: json.mshNumber,
+            fileUrl: json.fileUrl,
+            verified: false,
+          },
+        ]);
+      } else {
+        setData((prev) =>
+          prev.map((d, i) =>
+            i === editingIndex
+              ? { ...d, id: json.id, dan: json.dan, tanggal: json.tanggal, mshNumber: json.mshNumber, fileUrl: json.fileUrl ?? d.fileUrl }
+              : d,
+          ),
+        );
+      }
+      setEdit(false);
+      setEditingIndex(null);
+      setForm(EMPTY_FORM);
+      onRefetch?.();
+    } catch {
+      setError("Gagal menyimpan DAN");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -210,7 +291,7 @@ export default function TabDan({
 
           {data.map((d, i) => (
             <div
-              key={i}
+              key={d.id ?? i}
               className="rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2 flex justify-between items-center"
             >
               <div>
@@ -220,7 +301,17 @@ export default function TabDan({
                 <p className="text-xs text-slate-400">{d.tanggal}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {d.fileUrl && (
+                  <a
+                    href={d.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 hover:underline"
+                  >
+                    Lihat ijazah
+                  </a>
+                )}
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-300">
                   Draft
                 </span>
@@ -347,10 +438,12 @@ export default function TabDan({
               Batal
             </button>
             <button
+              type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 rounded text-xs bg-cyan-400 text-slate-900"
+              disabled={submitting}
+              className="px-3 py-1.5 rounded text-xs bg-cyan-400 text-slate-900 disabled:opacity-60"
             >
-              Simpan
+              {submitting ? "Menyimpan…" : "Simpan"}
             </button>
           </div>
         </div>

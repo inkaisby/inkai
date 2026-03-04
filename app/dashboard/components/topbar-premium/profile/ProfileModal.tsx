@@ -11,6 +11,7 @@ import useProfileData, { type ProfileData } from "./hooks/useProfileData";
 import useAutoSave from "./hooks/useAutoSave";
 import useWizard from "./hooks/useWizard";
 import useRantingOptions from "./hooks/useRantingOptions";
+import { useBootstrapStore } from "../../../store/bootstrapStore";
 
 import {
   getProvinces,
@@ -79,6 +80,8 @@ const ProfileSchema = z.object({
   districtId: z.string().min(1),
   villageId: z.string().min(1),
   rantingId: z.string().min(1),
+  nomor: z.string(),
+  status: z.string(),
 });
 
 /* ================= COMPONENT ================= */
@@ -94,6 +97,10 @@ export default function ProfileModal() {
     saving,
     nikExists,
   } = useProfileData();
+
+  const bootstrapUser = useBootstrapStore((s) => s.data?.user);
+  const canEditNomor =
+    (bootstrapUser?.app_role ?? "").toUpperCase() === "SUPERADMIN";
 
   const { currentStep, nextStep, prevStep, maxStep } = useWizard();
   const { options: rantingOptions, loading: rantingLoading } =
@@ -323,6 +330,7 @@ export default function ProfileModal() {
                   step={currentStep}
                   errors={errors}
                   nikExists={nikExists}
+                  canEditNomor={canEditNomor}
                 />
               </>
             )}

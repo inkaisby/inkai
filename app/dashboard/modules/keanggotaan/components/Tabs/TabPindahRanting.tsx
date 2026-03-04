@@ -17,7 +17,7 @@ type Wilayah = {
   name: string;
 };
 
-/** Bentuk baris tabel pengajuan_pindah_ranting dari DB (data bayangan) */
+/** Bentuk baris dari API/DB pengajuan_pindah_ranting */
 export type RiwayatItem = {
   id: string;
   asal: string;
@@ -41,36 +41,7 @@ const EMPTY_FORM: FormState = {
   alasan: "",
 };
 
-/* ===============================
-   DATA BAYANGAN HASIL DARI DB
-   (mock pengajuan_pindah_ranting)
-================================ */
-const MOCK_HISTORY_PINDAH_RANTING: RiwayatItem[] = [
-  {
-    id: "pr-001",
-    asal: "Cakra Koarmatim",
-    tujuan: "Jawa Timur / Surabaya / Wonokromo",
-    alasan: "Pindah domisili mengikuti penugasan kerja.",
-    tanggal: "15 Januari 2025",
-    status: "DISETUJUI",
-  },
-  {
-    id: "pr-002",
-    asal: "Cakra Koarmatim",
-    tujuan: "Jawa Tengah / Semarang / Semarang Tengah",
-    alasan: "Mutasi tugas ke Pangkalan TNI AL Semarang.",
-    tanggal: "22 Februari 2025",
-    status: "DIAJUKAN",
-  },
-  {
-    id: "pr-003",
-    asal: "Wonokromo",
-    tujuan: "Jawa Timur / Sidoarjo / Sidoarjo",
-    alasan: "Kedekatan lokasi latihan dengan tempat tinggal baru.",
-    tanggal: "10 Desember 2024",
-    status: "DITOLAK",
-  },
-];
+const API_PINDAH_RANTING = "/api/keanggotaan/pindah-ranting";
 
 /* ===============================
    PROPS (identitas dari parent / session)
@@ -95,12 +66,12 @@ export default function TabPindahRanting({ anggota }: TabPindahRantingProps) {
   };
 
   /* ===============================
-     STATE (riwayat awal = data bayangan dari DB)
+     STATE (riwayat dari DB via API)
   =============================== */
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [riwayat, setRiwayat] = useState<RiwayatItem[]>(
-    MOCK_HISTORY_PINDAH_RANTING,
-  );
+  const [riwayat, setRiwayat] = useState<RiwayatItem[]>([]);
+  const [loadingRiwayat, setLoadingRiwayat] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
@@ -118,6 +89,34 @@ export default function TabPindahRanting({ anggota }: TabPindahRantingProps) {
   =============================== */
   useEffect(() => {
     getProvinces().then(setProvinces);
+  }, []);
+
+  /* ===============================
+     LOAD RIWAYAT PINDAH RANTING DARI API
+  =============================== */
+  async function loadRiwayat(showLoading = true) {
+    if (showLoading) setLoadingRiwayat(true);
+    try {
+      const res = await fetch(API_PINDAH_RANTING);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || "Gagal memuat riwayat");
+        setRiwayat([]);
+        return;
+      }
+      const data = await res.json();
+      setRiwayat(Array.isArray(data.riwayat) ? data.riwayat : []);
+      setError(null);
+    } catch {
+      setError("Gagal memuat riwayat");
+      setRiwayat([]);
+    } finally {
+      setLoadingRiwayat(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRiwayat();
   }, []);
 
   /* ===============================
@@ -154,30 +153,45 @@ export default function TabPindahRanting({ anggota }: TabPindahRantingProps) {
     setEditWilayah(false);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.provId || !form.kabId || !form.kecId || !form.alasan) {
       setError("Semua field wajib diisi");
       return;
     }
 
-    setRiwayat((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        asal: user.cabangAsal,
-        tujuan: `${provLabel} / ${kabLabel} / ${kecLabel}`,
-        alasan: form.alasan,
-        tanggal: new Date().toLocaleDateString("id-ID"),
-        status: "DIAJUKAN",
-      },
-    ]);
-    setForm(EMPTY_FORM);
-    setProvLabel("");
-    setKabLabel("");
-    setKecLabel("");
-    setEditWilayah(true);
-
+    const tujuan = `${provLabel} / ${kabLabel} / ${kecLabel}`;
     setError(null);
+    setSubmitting(true);
+
+    try {
+      const res = await fetch(API_PINDAH_RANTING, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          asal: user.cabangAsal,
+          tujuan,
+          alasan: form.alasan,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data.message || "Gagal mengajukan pindah ranting");
+        return;
+      }
+
+      setForm(EMPTY_FORM);
+      setProvLabel("");
+      setKabLabel("");
+      setKecLabel("");
+      setEditWilayah(true);
+      await loadRiwayat(false);
+    } catch {
+      setError("Gagal mengajukan pindah ranting");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ===============================
@@ -338,22 +352,26 @@ ${approvalLink}
         )}
 
         <button
+          type="button"
           onClick={handleSubmit}
+          disabled={submitting}
           className="w-full py-2 rounded-lg text-xs font-semibold
                      bg-gradient-to-r from-cyan-400 to-emerald-400
-                     text-slate-900"
+                     text-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Ajukan
+          {submitting ? "Mengirim…" : "Ajukan"}
         </button>
       </div>
 
-      {/* RIWAYAT PENGAJUAN PINDAH RANTING (history dari DB + pengajuan baru) */}
+      {/* RIWAYAT PENGAJUAN PINDAH RANTING (dari DB) */}
       <div className="rounded-xl p-4 border border-cyan-500/30 bg-slate-900">
         <p className="text-xs font-bold text-cyan-300 mb-2">
           RIWAYAT PENGAJUAN PINDAH RANTING
         </p>
 
-        {riwayat.length === 0 ? (
+        {loadingRiwayat ? (
+          <p className="text-xs text-slate-500 py-2">Memuat riwayat…</p>
+        ) : riwayat.length === 0 ? (
           <p className="text-xs text-slate-500 py-2">
             Belum ada riwayat pengajuan. Isi form di atas lalu klik Ajukan.
           </p>

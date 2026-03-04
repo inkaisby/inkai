@@ -27,7 +27,7 @@ export default function TabNavigation({
             className={`
               relative flex-1 rounded-lg px-3 py-2
               text-xs font-semibold tracking-wide
-              transition-all
+              transition-all duration-200 ease-out
               ${
                 active
                   ? "bg-gradient-to-r from-cyan-300 to-emerald-300 text-slate-900"

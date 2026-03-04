@@ -29,6 +29,8 @@ type ProfileRow = {
 
   ranting_id: string | null;
   avatar_path: string | null;
+  nomor?: string | null;
+  status?: string | null;
 };
 
 /* =====================
@@ -58,6 +60,9 @@ export interface ProfileData {
 
   rantingId: string;
   rantingLocked: boolean;
+
+  nomor: string;
+  status: string;
 
   avatarPath?: string | null;
   avatarUrl?: string | null;
@@ -91,6 +96,9 @@ const EMPTY: ProfileData = {
 
   rantingId: "",
   rantingLocked: false,
+
+  nomor: "",
+  status: "",
 
   avatarPath: null,
   avatarUrl: null,
@@ -128,6 +136,9 @@ function normalize(db: ProfileRow | null): ProfileData {
 
     rantingId: db.ranting_id ?? "",
     rantingLocked: Boolean(db.ranting_id),
+
+    nomor: (db as ProfileRow).nomor ?? "",
+    status: (db as ProfileRow).status ?? "",
 
     avatarPath: db.avatar_path ?? null,
     avatarUrl: null,
@@ -172,6 +183,18 @@ export default function useProfileData() {
           .getPublicUrl(row.avatar_path);
 
         normalized.avatarUrl = data?.publicUrl ?? null;
+      }
+
+      // Nomor anggota & status dari API keanggotaan (kolom mungkin belum di get_profile_self)
+      try {
+        const res = await fetch("/api/keanggotaan/profile", { credentials: "include" });
+        if (res.ok) {
+          const json = (await res.json()) as { nomor?: string; status?: string };
+          if (json.nomor != null) normalized.nomor = String(json.nomor);
+          if (json.status != null) normalized.status = String(json.status);
+        }
+      } catch {
+        // ignore
       }
 
       setProfile(normalized);
@@ -366,6 +389,26 @@ export default function useProfileData() {
         );
 
         if (rpcError) throw rpcError;
+
+        // Simpan nomor anggota & status ke tabel profiles (PATCH keanggotaan)
+        try {
+          const patchRes = await fetch("/api/keanggotaan/profile", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              nomor: p.nomor || null,
+              status: p.status || null,
+            }),
+          });
+          if (!patchRes.ok) {
+            const errData = await patchRes.json().catch(() => ({}));
+            throw new Error((errData as { message?: string }).message ?? "Gagal menyimpan No. Anggota");
+          }
+        } catch (e) {
+          console.warn("PATCH keanggotaan/profile:", e);
+          throw e;
+        }
 
         setProfile((prev) => ({
           ...prev,
