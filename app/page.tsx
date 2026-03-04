@@ -1,23 +1,29 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import LoginModal from "@/app/auth/login/LoginModal";
 import JarvisLoader from "@/components/JarvisLoader";
 import { useBootstrapStore, type BootstrapData } from "@/app/dashboard/store/bootstrapStore";
 
-function HomeContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || "/dashboard";
+function getReturnTo(): string {
+  if (typeof window === "undefined") return "/dashboard";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("returnTo") || "/dashboard";
+}
 
-  const [phase, setPhase] = useState<"intro" | "landing" | "auth" | "boot">(
-    "landing",
-  );
+export default function Home() {
+  const router = useRouter();
+  const [returnTo, setReturnTo] = useState("/dashboard");
+  const [phase, setPhase] = useState<"landing" | "auth" | "boot">("landing");
   const loginButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setReturnTo(getReturnTo());
+  }, []);
 
   useEffect(() => {
     if (phase === "landing") {
@@ -42,7 +48,7 @@ function HomeContent() {
           })
           .catch(() => {});
         setTimeout(() => {
-          router.replace(returnTo);
+          router.replace(getReturnTo());
           router.refresh();
         }, 300);
       }
@@ -52,13 +58,13 @@ function HomeContent() {
       if (event === "SIGNED_IN" && session) {
         setPhase("boot");
         await new Promise((r) => setTimeout(r, 300));
-        router.replace(returnTo);
+        router.replace(getReturnTo());
         router.refresh();
       }
     });
 
     return () => data.subscription.unsubscribe();
-  }, [router, returnTo]);
+  }, [router]);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-black text-white flex items-center justify-center">
@@ -106,22 +112,5 @@ function HomeContent() {
         </motion.div>
       )}
     </main>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense
-      fallback={
-        <main className="relative h-screen w-screen overflow-hidden bg-black text-white flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <img src="/logo/inkai-logo.png" alt="" className="w-24 opacity-80" />
-            <p className="text-cyan-300 text-sm">Memuat…</p>
-          </div>
-        </main>
-      }
-    >
-      <HomeContent />
-    </Suspense>
   );
 }

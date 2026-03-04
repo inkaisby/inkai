@@ -30,6 +30,9 @@ import CompletionScore from "./components/CompletionScore";
 /* ================= TYPES ================= */
 type Option = { label: string; value: string };
 
+/* ================= REOPEN TIMER (FORCED MODE) ================= */
+let forcedReopenTimer: number | null = null;
+
 const toOptions = (
   arr: { id: unknown; nama?: string; name?: string }[] | unknown,
 ): Option[] =>
@@ -209,13 +212,35 @@ export default function ProfileModal() {
   /* ================= CLOSE REQUEST ================= */
   const handleCloseRequest = () => {
     if (validation.success) {
+      if (forcedReopenTimer) {
+        clearTimeout(forcedReopenTimer);
+        forcedReopenTimer = null;
+      }
       close();
       return;
     }
+
     if (requireComplete) {
-      toast.error("Profil belum lengkap. Lengkapi data untuk melanjutkan.");
+      toast.error(
+        "Profil belum lengkap. Lengkapi data terlebih dahulu — jendela ini akan muncul lagi sebentar lagi.",
+      );
+
+      close();
+
+      if (typeof window !== "undefined") {
+        if (forcedReopenTimer) {
+          clearTimeout(forcedReopenTimer);
+        }
+        forcedReopenTimer = window.setTimeout(() => {
+          const state = useProfileModal.getState();
+          if (!state.isOpen) {
+            state.openForced();
+          }
+        }, 8000);
+      }
       return;
     }
+
     close();
   };
 
@@ -275,7 +300,7 @@ export default function ProfileModal() {
           <ProfileHeader
             currentStep={currentStep}
             onCloseRequest={handleCloseRequest}
-            hideClose={requireComplete}
+            hideClose={false}
           />
           <CompletionScore profile={profile} />
           <WizardStepper step={currentStep} maxStep={maxStep} />

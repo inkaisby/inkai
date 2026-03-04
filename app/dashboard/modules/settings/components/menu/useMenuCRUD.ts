@@ -19,7 +19,7 @@ export type MenuRow = {
 };
 
 export function useMenuCRUD() {
-  const { data: bootstrap } = useBootstrapStore();
+  const { data: bootstrap, setBootstrap } = useBootstrapStore();
   const [menus, setMenus] = useState<MenuRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +37,22 @@ export function useMenuCRUD() {
       const res = await fetch("/api/menus", { credentials: "include" });
       if (!res.ok) throw new Error("Gagal memuat menu");
       const data = await res.json();
-      setMenus(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setMenus(list);
+
+      // Sinkronkan ke bootstrap store supaya Sidebar ikut realtime
+      if (bootstrap) {
+        setBootstrap({
+          ...bootstrap,
+          menus: list,
+        });
+      }
     } catch (e: any) {
       setError(e.message);
       setMenus([]);
     }
-    
-  }, []);
+
+  }, [bootstrap, setBootstrap]);
 
   /* ================= CRUD ================= */
 const createMenu = async (payload: Partial<MenuRow>) => {
