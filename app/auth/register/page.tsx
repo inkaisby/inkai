@@ -57,15 +57,26 @@ export default function RegisterForm() {
 
       if (error) {
         console.error("SIGNUP ERROR:", error);
+        setLoading(false);
 
-        const msg = error.message.toLowerCase();
+        const msg = (error.message ?? "").toLowerCase();
+        const code = String((error as { code?: string }).code ?? "").toLowerCase();
 
-        if (
+        // Email sudah terdaftar (berbagai format error Supabase)
+        const isAlreadyRegistered =
+          code === "user_already_exists" ||
+          code === "422" ||
           msg.includes("already") ||
+          msg.includes("already registered") ||
+          msg.includes("already been registered") ||
+          msg.includes("user already") ||
           msg.includes("exist") ||
           msg.includes("registered") ||
-          msg.includes("duplicate")
-        ) {
+          msg.includes("duplicate") ||
+          msg.includes("sudah terdaftar") ||
+          msg.includes("sudah ada");
+
+        if (isAlreadyRegistered) {
           triggerError("Email sudah terdaftar. Silakan login.");
           return;
         }
@@ -83,12 +94,15 @@ export default function RegisterForm() {
 
       // Tanpa konfirmasi email: jika Supabase mengembalikan session, langsung ke dashboard
       if (data.session) {
+        setLoading(false);
         router.replace("/dashboard");
         return;
       }
+      setLoading(false);
       setSuccessModal(true);
     } catch (err) {
-      console.error("UNEXPECTED ERROR:", err); // ⬅️ tambahan opsional
+      console.error("UNEXPECTED ERROR:", err);
+      setLoading(false);
       triggerError("Terjadi kesalahan sistem.");
     }
   };
