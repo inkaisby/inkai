@@ -46,42 +46,35 @@ export async function GET(req: NextRequest) {
     .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
     .order("nama");
 
-  const hasWilayahFilter = Boolean(provinceId || regencyId || districtId);
-
-  // Untuk profil self-service: jika filter wilayah, skip scope agar user bisa pilih ranting di area alamat.
-  const skipScopeForWilayah = hasWilayahFilter;
-
-  if (!canSeeAllRanting && !skipScopeForWilayah) {
+  // Selalu terapkan scope untuk non-PP/Superadmin — filter wilayah hanya mempersempit hasil dalam scope (cegah bocor data).
+  if (!canSeeAllRanting) {
     if (scope.ranting_ids.length === 0) {
-      if (!hasWilayahFilter) {
-        // Tanpa filter wilayah dan tanpa scope: kembalikan hanya context_ranting milik user (untuk tampilan nama)
-        if (contextRantingId) {
-          const { data: one } = await admin
-            .from("ranting")
-            .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
-            .eq("id", contextRantingId)
-            .maybeSingle();
-          const { data: usr } = await admin
-            .from("user_structural_roles")
-            .select("ranting_id")
-            .eq("user_id", user.id)
-            .eq("ranting_id", contextRantingId)
-            .limit(1)
-            .maybeSingle();
-          const { data: prof } = await admin
-            .from("profiles")
-            .select("ranting_id")
-            .eq("user_id", user.id)
-            .limit(1)
-            .maybeSingle();
-          const isSelf = !!(usr?.ranting_id || prof?.ranting_id === contextRantingId);
-          if (isSelf && one) return NextResponse.json([one]);
-        }
-        return NextResponse.json([]);
+      // Tanpa scope: hanya kembalikan context_ranting milik user (untuk tampilan nama), atau kosong
+      if (contextRantingId) {
+        const { data: one } = await admin
+          .from("ranting")
+          .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
+          .eq("id", contextRantingId)
+          .maybeSingle();
+        const { data: usr } = await admin
+          .from("user_structural_roles")
+          .select("ranting_id")
+          .eq("user_id", user.id)
+          .eq("ranting_id", contextRantingId)
+          .limit(1)
+          .maybeSingle();
+        const { data: prof } = await admin
+          .from("profiles")
+          .select("ranting_id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        const isSelf = !!(usr?.ranting_id || prof?.ranting_id === contextRantingId);
+        if (isSelf && one) return NextResponse.json([one]);
       }
-    } else {
-      query = query.in("id", scope.ranting_ids);
+      return NextResponse.json([]);
     }
+    query = query.in("id", scope.ranting_ids);
   }
 
   // Jangan batasi ke satu ranting untuk PP/Superadmin agar dropdown bisa tampil semua ranting

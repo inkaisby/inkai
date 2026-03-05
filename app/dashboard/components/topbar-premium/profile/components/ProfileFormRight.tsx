@@ -18,6 +18,8 @@ type Props = {
   regencyOptions: WilayahOption[];
   districtOptions: WilayahOption[];
   villageOptions: WilayahOption[];
+  districtNameById?: string | null;
+  villageNameById?: string | null;
   provincesLoading?: boolean;
   regenciesLoading?: boolean;
   districtsLoading?: boolean;
@@ -52,6 +54,8 @@ export default function ProfileFormRight({
   regencyOptions,
   districtOptions,
   villageOptions,
+  districtNameById = null,
+  villageNameById = null,
   provincesLoading = false,
   regenciesLoading = false,
   districtsLoading = false,
@@ -73,12 +77,20 @@ export default function ProfileFormRight({
   const districtOpts = optionsWithFallback(
     districtOptions,
     profile.districtId,
-    districtsLoading ? "Memuat kecamatan..." : "—"
+    districtsLoading
+      ? "Memuat kecamatan..."
+      : profile.districtId
+        ? (districtNameById ?? `ID: ${normalizeId(profile.districtId)}`)
+        : "—"
   );
   const villageOpts = optionsWithFallback(
     villageOptions,
     profile.villageId,
-    villagesLoading ? "Memuat kelurahan..." : "—"
+    villagesLoading
+      ? "Memuat kelurahan..."
+      : profile.villageId
+        ? (villageNameById ?? `ID: ${normalizeId(profile.villageId)}`)
+        : "—"
   );
 
   return (

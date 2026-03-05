@@ -128,6 +128,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
   const [regencyOptions, setRegencyOptions] = useState<WilayahOption[]>([]);
   const [districtOptions, setDistrictOptions] = useState<WilayahOption[]>([]);
   const [villageOptions, setVillageOptions] = useState<WilayahOption[]>([]);
+  const [villageNameById, setVillageNameById] = useState<string | null>(null);
   const [provincesLoading, setProvincesLoading] = useState(true);
   const [regenciesLoading, setRegenciesLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
@@ -181,8 +182,31 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
     });
 
     setDirty(false);
+    setVillageNameById(null);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [user]);
+
+  // Resolve nama kelurahan/kecamatan by ID agar tampil nama (sesuai DB), bukan angka
+  useEffect(() => {
+    const vid = form?.village_id != null ? normalizeId(form.village_id) : "";
+    if (!vid) {
+      setVillageNameById(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/wilayah/name?${new URLSearchParams({ id: vid })}`)
+      .then((res) => res.json())
+      .then((data: { name?: string | null }) => {
+        if (!cancelled && data?.name) setVillageNameById(data.name);
+        else if (!cancelled) setVillageNameById(null);
+      })
+      .catch(() => {
+        if (!cancelled) setVillageNameById(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form?.village_id]);
 
   useEffect(() => {
     setProvincesLoading(true);
@@ -234,27 +258,28 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
       return;
     }
     setVillagesLoading(true);
-    const district6 = normalizeId(form.district_id).slice(0, 6);
-    if (!district6) {
+    // Pakai full district_id agar daftar kelurahan sesuai kecamatan (jangan slice(0,6) → kelurahan salah → tampil "-")
+    const districtKey = normalizeId(form.district_id);
+    if (!districtKey) {
       setVillageOptions([]);
       setVillagesLoading(false);
       return;
     }
-    getVillages(district6)
-      .then((res) => setVillageOptions(toOptions(res)))
+    const tryLoad = (key: string) =>
+      getVillages(key).then((res) => (res?.length ? res : null));
+    tryLoad(districtKey)
+      .then((res) => {
+        if (res) return res;
+        if (districtKey.length > 6) return tryLoad(districtKey.slice(0, 6));
+        return [];
+      })
+      .then((res) => setVillageOptions(toOptions(res ?? [])))
       .catch(() => setVillageOptions([]))
       .finally(() => setVillagesLoading(false));
   }, [form?.district_id]);
 
-  // Jika kelurahan yang tersimpan tidak ada di daftar kelurahan kecamatan ini, reset agar kecamatan–kelurahan konsisten
-  useEffect(() => {
-    if (!form?.village_id || villageOptions.length === 0) return;
-    const villageNorm = normalizeId(form.village_id);
-    const found = villageOptions.some((o) => normalizeId(o.value) === villageNorm);
-    if (!found) {
-      setForm((prev) => (prev ? { ...prev, village_id: null } : prev));
-    }
-  }, [villageOptions, form?.village_id]);
+  // Jangan reset village_id bila tidak ketemu di daftar — pertahankan nilai dari DB
+  // dan tampilkan lewat optionsWithFallback (label "—" atau ID) agar Kelurahan tidak kosong.
 
   if (!user || !form) {
     return <div className="text-sm text-zinc-500">Pilih pengguna</div>;
@@ -477,7 +502,11 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
             options={optionsWithFallback(
               villageOptions,
               form.village_id,
-              villagesLoading ? "Memuat kelurahan..." : "—"
+              villagesLoading
+                ? "Memuat kelurahan..."
+                : form.village_id
+                  ? villageNameById ?? `ID: ${normalizeId(form.village_id)}`
+                  : "—"
             )}
             onChange={(v) => update("village_id", v ? String(v).replace(/\./g, "") || null : null)}
           />

@@ -33,4 +33,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Agar perilaku lokal dan online sama saat ada perubahan:** lihat **[DEPLOY.md](./DEPLOY.md)** (env parity + alur push → deploy).
+
+**Bingung dengan banyaknya pengaturan di dashboard?** Lihat **[docs/PANDUAN-PENGATURAN.md](./docs/PANDUAN-PENGATURAN.md)** — peta singkat: Settings (Users / Menu / Database), Profil vs Role Management, dan alur set user (mis. Ketua Cabang).

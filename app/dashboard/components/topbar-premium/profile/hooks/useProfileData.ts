@@ -106,6 +106,11 @@ const EMPTY: ProfileData = {
   avatarFile: null,
 };
 
+function toId(v: string | number | null | undefined): string {
+  if (v == null || v === "") return "";
+  return String(v).replace(/\./g, "").trim();
+}
+
 /* =====================
    NORMALIZE
 ===================== */
@@ -133,10 +138,10 @@ function normalize(db: ProfileRow | null): ProfileData {
     pekerjaanOrtu: db.pekerjaan_ortu ?? "",
     alamat: db.alamat ?? "",
 
-    provinceId: String(db.province_id ?? ""),
-    regencyId: String(db.regency_id ?? ""),
-    districtId: String(db.district_id ?? ""),
-    villageId: String(db.village_id ?? ""),
+    provinceId: toId(db.province_id),
+    regencyId: toId(db.regency_id),
+    districtId: toId(db.district_id),
+    villageId: toId(db.village_id),
 
     rantingId: db.ranting_id ?? "",
     rantingLocked: Boolean(db.ranting_id),
@@ -216,10 +221,10 @@ export default function useProfileData() {
           };
           const p = meJson.profile;
           if (p) {
-            if (p.province_id != null && p.province_id !== "") normalized.provinceId = String(p.province_id);
-            if (p.regency_id != null && p.regency_id !== "") normalized.regencyId = String(p.regency_id);
-            if (p.district_id != null && p.district_id !== "") normalized.districtId = String(p.district_id);
-            if (p.village_id != null && p.village_id !== "") normalized.villageId = String(p.village_id);
+            if (p.province_id != null && p.province_id !== "") normalized.provinceId = String(p.province_id).replace(/\./g, "").trim();
+            if (p.regency_id != null && p.regency_id !== "") normalized.regencyId = String(p.regency_id).replace(/\./g, "").trim();
+            if (p.district_id != null && p.district_id !== "") normalized.districtId = String(p.district_id).replace(/\./g, "").trim();
+            if (p.village_id != null && p.village_id !== "") normalized.villageId = String(p.village_id).replace(/\./g, "").trim();
             if (p.ranting_id != null && p.ranting_id !== "") {
               normalized.rantingId = String(p.ranting_id);
               normalized.rantingLocked = true;

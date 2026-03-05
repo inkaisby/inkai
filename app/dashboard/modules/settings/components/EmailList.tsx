@@ -47,6 +47,15 @@ interface EmailListProps {
 const PAGE_SIZE = 6;
 const ROOT_EMAIL = "karateinkaisby@gmail.com";
 
+function toNumOrNull(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
+  const s = String(v).replace(/\./g, "").trim();
+  if (!s) return null;
+  const n = parseInt(s, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 function apiRowToUserRow(r: Record<string, unknown>): UserRow {
   return {
     id: String(r.id ?? ""),
@@ -68,10 +77,10 @@ function apiRowToUserRow(r: Record<string, unknown>): UserRow {
     email_allowed: Boolean(r.email_allowed),
     profile_completed: Boolean(r.profile_completed),
     status: (r.status as string) ?? null,
-    province_id: (r.province_id as number) ?? null,
-    regency_id: (r.regency_id as number) ?? null,
-    district_id: (r.district_id as number) ?? null,
-    village_id: (r.village_id as string) ?? null,
+    province_id: toNumOrNull(r.province_id),
+    regency_id: toNumOrNull(r.regency_id),
+    district_id: toNumOrNull(r.district_id),
+    village_id: r.village_id != null ? String(r.village_id).replace(/\./g, "").trim() || null : null,
     ranting_id: (r.ranting_id as string) ?? null,
     created_at: String(r.created_at ?? ""),
     updated_at: String(r.updated_at ?? ""),

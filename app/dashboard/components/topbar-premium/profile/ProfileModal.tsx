@@ -119,6 +119,8 @@ export default function ProfileModal() {
   const [regencyOptions, setRegencyOptions] = useState<Option[]>([]);
   const [districtOptions, setDistrictOptions] = useState<Option[]>([]);
   const [villageOptions, setVillageOptions] = useState<Option[]>([]);
+  const [districtNameById, setDistrictNameById] = useState<string | null>(null);
+  const [villageNameById, setVillageNameById] = useState<string | null>(null);
   const [provincesLoading, setProvincesLoading] = useState(true);
   const [regenciesLoading, setRegenciesLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
@@ -173,21 +175,74 @@ export default function ProfileModal() {
       return;
     }
     setVillagesLoading(true);
-    getVillages(profile.districtId)
-      .then((res) => setVillageOptions(toOptions(res)))
+    const districtKey = String(profile.districtId).replace(/\./g, "").trim();
+    const tryLoad = (key: string) =>
+      getVillages(key).then((res) => (res?.length ? res : null));
+    tryLoad(districtKey)
+      .then((res) => {
+        if (res) return res;
+        if (districtKey.length > 6) return tryLoad(districtKey.slice(0, 6));
+        return [];
+      })
+      .then((res) => setVillageOptions(toOptions(res ?? [])))
       .catch(() => setVillageOptions([]))
       .finally(() => setVillagesLoading(false));
   }, [profile?.districtId]);
 
+  // Resolve nama kecamatan/kelurahan by ID agar tampil nama (bukan "-") saat nilai ada tapi belum di opsi
+  useEffect(() => {
+    const did = profile?.districtId ? String(profile.districtId).replace(/\./g, "").trim() : "";
+    if (!did) {
+      setDistrictNameById(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/wilayah/name?${new URLSearchParams({ id: did })}`)
+      .then((res) => res.json())
+      .then((data: { name?: string | null }) => {
+        if (!cancelled) setDistrictNameById(data?.name ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setDistrictNameById(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.districtId]);
+
+  useEffect(() => {
+    const vid = profile?.villageId ? String(profile.villageId).replace(/\./g, "").trim() : "";
+    if (!vid) {
+      setVillageNameById(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/wilayah/name?${new URLSearchParams({ id: vid })}`)
+      .then((res) => res.json())
+      .then((data: { name?: string | null }) => {
+        if (!cancelled) setVillageNameById(data?.name ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setVillageNameById(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.villageId]);
+
   /* ================= RESOLVE FUNCTIONS ================= */
-  const resolveWilayah = (value: string) => {
+  const resolveWilayah = (key: string, value: string) => {
     const allOptions = [
       ...provinceOptions,
       ...regencyOptions,
       ...districtOptions,
       ...villageOptions,
     ];
-    return allOptions.find((o) => o.value === value)?.label ?? "";
+    const found = allOptions.find((o) => String(o.value).replace(/\./g, "") === String(value).replace(/\./g, ""));
+    if (found) return found.label;
+    if (key === "districtId" && districtNameById) return districtNameById;
+    if (key === "villageId" && villageNameById) return villageNameById;
+    return "";
   };
 
   const resolveRanting = (value: string) => {
@@ -347,6 +402,8 @@ export default function ProfileModal() {
                 regencyOptions={regencyOptions}
                 districtOptions={districtOptions}
                 villageOptions={villageOptions}
+                districtNameById={districtNameById}
+                villageNameById={villageNameById}
                 provincesLoading={provincesLoading}
                 regenciesLoading={regenciesLoading}
                 districtsLoading={districtsLoading}
@@ -368,7 +425,7 @@ export default function ProfileModal() {
                             key === "regencyId" ||
                             key === "districtId" ||
                             key === "villageId"
-                          ? resolveWilayah(String(raw))
+                          ? resolveWilayah(key, String(raw))
                           : String(raw);
 
                     return (

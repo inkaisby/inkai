@@ -34,6 +34,13 @@ Konteks proyek ini dipakai agar **Claude Code** dan **Cursor** punya pemahaman y
 - Build: `npm run build`
 - Lint: `npm run lint`
 
+## Pengaturan (Settings)
+
+- Halaman **Settings** (`/dashboard/settings`) hanya untuk Superadmin.
+- Tiga mode: **Users** (profil, password, Role Management, akses menu, log), **Menu** (item sidebar dari DB), **Database** (audit/struktur).
+- **Profil** = data diri + level/domisili (ringkasan); **Role Management** = jabatan organisasi + Cabang/Ranting/Provinsi → menentukan scope & akses.
+- Panduan lengkap untuk pengguna: **docs/PANDUAN-PENGATURAN.md**.
+
 ## Bekerja dengan Cursor
 
 Aturan Cursor yang selaras dengan dokumen ini ada di `.cursor/rules/inkai-app.mdc`. Saat mengedit fitur, rujuk modul di `app/dashboard/modules/<nama>/` dan API terkait di `app/api/`.

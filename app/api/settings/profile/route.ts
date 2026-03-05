@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
 import { isValidUuid } from "@/app/lib/security/validateUuid";
+import { logActivity } from "@/app/lib/activityLog";
 
 const ALLOWED_KEYS = [
   "nama",
@@ -158,6 +159,28 @@ export async function PUT(req: NextRequest) {
         { message: error.message },
         { status: 500 }
       );
+    }
+
+    let targetEmail: string | null =
+      typeof body?.email === "string" ? body.email.trim() || null : null;
+    if (!targetEmail) {
+      const { data: prof } = await admin
+        .from("profiles")
+        .select("email")
+        .eq("user_id", userId)
+        .maybeSingle();
+      targetEmail = prof?.email ?? null;
+    }
+    try {
+      await logActivity({
+        user_id: userId,
+        email: targetEmail,
+        action: "profile_updated",
+        module: "settings",
+        detail: { updated_keys: Object.keys(payload) },
+      });
+    } catch {
+      // jangan gagalkan response jika log gagal
     }
 
     return NextResponse.json({ ok: true });

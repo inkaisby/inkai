@@ -70,3 +70,30 @@ export async function getVillagesFromPackage(
       name: v.name,
     }));
 }
+
+/** Resolve nama kelurahan atau kecamatan by ID (untuk tampilan, bukan hanya angka). */
+export async function getAreaNameById(id: string | number | null | undefined): Promise<string | null> {
+  const raw = id == null ? "" : String(id).replace(/\./g, "").trim();
+  if (!raw) return null;
+  try {
+    const list = await getVillages();
+    for (const v of list) {
+      if (toId(v.code) === raw) return v.name ?? null;
+    }
+    const distList = await getDistricts();
+    for (const d of distList) {
+      const codeNorm = toId(d.code);
+      if (codeNorm === raw) return d.name ?? null;
+    }
+    // DB kadang pakai 7 digit untuk kecamatan, paket pakai 6 digit — coba match 6 digit pertama
+    if (raw.length >= 6) {
+      const prefix6 = raw.slice(0, 6);
+      for (const d of distList) {
+        if (toId(d.code) === prefix6) return d.name ?? null;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}

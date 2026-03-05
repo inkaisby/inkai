@@ -66,6 +66,7 @@ function TopbarContent() {
         <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-24 sm:pr-28">
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() =>
               window.dispatchEvent(
                 new CustomEvent("toggle-sidebar", { detail: true }),
@@ -85,6 +86,7 @@ function TopbarContent() {
             <div className="flex items-center gap-2 ml-2">
               <MapPin size={16} className="text-cyan-400/80" />
               <select
+                suppressHydrationWarning
                 value={selectedContext}
                 onChange={(e) => setSelectedContext(e.target.value)}
                 className="text-sm bg-black/50 border border-cyan-500/40 rounded px-2 py-1 text-cyan-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"

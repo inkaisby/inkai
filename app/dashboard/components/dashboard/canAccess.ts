@@ -32,6 +32,12 @@ export type SessionUserAccess = {
     active: boolean;
   }[];
 
+  /** Fallback: level dari profiles.structural_level (Settings → Profil) bila user_structural_roles kosong. */
+  profile_structural_level?: number | null;
+
+  /** Domisili: regency_id dari profil (untuk pre-fill Home Base kabupaten/kota). */
+  profile_regency_id?: string | null;
+
   functional_roles?: {
     role_name: string;
     active: boolean;
@@ -70,14 +76,15 @@ export function canAccessMenu(
     menu.required_structural_level !== null &&
     menu.required_structural_level !== undefined
   ) {
-    const hasLevel =
+    const required = menu.required_structural_level;
+    const fromRoles =
       user.structural_roles?.some(
-        (r) =>
-          r.active &&
-          r.structural_level >= menu.required_structural_level!,
+        (r) => r.active && r.structural_level >= required,
       ) ?? false;
-
-    if (!hasLevel) return false;
+    const fromProfile =
+      user.profile_structural_level != null &&
+      user.profile_structural_level >= required;
+    if (!fromRoles && !fromProfile) return false;
   }
 
   if (menu.required_functional_role) {

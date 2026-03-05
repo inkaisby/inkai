@@ -16,6 +16,7 @@ export default function NotificationNode({ onClick }: Props) {
 
   return (
     <motion.div
+      suppressHydrationWarning
       role="button"
       tabIndex={0}
       whileTap={{ scale: 0.9 }}

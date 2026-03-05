@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 type StructuralRoleMaster = {
   id: string;
@@ -48,10 +49,15 @@ function formatRoleLabel(roleName: string): string {
 
 interface Props {
   userId: string;
+  /** Email user (untuk log aktivitas saat role ditambah) */
+  userEmail?: string | null;
+  /** Domisili user (regency_id) dari Profil — untuk hint saat pilih Cabang */
+  userRegencyId?: string | null;
 }
 
-export default function RoleManagementPanel({ userId }: Props) {
+export default function RoleManagementPanel({ userId, userEmail, userRegencyId }: Props) {
   const [loading, setLoading] = useState(true);
+  const [userRegencyName, setUserRegencyName] = useState<string | null>(null);
   const [structuralMaster, setStructuralMaster] = useState<
     StructuralRoleMaster[]
   >([]);
@@ -68,6 +74,8 @@ export default function RoleManagementPanel({ userId }: Props) {
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [seedLoading, setSeedLoading] = useState(false);
+  const [provinsiSeedLoading, setProvinsiSeedLoading] = useState(false);
+  const [cabangSeedLoading, setCabangSeedLoading] = useState(false);
   /* Isi manual: level 1-5, nama jabatan, org (jika level 2-4) */
   const [manualLevel, setManualLevel] = useState<number>(1);
   const [manualRoleName, setManualRoleName] = useState("");
@@ -99,6 +107,18 @@ export default function RoleManagementPanel({ userId }: Props) {
     {} as Record<number, StructuralRoleMaster[]>,
   );
   const sortedLevels = [1, 2, 3, 4, 5].filter((L) => rolesByLevel[L]?.length);
+
+  /** Opsi jabatan flat untuk SearchableSelect (dengan label level) */
+  const jobOptions = useMemo(
+    () =>
+      sortedLevels.flatMap((L) =>
+        (rolesByLevel[L] ?? []).map((r) => ({
+          value: r.id,
+          label: `${LEVEL_LABELS[L] ?? `Level ${L}`} — ${formatRoleLabel(r.role_name)}`,
+        }))
+      ),
+    [structuralMaster, sortedLevels]
+  );
 
   /* ================= LOAD DATA ================= */
   const load = useCallback(async () => {
@@ -154,6 +174,29 @@ export default function RoleManagementPanel({ userId }: Props) {
     load();
   }, [load]);
 
+  /* Resolve nama kabupaten/kota dari domisili user (untuk hint saat pilih Cabang) */
+  useEffect(() => {
+    if (!userRegencyId?.trim()) {
+      setUserRegencyName(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/wilayah/name?id=${encodeURIComponent(userRegencyId.trim())}`, {
+      credentials: "include",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { name?: string } | null) => {
+        if (!cancelled && data?.name) setUserRegencyName(data.name);
+        else if (!cancelled) setUserRegencyName(null);
+      })
+      .catch(() => {
+        if (!cancelled) setUserRegencyName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userRegencyId]);
+
   /* ================= TAMBAH JABATAN MANUAL ================= */
   const addManualStructuralRole = async () => {
     const name = manualRoleName.trim().toUpperCase().replace(/\s+/g, "_");
@@ -199,6 +242,27 @@ export default function RoleManagementPanel({ userId }: Props) {
         alert(error.message ?? "Gagal menambah jabatan ke user");
         return;
       }
+      if (userEmail?.trim()) {
+        try {
+          await fetch("/api/activity/log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              email: userEmail.trim(),
+              action: "role_added_manual",
+              module: "settings",
+              detail: {
+                role_name: name,
+                structural_level: manualLevel,
+                org_id: manualNeedOrg ? manualOrgId : null,
+              },
+            }),
+          });
+        } catch {
+          // ignore
+        }
+      }
       setManualRoleName("");
       setManualOrgId("");
       await load();
@@ -226,6 +290,50 @@ export default function RoleManagementPanel({ userId }: Props) {
     }
   };
 
+  /* ================= SEED PROVINSI DEFAULT ================= */
+  const seedProvinsiDefault = async () => {
+    setProvinsiSeedLoading(true);
+    try {
+      const res = await fetch("/api/admin/seed-provinsi", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = (await res.json()) as { ok?: boolean; message?: string; inserted?: number };
+      if (!res.ok) {
+        alert(data.message ?? "Gagal mengisi provinsi default");
+        return;
+      }
+      await load();
+      alert(data.message ?? (data.inserted ? `Provinsi default ditambahkan: ${data.inserted}.` : "Selesai."));
+    } finally {
+      setProvinsiSeedLoading(false);
+    }
+  };
+
+  /* ================= SEED CABANG DARI WILAYAH ================= */
+  const seedCabangFromWilayah = async () => {
+    setCabangSeedLoading(true);
+    try {
+      const res = await fetch("/api/admin/seed-cabang-wilayah", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = (await res.json()) as { message?: string; cabangCreated?: number; cabangUpdated?: number };
+      if (!res.ok) {
+        alert(data.message ?? "Gagal mengisi cabang dari wilayah");
+        return;
+      }
+      await load();
+      alert(
+        data.cabangCreated != null || data.cabangUpdated != null
+          ? `Cabang dari wilayah berhasil. Dibuat: ${data.cabangCreated ?? 0}, Diupdate: ${data.cabangUpdated ?? 0}.`
+          : "Cabang dari wilayah selesai."
+      );
+    } finally {
+      setCabangSeedLoading(false);
+    }
+  };
+
   /* ================= ADD STRUCTURAL ROLE ================= */
   const addStructuralRole = async () => {
     if (!selectedRole) return;
@@ -249,6 +357,28 @@ export default function RoleManagementPanel({ userId }: Props) {
     if (error) {
       alert(error.message ?? "Gagal menambah role");
       return;
+    }
+    if (userEmail?.trim()) {
+      try {
+        await fetch("/api/activity/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            email: userEmail.trim(),
+            action: "role_added",
+            module: "settings",
+            detail: {
+              role_id: selectedRole,
+              role_name: selectedRoleMeta?.role_name,
+              level: selectedRoleMeta?.structural_level,
+              org_id: needOrg ? selectedOrgId : null,
+            },
+          }),
+        });
+      } catch {
+        // ignore
+      }
     }
     setSelectedRole("");
     setSelectedOrgId("");
@@ -281,28 +411,34 @@ export default function RoleManagementPanel({ userId }: Props) {
         <div className="flex flex-wrap gap-3 mb-4 items-end">
           <div>
             <label className="block text-xs text-white/50 mb-1">Sebagai apa (jabatan)</label>
-            <select
+            <SearchableSelect
+              options={jobOptions}
               value={selectedRole}
-              onChange={(e) => {
-                setSelectedRole(e.target.value);
+              onChange={(v) => {
+                setSelectedRole(v);
                 setSelectedOrgId("");
               }}
-              className="px-3 py-2 bg-black/40 border border-white/10 rounded min-w-[220px]"
-            >
-              <option value="">— Pilih jabatan —</option>
-              {sortedLevels.map((L) => (
-                <optgroup key={L} label={`${LEVEL_LABELS[L] ?? `Level ${L}`}`}>
-                  {(rolesByLevel[L] ?? []).map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {formatRoleLabel(r.role_name)}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              placeholder="— Pilih jabatan —"
+              minWidth="min-w-[220px]"
+            />
+            {provinsiList.length === 0 && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-amber-400/90">
+                  <strong>Data provinsi</strong> ada di sini: belum ada provinsi organisasi. Isi sekali pakai agar nanti &quot;Isi cabang dari wilayah&quot; bisa jalan:
+                </p>
+                <button
+                  type="button"
+                  onClick={seedProvinsiDefault}
+                  disabled={provinsiSeedLoading}
+                  className="px-3 py-1.5 text-sm rounded bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/30 disabled:opacity-50"
+                >
+                  {provinsiSeedLoading ? "Mengisi…" : "Isi provinsi default"}
+                </button>
+              </div>
+            )}
             {structuralMaster.length === 0 && (
               <div className="mt-2 space-y-2">
-                <p className="text-xs text-amber-400/90">Belum ada jabatan. Isi jabatan default hirarki INKAI sekali pakai:</p>
+                <p className="text-xs text-amber-400/90">Belum ada jabatan. Isi jabatan default hirarki INKAI sekali pakai (setelah itu dropdown punya pilihan):</p>
                 <button
                   type="button"
                   onClick={seedDefaultRoles}
@@ -313,6 +449,19 @@ export default function RoleManagementPanel({ userId }: Props) {
                 </button>
               </div>
             )}
+            {cabangList.length === 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-amber-400/90">Belum ada data cabang. Isi cabang dari kabupaten/kota sekali pakai (perlu data provinsi dulu; setelah itu dropdown Pilih Cabang punya pilihan):</p>
+                <button
+                  type="button"
+                  onClick={seedCabangFromWilayah}
+                  disabled={cabangSeedLoading}
+                  className="px-3 py-1.5 text-sm rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 disabled:opacity-50"
+                >
+                  {cabangSeedLoading ? "Mengisi…" : "Isi cabang dari wilayah"}
+                </button>
+              </div>
+            )}
           </div>
 
           {needOrg && (
@@ -320,18 +469,13 @@ export default function RoleManagementPanel({ userId }: Props) {
               <label className="block text-xs text-white/50 mb-1">
                 {orgLabel}
               </label>
-              <select
+              <SearchableSelect
+                options={orgOptions}
                 value={selectedOrgId}
-                onChange={(e) => setSelectedOrgId(e.target.value)}
-                className="px-3 py-2 bg-black/40 border border-white/10 rounded min-w-[180px]"
-              >
-                <option value="">— Pilih {orgLabel} —</option>
-                {orgOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedOrgId}
+                placeholder={`— Pilih ${orgLabel} —`}
+                minWidth="min-w-[180px]"
+              />
               {orgOptions.length === 0 && (
                 <p className="text-xs text-amber-400/90 mt-1">Belum ada data. Isi tabel provinsi / cabang / ranting di DB.</p>
               )}
@@ -380,18 +524,23 @@ export default function RoleManagementPanel({ userId }: Props) {
             {manualNeedOrg && (
               <div>
                 <label className="block text-xs text-white/50 mb-1">{manualOrgLabel}</label>
-                <select
+                <SearchableSelect
+                  options={manualOrgOptions}
                   value={manualOrgId}
-                  onChange={(e) => setManualOrgId(e.target.value)}
-                  className="px-3 py-2 bg-black/40 border border-white/10 rounded min-w-[180px]"
-                >
-                  <option value="">— Pilih {manualOrgLabel} —</option>
-                  {manualOrgOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setManualOrgId}
+                  placeholder={`— Pilih ${manualOrgLabel} —`}
+                  minWidth="min-w-[180px]"
+                />
+                {manualLevel === 3 && cabangList.length === 0 && (
+                  <p className="text-xs text-amber-400/90 mt-1">
+                    Belum ada data cabang. Gunakan tombol &quot;Isi cabang dari wilayah&quot; di atas (sekali pakai), atau pastikan login sebagai Superadmin.
+                  </p>
+                )}
+                {manualLevel === 3 && (userRegencyName || userRegencyId) && (
+                  <p className="text-xs text-cyan-300/90 mt-1">
+                    Domisili user: {userRegencyName ?? userRegencyId}. Pilih cabang yang sesuai.
+                  </p>
+                )}
               </div>
             )}
             <button

@@ -7,7 +7,7 @@ import { getUserScope } from "@/app/lib/scope/getUserScope";
 import { isProfileCompleted } from "@/app/lib/profileCompleted";
 
 const PROFILE_FIELDS =
-  "email_allowed, app_role, nik, nama, email, telepon, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path";
+  "email_allowed, app_role, nik, nama, email, telepon, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path, structural_level";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -51,6 +51,11 @@ export async function GET() {
 
   const profile_completed = isProfileCompleted(profile as Record<string, unknown> | null);
 
+  const profileRegencyId =
+    profile?.regency_id != null
+      ? String(profile.regency_id).replace(/\./g, "").trim()
+      : null;
+
   return NextResponse.json({
     user: {
       email: user.email ?? null,
@@ -58,6 +63,8 @@ export async function GET() {
       email_allowed: profile?.email_allowed ?? false,
       app_role: profile?.app_role ?? null,
       structural_roles: structural ?? [],
+      profile_structural_level: profile?.structural_level ?? null,
+      profile_regency_id: profileRegencyId,
       functional_roles,
       scope,
     },

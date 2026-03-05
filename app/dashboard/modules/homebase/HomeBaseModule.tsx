@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Users,
   UserCheck,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
+import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
 
 type RantingRow = {
   id: string;
@@ -50,8 +51,45 @@ type PaymentRow = {
 const accentCard =
   "rounded-lg border border-teal-500/25 bg-teal-500/5 shadow-[0_0_20px_rgba(45,212,191,0.15)]";
 
+const EMPTY_STRUCTURAL_ROLES: { structural_level?: number }[] = [];
+
 export default function HomeBaseModule() {
   const { scope, app_role } = useScope();
+  const profileRegencyId = useBootstrapStore(
+    (s) => s.data?.user?.profile_regency_id ?? null,
+  );
+  const profileStructuralLevel = useBootstrapStore(
+    (s) => s.data?.user?.profile_structural_level ?? null,
+  );
+  const structuralRoles = useBootstrapStore((s) => {
+    const roles = s.data?.user?.structural_roles;
+    return roles ?? EMPTY_STRUCTURAL_ROLES;
+  });
+  const userLevelAtLeast3 = useMemo(() => {
+    if (profileStructuralLevel != null && profileStructuralLevel >= 3) return true;
+    const maxFromRoles = (structuralRoles as { structural_level?: number }[]).reduce(
+      (max, r) => Math.max(max, r.structural_level ?? 0),
+      0,
+    );
+    return maxFromRoles >= 3;
+  }, [profileStructuralLevel, structuralRoles]);
+
+  const canUseDomisiliPreFill = useMemo(
+    () =>
+      userLevelAtLeast3 ||
+      (app_role ?? "").toUpperCase() === "SUPERADMIN",
+    [userLevelAtLeast3, app_role],
+  );
+
+  const profileRegencyIdRef = useRef(profileRegencyId);
+  const canUseDomisiliPreFillRef = useRef(canUseDomisiliPreFill);
+  useEffect(() => {
+    profileRegencyIdRef.current = profileRegencyId;
+  }, [profileRegencyId]);
+  useEffect(() => {
+    canUseDomisiliPreFillRef.current = canUseDomisiliPreFill;
+  }, [canUseDomisiliPreFill]);
+
   const [rantingList, setRantingList] = useState<RantingRow[]>([]);
   const [rantingLoading, setRantingLoading] = useState(true);
   const [, setProvinsiList] = useState<ProvinsiOption[]>([]);
@@ -298,7 +336,20 @@ export default function HomeBaseModule() {
     };
   }, []);
 
-  // Load kabupaten/kota (regencies) untuk filter manual — berdasarkan province_id di ranting
+  // Kabupaten/kota HANYA yang ada di ranting user (scope) — cegah ganti wilayah ke luar akses
+  const allowedRegencyIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rantingList
+            .map((r) => (r.regency_id != null ? String(r.regency_id) : null))
+            .filter((id): id is string => id != null),
+        ),
+      ),
+    [rantingList],
+  );
+
+  // Load nama kabupaten/kota hanya untuk regency_id yang ada di rantingList
   useEffect(() => {
     let cancelled = false;
     const provinceIds = Array.from(
@@ -309,7 +360,7 @@ export default function HomeBaseModule() {
       ),
     );
 
-    if (provinceIds.length === 0) {
+    if (provinceIds.length === 0 || allowedRegencyIds.length === 0) {
       Promise.resolve().then(() => {
         if (!cancelled) setWilayahOptions([]);
       });
@@ -319,6 +370,7 @@ export default function HomeBaseModule() {
     }
 
     const load = async () => {
+      const allowedSet = new Set(allowedRegencyIds);
       const all: WilayahOption[] = [];
       for (const pid of provinceIds) {
         try {
@@ -332,11 +384,12 @@ export default function HomeBaseModule() {
             const id = String(
               (r as { id?: string }).id ?? (r as { code?: string }).code ?? "",
             );
+            if (!id || !allowedSet.has(id)) continue;
             const name =
               (r as { name?: string }).name ??
               (r as { nama?: string }).nama ??
               id;
-            if (id) all.push({ id, name });
+            all.push({ id, name });
           }
         } catch {
           // skip province
@@ -349,7 +402,32 @@ export default function HomeBaseModule() {
     return () => {
       cancelled = true;
     };
-  }, [rantingList]);
+  }, [rantingList, allowedRegencyIds]);
+
+  // Pre-fill kabupaten/kota: Superadmin atau level ≥ 3 pakai domisili profil; else satu cabang saja.
+  // Deps array tetap 3 elemen (refs untuk profileRegencyId dan canUseDomisiliPreFill).
+  useEffect(() => {
+    if (wilayahOptions.length === 0 || allowedRegencyIds.length === 0) return;
+    const allowedSet = new Set(allowedRegencyIds);
+    const domisiliId = profileRegencyIdRef.current;
+    const useDomisili = canUseDomisiliPreFillRef.current;
+    const idByDomisili =
+      useDomisili && domisiliId && allowedSet.has(domisiliId)
+        ? domisiliId
+        : allowedRegencyIds.length === 1
+          ? allowedRegencyIds[0]
+          : null;
+    if (!idByDomisili || selectedRegencyId === idByDomisili) return;
+    const opt = wilayahOptions.find((w) => w.id === idByDomisili);
+    if (!opt) return;
+    const displayName = opt.name || opt.id;
+    const t = setTimeout(() => {
+      setSelectedRegencyId(idByDomisili);
+      setSelectedRegencyName(displayName);
+      setWilayahSearch(displayName);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [allowedRegencyIds, wilayahOptions, selectedRegencyId]);
 
   const wilayahLabel = useMemo(() => {
     if (!scope) return "Wilayah belum ter-set";
@@ -544,10 +622,13 @@ export default function HomeBaseModule() {
                   Cabang per kabupaten/kota
                 </h2>
               </div>
-              {/* Filter manual: search kabupaten/kota (Kota Surabaya, Sidoarjo, Gresik, dll) */}
+              <p className="text-[11px] text-white/50">
+                Hanya cabang di wilayah Anda (sesuai profil). Data dibatasi di server.
+              </p>
               <div className="relative">
                 <input
                   type="text"
+                  suppressHydrationWarning
                   value={wilayahSearch}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -557,7 +638,11 @@ export default function HomeBaseModule() {
                       setSelectedRegencyName(null);
                     }
                   }}
-                  placeholder="Cari kabupaten/kota (misal: Kota Surabaya, Sidoarjo, Gresik, Mojokerto)"
+                  placeholder={
+                    wilayahOptions.length > 0
+                      ? "Pilih kabupaten/kota Anda…"
+                      : "Memuat daftar kabupaten/kota…"
+                  }
                   className={`w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-teal-500/50 focus:outline-none ${selectedRegencyId ? "pr-20" : ""}`}
                 />
                 {selectedRegencyId && (
@@ -609,7 +694,7 @@ export default function HomeBaseModule() {
               <p className="text-xs text-white/50">
                 {selectedRegencyId
                   ? "Cabang ini belum memiliki ranting."
-                  : "Pilih kabupaten/kota di atas atau tampilkan semua ranting di bawah."}
+                  : "Pilih kabupaten/kota di atas atau lihat semua ranting di wilayah Anda di bawah."}
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -716,6 +801,7 @@ export default function HomeBaseModule() {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
+                    suppressHydrationWarning
                     value={rantingSearch}
                     onChange={(e) => setRantingSearch(e.target.value)}
                     placeholder="Cari ranting di cabang ini…"

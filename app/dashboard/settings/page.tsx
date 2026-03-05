@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import SettingsView from "../modules/settings/SettingsModule";
 import { useBootstrapStore } from "../store/bootstrapStore";
 
-const SUPERADMIN_EMAIL = "karateinkaisby@gmail.com";
+const ROOT_EMAIL = (process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL ?? "").toLowerCase();
 
 export default function SettingsPage() {
   const { data: bootstrap, loading: bootstrapLoading } = useBootstrapStore();
@@ -37,7 +38,8 @@ export default function SettingsPage() {
     }
 
     const loadPermissions = async () => {
-      const res = await fetch(`/api/permissions?email=${selectedEmail}`);
+      const q = new URLSearchParams({ email: selectedEmail });
+      const res = await fetch(`/api/permissions?${q.toString()}`);
       const json = await res.json();
       setPermissions(json.permissions ?? {});
     };
@@ -46,7 +48,7 @@ export default function SettingsPage() {
   }, [selectedEmail]);
 
   const isSuperAdmin =
-    sessionEmail === SUPERADMIN_EMAIL ||
+    (ROOT_EMAIL && sessionEmail?.toLowerCase() === ROOT_EMAIL) ||
     (appRole ?? "").toUpperCase() === "SUPERADMIN";
 
   /* ===============================
@@ -58,7 +60,7 @@ export default function SettingsPage() {
     setSaving(true);
 
     try {
-      await fetch("/api/permissions", {
+      const saveRes = await fetch("/api/permissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,13 +69,19 @@ export default function SettingsPage() {
         }),
       });
 
-      const res = await fetch(`/api/permissions?email=${selectedEmail}`);
+      const q = new URLSearchParams({ email: selectedEmail });
+      const res = await fetch(`/api/permissions?${q.toString()}`);
       const json = await res.json();
       setPermissions(json.permissions ?? {});
 
-      alert("Permission berhasil disimpan");
+      if (saveRes.ok) {
+        toast.success("Permission berhasil disimpan");
+      } else {
+        const msg = (await saveRes.json().catch(() => ({})))?.message ?? "Gagal menyimpan permission";
+        toast.error(msg);
+      }
     } catch {
-      alert("Gagal menyimpan permission");
+      toast.error("Gagal menyimpan permission");
     } finally {
       setSaving(false);
     }

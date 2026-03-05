@@ -8,6 +8,7 @@ import ChangePasswordPanel from "./ChangePasswordPanel";
 import PermissionMatrix from "./PermissionMatrix";
 import MenuList from "./menu/MenuList";
 import UserActivityLogPanel from "./logs/UserActivityLogPanel";
+import UserResumePanel from "./UserResumePanel";
 import { ModeButton } from "./ModeButton";
 import RoleManagementPanel from "./roles/RoleManagementPanel";
 
@@ -15,7 +16,7 @@ import RoleManagementPanel from "./roles/RoleManagementPanel";
 import DatabaseView from "./database/DatabaseView";
 
 type Mode = "users" | "menu" | "database";
-type Tab = "profile" | "password" | "roles" | "logs";
+type Tab = "resume" | "profile" | "password" | "roles" | "logs";
 
 const STORAGE_KEY = "settings:leftPanelWidth";
 const SNAP_POINTS = [360, 420, 560, 720];
@@ -64,7 +65,7 @@ export default function SettingsView({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset tabs when selected user changes
-    setActiveTab("profile");
+    setActiveTab("resume");
     setPermissionOpen(false);
   }, [selectedUser?.user_id]);
 
@@ -229,6 +230,12 @@ export default function SettingsView({
               <>
                 <div className="tab-header">
                   <TabButton
+                    active={activeTab === "resume"}
+                    onClick={() => setActiveTab("resume")}
+                  >
+                    Resume
+                  </TabButton>
+                  <TabButton
                     active={activeTab === "profile"}
                     onClick={() => setActiveTab("profile")}
                   >
@@ -246,7 +253,6 @@ export default function SettingsView({
                   >
                     Role Management
                   </TabButton>
-
                   <TabButton
                     active={activeTab === "logs"}
                     onClick={() => setActiveTab("logs")}
@@ -256,6 +262,9 @@ export default function SettingsView({
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto pt-4 pr-2">
+                  {activeTab === "resume" && (
+                    <UserResumePanel user={selectedUser} />
+                  )}
                   {activeTab === "profile" && (
                     <ProfilePanel user={selectedUser} isSuperAdmin={isSuperAdmin} />
                   )}
@@ -278,7 +287,15 @@ export default function SettingsView({
                           ROOT account — Role tidak dapat diubah.
                         </div>
                       ) : (
-                        <RoleManagementPanel userId={selectedUser.user_id} />
+                        <RoleManagementPanel
+                          userId={selectedUser.user_id}
+                          userEmail={selectedUser.email}
+                          userRegencyId={
+                            selectedUser.regency_id != null
+                              ? String(selectedUser.regency_id).replace(/\./g, "").trim()
+                              : null
+                          }
+                        />
                       )}
                     </div>
                   )}

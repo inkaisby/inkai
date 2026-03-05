@@ -1,0 +1,36 @@
+# CI: lint + build pada setiap push/PR agar perubahan divalidasi sebelum deploy.
+# Deploy online (Vercel) berjalan otomatis setelah push jika repo sudah terhubung.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          # Nilai dummy agar build bisa jalan di CI (tanpa Supabase nyata).
+          # Di Vercel, gunakan env asli dari Dashboard → Environment Variables.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+        run: npm run build

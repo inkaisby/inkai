@@ -12,9 +12,11 @@ Hirarki INKAI di app: **PP → Provinsi (Pengprov) → Cabang → Ranting → Ko
 
 **Lokasi data:** Tabel `public.provinsi`, `public.cabang`, `public.ranting` (relasi: ranting.cabang_id → cabang, cabang.provinsi_id → provinsi).
 
-**Cara mengubah:** Lewat **SQL** di Supabase (Dashboard → SQL Editor). Belum ada UI CRUD di app untuk tambah/edit/hapus provinsi/cabang/ranting.
+**Cara mengubah:**  
+- **Isi awal (sekali pakai):** Di **Settings → Users → Role Management** — jika belum ada data, gunakan tombol **Isi provinsi default**, lalu **Isi jabatan default**, lalu **Isi cabang dari wilayah**. Itu mengisi tabel provinsi (organisasi), structural_role_master, dan cabang dari wilayah.
+- **Tambah/edit manual:** Lewat **SQL** di Supabase (Dashboard → SQL Editor). Belum ada UI CRUD penuh untuk edit/hapus provinsi/cabang/ranting.
 
-### Tambah Provinsi
+### Tambah Provinsi (manual lewat SQL)
 ```sql
 INSERT INTO public.provinsi (nama, aktif) VALUES ('Jawa Barat', true);
 ```
