@@ -7,6 +7,7 @@ import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
 import { uploadUktBukti } from "@/app/lib/storage/ijazah";
+import { insertEvent } from "@/app/lib/events/insertEvent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -80,6 +81,18 @@ export async function POST(
     console.error("[ukt/pendaftaran upload] update", updateErr);
     return NextResponse.json({ message: updateErr.message }, { status: 500 });
   }
+
+  await insertEvent(admin, {
+    user_id: user.id,
+    type: "ukt_bukti_upload",
+    title: "Upload bukti pembayaran UKT",
+    module: "ukt",
+    detail: {
+      id,
+      ranting_id: row.ranting_id,
+      path: result.path,
+    },
+  });
 
   return NextResponse.json({
     ok: true,

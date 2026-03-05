@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { ProfileData } from "./useProfileData";
 
-/** Field wajib sama dengan ProfileSchema / step 1+2+3 + avatar (profil lengkap = 100%). */
+/** Field wajib sama dengan ProfileSchema / step 1+2+3 (tanpa memaksa avatar). */
 const REQUIRED_FIELDS: (keyof ProfileData)[] = [
   "nik",
   "nama",
@@ -20,7 +20,6 @@ const REQUIRED_FIELDS: (keyof ProfileData)[] = [
   "districtId",
   "villageId",
   "rantingId",
-  "avatarPath", // avatar wajib agar score tidak 100% sebelum foto profil terisi (modal bisa dipaksa buka)
 ];
 
 function isFilled(value: unknown): boolean {

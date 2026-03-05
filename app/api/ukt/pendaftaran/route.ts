@@ -7,6 +7,7 @@ import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
 import { getPublicUrl } from "@/app/lib/storage/ijazah";
+import { insertEvent } from "@/app/lib/events/insertEvent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -171,6 +172,20 @@ export async function POST(req: NextRequest) {
     console.error("[ukt/pendaftaran POST]", error);
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
+
+  // Event notifikasi: pendaftaran UKT baru
+  await insertEvent(admin as any, {
+    user_id: user.id,
+    type: "ukt_pendaftaran_create",
+    title: "Mendaftarkan peserta UKT",
+    module: "ukt",
+    detail: {
+      tahun_ajaran_id: tahunAjaranId,
+      ranting_id: rantingId,
+      profile_id: profileId,
+      id: (data as any).id,
+    },
+  });
 
   return NextResponse.json(data);
 }

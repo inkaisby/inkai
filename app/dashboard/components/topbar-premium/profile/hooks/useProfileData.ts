@@ -112,12 +112,16 @@ const EMPTY: ProfileData = {
 function normalize(db: ProfileRow | null): ProfileData {
   if (!db) return EMPTY;
 
+  const rawNama = db.nama ?? "";
+  const nama =
+    rawNama.trim().toLowerCase() === "belum lengkap" ? "" : rawNama;
+
   return {
     ...EMPTY,
     nik: db.nik ?? "",
     nikLocked: Boolean(db.nik),
 
-    nama: db.nama ?? "",
+    nama,
     email: db.email ?? "",
     telepon: db.telepon ?? "",
     role: db.role ?? "",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
+import { insertEvent } from "@/app/lib/events/insertEvent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -136,23 +137,22 @@ export async function POST(req: NextRequest) {
         nomor: (inserted as { nomor?: string | null }).nomor ?? null,
       });
     }
-
-    // Insert event notifikasi untuk user yang melakukan impor
-    const titleBase = entries.length === 1 ? "Tambah anggota ranting" : "Impor anggota ranting";
-    await admin.from("events").insert({
-      user_id: user.id,
-      type: "anggota_ranting_import",
-      title:
-        entries.length === 1
-          ? `${titleBase}: ${nama || nomor || nik || "tanpa nama"}`
-          : `${titleBase}: ${entries.length} entri`,
-      module: "keanggotaan",
-      detail: {
-        ranting_id: rantingId,
-        entries: entries.length,
-      },
-    });
   }
+
+  // Satu event ringkasan untuk seluruh impor
+  const totalEntries = entries.length;
+  await insertEvent(admin, {
+    user_id: user.id,
+    type: "anggota_ranting_import",
+    title:
+      totalEntries === 1
+        ? `Tambah anggota ranting: ${results[0]?.nama || "1 entri"}`
+        : `Impor anggota ranting: ${totalEntries} entri`,
+    module: "keanggotaan",
+    detail: {
+      total_entries: totalEntries,
+    },
+  });
 
   return NextResponse.json({ entries: results });
 }

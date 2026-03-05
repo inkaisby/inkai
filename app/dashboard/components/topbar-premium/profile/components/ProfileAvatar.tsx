@@ -124,7 +124,7 @@ export default function ProfileAvatar({
       <p className="text-xs text-cyan-300 mt-2">
         {uploading
           ? "Mengunggah foto…"
-          : "Klik ikon kamera untuk mengubah foto."}
+          : "Gunakan foto resmi: memakai baju karate, posisi separuh badan, wajah terlihat jelas."}
       </p>
     </div>
   );

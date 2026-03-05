@@ -39,7 +39,10 @@ const toOptions = (
 ): Option[] =>
   Array.isArray(arr)
     ? arr.map((v) => ({
-        label: (v as { nama?: string; name?: string }).nama ?? (v as { name?: string }).name ?? "-",
+        label:
+          (v as { nama?: string; name?: string }).nama ??
+          (v as { name?: string }).name ??
+          "-",
         value: String((v as { id: unknown }).id),
       }))
     : [];
@@ -111,10 +114,6 @@ export default function ProfileModal() {
       contextRantingId: profile?.rantingId ?? null,
     });
 
-  /* ================= RANTING LOCK ================= */
-  // User baru pilih ranting sekali (by wilayah); setelah tersimpan terkunci. Hanya admin yang bisa ubah (via Pengaturan → Edit pengguna).
-  const rantingLocked = !!profile?.rantingId;
-
   /* ================= WILAYAH ================= */
   const [provinceOptions, setProvinceOptions] = useState<Option[]>([]);
   const [regencyOptions, setRegencyOptions] = useState<Option[]>([]);
@@ -124,6 +123,7 @@ export default function ProfileModal() {
   const [regenciesLoading, setRegenciesLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
   const [villagesLoading, setVillagesLoading] = useState(false);
+  const [legalConfirmOpen, setLegalConfirmOpen] = useState(false);
 
   useEffect(() => {
     setProvincesLoading(true);
@@ -218,36 +218,24 @@ export default function ProfileModal() {
 
   /* ================= CLOSE REQUEST ================= */
   const handleCloseRequest = () => {
-    if (validation.success) {
-      if (forcedReopenTimer) {
-        clearTimeout(forcedReopenTimer);
-        forcedReopenTimer = null;
-      }
+    // Jika tidak dalam mode wajib lengkap, izinkan tutup kapan saja
+    if (!requireComplete) {
       close();
       return;
     }
 
-    if (requireComplete) {
+    // Mode wajib lengkap: hanya boleh tutup jika validasi penuh lolos
+    if (!validation.success) {
       toast.error(
-        "Profil belum lengkap. Lengkapi data terlebih dahulu — jendela ini akan muncul lagi dalam beberapa detik.",
+        "Profil belum lengkap. Lengkapi semua data wajib sebelum menutup profil.",
       );
-
-      close();
-
-      if (typeof window !== "undefined") {
-        if (forcedReopenTimer) {
-          clearTimeout(forcedReopenTimer);
-        }
-        forcedReopenTimer = window.setTimeout(() => {
-          const state = useProfileModal.getState();
-          if (!state.isOpen) {
-            state.openForced();
-          }
-        }, 4000);
-      }
       return;
     }
 
+    if (forcedReopenTimer) {
+      clearTimeout(forcedReopenTimer);
+      forcedReopenTimer = null;
+    }
     close();
   };
 
@@ -293,6 +281,7 @@ export default function ProfileModal() {
   return (
     <AnimatePresence>
       <motion.div
+        key="profile-modal"
         className="fixed inset-0 z-[200000] flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/60"
         onClick={requireComplete ? handleCloseRequest : undefined}
         role="presentation"
@@ -368,22 +357,23 @@ export default function ProfileModal() {
                     const raw = profile[key as keyof typeof profile];
                     if (!raw) return null;
 
+                    const value =
+                      key === "rantingId"
+                        ? resolveRanting(String(raw))
+                        : key === "provinceId" ||
+                            key === "regencyId" ||
+                            key === "districtId" ||
+                            key === "villageId"
+                          ? resolveWilayah(String(raw))
+                          : String(raw);
+
                     return (
                       <div key={String(key)} className="flex gap-3 text-sm">
                         <span className="w-44 text-cyan-200 font-medium">
                           {label}
                         </span>
 
-                        <span className="text-cyan-300">
-                          {key === "rantingId"
-                            ? resolveRanting(String(raw))
-                            : key === "provinceId" ||
-                                key === "regencyId" ||
-                                key === "districtId" ||
-                                key === "villageId"
-                              ? resolveWilayah(String(raw))
-                              : String(raw)}
-                        </span>
+                        <span className="text-cyan-300">{value}</span>
                       </div>
                     );
                   })}
@@ -413,39 +403,37 @@ export default function ProfileModal() {
       text-cyan-400
       cursor-wait"
                       />
-                    ) : !rantingLocked ? (
-                      /* 🟢 User baru: pilih ranting (by wilayah), sekali simpan lalu terkunci */
-                      <select
-                        value={profile?.rantingId ?? ""}
-                        onChange={(e) =>
-                          updateField("rantingId", e.target.value)
-                        }
-                        className="w-full rounded-lg px-3 py-2 text-sm
+                    ) : (
+                      <>
+                        <select
+                          value={profile?.rantingId ?? ""}
+                          onChange={(e) =>
+                            updateField("rantingId", e.target.value)
+                          }
+                          className="w-full rounded-lg px-3 py-2 text-sm
       bg-[#0A0F14]
       border border-cyan-400/40
       text-cyan-200"
-                      >
-                        <option value="">Pilih Ranting</option>
-                        {rantingOptions.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      /* 🔒 Terkunci setelah simpan; hanya admin yang bisa ubah */
-                      <>
-                        <input
-                          value={resolveRanting(profile!.rantingId)}
-                          disabled
-                          className="w-full rounded-lg px-3 py-2 text-sm
-      bg-[#0A0F14]
-      border border-emerald-400/40
-      text-emerald-300
-      cursor-not-allowed"
-                        />
-                        <p className="text-xs text-cyan-300/70 mt-1">
-                          Hanya admin yang dapat mengubah ranting.
+                        >
+                          <option value="">Pilih Ranting</option>
+                          {rantingOptions.map((r) => (
+                            <option key={r.value} value={r.value}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 flex items-start gap-2 text-xs text-amber-300">
+                          <span className="mt-[1px] inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-400 text-[10px] font-bold">
+                            !
+                          </span>
+                          <span>
+                            Pastikan ranting sesuai tempat latihan utama Anda.{" "}
+                            <span className="font-semibold">
+                              Setelah dipilih dan disimpan, ranting tidak bisa
+                              diganti
+                            </span>
+                            . Pilih dengan hati-hati !!!!
+                          </span>
                         </p>
                       </>
                     )}
@@ -462,20 +450,83 @@ export default function ProfileModal() {
             prev={prevStep}
             isSaving={saving}
             canNext={canNext}
-            save={async () => {
-              try {
-                await saveProfile();
-                toast.success("Profil berhasil disimpan");
-                close();
-              } catch (err) {
-                toast.error(
-                  err instanceof Error ? err.message : "Gagal menyimpan profil",
-                );
-              }
+            save={() => {
+              setLegalConfirmOpen(true);
             }}
           />
         </motion.div>
       </motion.div>
+
+      {legalConfirmOpen && (
+        <motion.div
+          key="legal-confirm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[300000] flex items-center justify-center bg-black/70"
+        >
+          <div className="w-full max-w-md rounded-xl border border-cyan-500/40 bg-[#05080d]/95 p-5 text-sm text-cyan-50 space-y-4 shadow-[0_0_25px_rgba(34,211,238,0.35)]">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-cyan-200">
+                Konfirmasi Legalitas Data
+              </h2>
+              <p className="text-[13px] text-cyan-100/80">
+                Dengan menekan tombol{" "}
+                <span className="font-semibold">“Ya, data saya benar”</span>,
+                Anda menyatakan bahwa{" "}
+                <span className="font-semibold">
+                  seluruh data profil yang Anda isi adalah benar
+                </span>{" "}
+                dan dapat dipakai untuk keperluan legalitas (keanggotaan, UKT,
+                sertifikat, dan administrasi resmi lainnya).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-[12px] text-yellow-100">
+              <span className="mt-0.5 text-xs">⚠️</span>
+              <p>
+                Jika ada kesalahan penulisan nama, NIK, atau data penting lain,
+                <span className="font-semibold">
+                  {" "}
+                  proses administrasi dan penerbitan sertifikat dapat terganggu
+                </span>
+                . Periksa kembali sebelum menyimpan.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setLegalConfirmOpen(false)}
+                className="rounded-lg border border-cyan-500/40 px-3 py-1.5 text-cyan-200 hover:bg-cyan-900/40"
+              >
+                Periksa lagi
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  try {
+                    await saveProfile();
+                    toast.success("Profil berhasil disimpan");
+                    setLegalConfirmOpen(false);
+                    close();
+                  } catch (err) {
+                    toast.error(
+                      err instanceof Error
+                        ? err.message
+                        : "Gagal menyimpan profil",
+                    );
+                  }
+                }}
+                className="rounded-lg bg-gradient-to-r from-cyan-400 to-cyan-300 px-3 py-1.5 text-xs font-semibold text-black hover:shadow-[0_0_15px_rgba(34,211,238,0.7)] disabled:opacity-60"
+              >
+                {saving ? "Menyimpan..." : "Ya, data saya benar"}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }

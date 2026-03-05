@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
+import { insertEvent } from "@/app/lib/events/insertEvent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,6 +82,22 @@ export async function PATCH(
     console.error("[ukt/pendaftaran PATCH]", error);
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
+
+  // Event notifikasi: perubahan status / pembayaran
+  await insertEvent(admin, {
+    user_id: user.id,
+    type: "ukt_pendaftaran_update",
+    title:
+      body.status_bayar === "lunas"
+        ? "Konfirmasi pembayaran UKT (lunas)"
+        : "Perubahan data pendaftaran UKT",
+    module: "ukt",
+    detail: {
+      id,
+      status_bayar: body.status_bayar ?? row.status_bayar,
+      total_bayar: body.total_bayar ?? null,
+    },
+  });
 
   return NextResponse.json(updated);
 }

@@ -67,13 +67,14 @@ export default function ProfileFormLeft({
         }}
       />
 
-      {/* ================= NAMA (hanya admin yang boleh mengubah) ================= */}
+      {/* ================= NAMA LENGKAP ================= */}
       <BlockInput
         label="Nama Lengkap"
         value={profile.nama}
         onChange={(v) => update("nama", v)}
         error={errors.nama}
         dataField="nama"
+        placeholder="Nama lengkap sesuai identitas"
       />
 
       {/* ================= NO. ANGGOTA (hanya admin yang boleh mengisi) ================= */}
