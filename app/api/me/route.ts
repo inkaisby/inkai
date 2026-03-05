@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
         regency_id: profileRow.regency_id ?? null,
         district_id: profileRow.district_id ?? null,
         village_id: profileRow.village_id ?? null,
+        ranting_id: profileRow.ranting_id ?? null,
       }
     : null;
 

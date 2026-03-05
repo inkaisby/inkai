@@ -201,7 +201,7 @@ export default function useProfileData() {
         // ignore
       }
 
-      // Wilayah (Kecamatan/Kelurahan): fallback dari /api/me bila RPC get_profile_self tidak mengembalikan district_id/village_id
+      // Wilayah + ranting: fallback dari /api/me bila RPC get_profile_self tidak mengembalikan district_id/village_id/ranting_id (mis. production)
       try {
         const meRes = await fetch("/api/me", { credentials: "include" });
         if (meRes.ok) {
@@ -211,6 +211,7 @@ export default function useProfileData() {
               regency_id?: number | string | null;
               district_id?: number | string | null;
               village_id?: number | string | null;
+              ranting_id?: string | null;
             };
           };
           const p = meJson.profile;
@@ -219,6 +220,10 @@ export default function useProfileData() {
             if (p.regency_id != null && p.regency_id !== "") normalized.regencyId = String(p.regency_id);
             if (p.district_id != null && p.district_id !== "") normalized.districtId = String(p.district_id);
             if (p.village_id != null && p.village_id !== "") normalized.villageId = String(p.village_id);
+            if (p.ranting_id != null && p.ranting_id !== "") {
+              normalized.rantingId = String(p.ranting_id);
+              normalized.rantingLocked = true;
+            }
           }
         }
       } catch {

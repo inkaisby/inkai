@@ -123,10 +123,11 @@ export default function ProfileModal() {
   const [regenciesLoading, setRegenciesLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
   const [villagesLoading, setVillagesLoading] = useState(false);
-  const [rantingLocked, setRantingLocked] = useState<boolean>(
-    !!profile?.rantingId,
-  );
+  const [rantingLocked, setRantingLocked] = useState<boolean>(false);
   const [legalConfirmOpen, setLegalConfirmOpen] = useState(false);
+  // Read-only setelah save (session) atau dari DB setelah refresh (profile.rantingLocked)
+  const isRantingReadOnly =
+    rantingLocked || (profile?.rantingLocked === true);
 
   useEffect(() => {
     setProvincesLoading(true);
@@ -406,11 +407,12 @@ export default function ProfileModal() {
       text-cyan-400
       cursor-wait"
                       />
-                    ) : rantingLocked ? (
+                    ) : isRantingReadOnly ? (
                       <>
                         <input
                           value={resolveRanting(profile!.rantingId)}
                           disabled
+                          readOnly
                           className="w-full rounded-lg px-3 py-2 text-sm
       bg-[#0A0F14]
       border border-emerald-400/40
