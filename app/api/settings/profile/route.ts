@@ -56,18 +56,28 @@ export async function PUT(req: NextRequest) {
     }
 
     const payload: Record<string, unknown> = {};
+    const isEmpty = (v: unknown) => v === undefined || v === null || v === "";
+    const toNumOrNull = (v: unknown): number | null => {
+      if (isEmpty(v)) return null;
+      const n = Number(v);
+      return Number.isNaN(n) ? null : n;
+    };
     for (const key of ALLOWED_KEYS) {
-      if (key in body) {
-        const v = body[key];
-        if (key === "structural_level" && (v === null || v === "")) {
-          payload[key] = null;
-        } else if (key === "email_allowed") {
-          payload[key] = Boolean(v);
-        } else if (key === "province_id" || key === "regency_id" || key === "district_id") {
-          payload[key] = v === null || v === "" ? null : Number(v);
-        } else {
-          payload[key] = v === null || v === "" ? null : v;
-        }
+      if (!(key in body)) continue;
+      const v = body[key];
+      if (key === "structural_level") {
+        payload[key] = isEmpty(v) ? null : (Number.isNaN(Number(v)) ? null : Number(v));
+      } else if (key === "email_allowed") {
+        payload[key] = Boolean(v);
+      } else if (
+        key === "province_id" ||
+        key === "regency_id" ||
+        key === "district_id" ||
+        key === "village_id"
+      ) {
+        payload[key] = toNumOrNull(v);
+      } else {
+        payload[key] = isEmpty(v) ? null : v;
       }
     }
 

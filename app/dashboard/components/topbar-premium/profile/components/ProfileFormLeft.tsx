@@ -67,13 +67,14 @@ export default function ProfileFormLeft({
         }}
       />
 
-      {/* ================= NAMA ================= */}
+      {/* ================= NAMA (hanya admin yang boleh mengubah) ================= */}
       <BlockInput
         label="Nama Lengkap"
         value={profile.nama}
         onChange={(v) => update("nama", v)}
         error={errors.nama}
         dataField="nama"
+        disabled={!canEditNomor}
       />
 
       {/* ================= NO. ANGGOTA (hanya admin yang boleh mengisi) ================= */}
@@ -87,7 +88,7 @@ export default function ProfileFormLeft({
         disabled={!canEditNomor}
       />
 
-      {/* ================= STATUS KEANGGOTAAN ================= */}
+      {/* ================= STATUS KEANGGOTAAN (hanya admin yang boleh mengubah) ================= */}
       <BlockSelect
         label="Status Keanggotaan"
         value={profile.status}
@@ -99,6 +100,7 @@ export default function ProfileFormLeft({
         ]}
         error={errors.status}
         dataField="status"
+        disabled={!canEditNomor}
       />
 
       {/* ================= EMAIL ================= */}
