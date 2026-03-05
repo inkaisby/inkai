@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import { waitForSessionReady } from "@/app/lib/auth/sessionReady";
 import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
+import useProfileModal from "../../../components/topbar-premium/profile/useProfileModal";
 
 import { User } from "@supabase/supabase-js";
 import { Anggota } from "../types/Anggota";
@@ -84,6 +85,8 @@ export function useMyKeanggotaan() {
         const mapped = (await profileRes.json()) as Anggota;
         setData(mapped);
         await loadRiwayat();
+      } else if (profileRes.status === 404) {
+        useProfileModal.getState().openForced();
       }
 
       setLoading(false);

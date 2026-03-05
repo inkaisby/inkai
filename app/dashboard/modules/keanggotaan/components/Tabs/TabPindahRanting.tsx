@@ -8,6 +8,7 @@ import {
 } from "../../services/wilayahService";
 import { FileText, MessageCircle } from "lucide-react";
 import jsPDF from "jspdf";
+import useProfileModal from "../../../topbar-premium/profile/useProfileModal";
 
 /* ===============================
    TYPES
@@ -100,8 +101,12 @@ export default function TabPindahRanting({ anggota }: TabPindahRantingProps) {
       const res = await fetch(API_PINDAH_RANTING);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || "Gagal memuat riwayat");
+        const msg = data.message || "Gagal memuat riwayat";
+        setError(msg);
         setRiwayat([]);
+        if (res.status === 404 && String(msg).toLowerCase().includes("profile tidak ditemukan")) {
+          useProfileModal.getState().openForced();
+        }
         return;
       }
       const data = await res.json();
