@@ -123,6 +123,9 @@ export default function ProfileModal() {
   const [regenciesLoading, setRegenciesLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
   const [villagesLoading, setVillagesLoading] = useState(false);
+  const [rantingLocked, setRantingLocked] = useState<boolean>(
+    !!profile?.rantingId,
+  );
   const [legalConfirmOpen, setLegalConfirmOpen] = useState(false);
 
   useEffect(() => {
@@ -403,6 +406,23 @@ export default function ProfileModal() {
       text-cyan-400
       cursor-wait"
                       />
+                    ) : rantingLocked ? (
+                      <>
+                        <input
+                          value={resolveRanting(profile!.rantingId)}
+                          disabled
+                          className="w-full rounded-lg px-3 py-2 text-sm
+      bg-[#0A0F14]
+      border border-emerald-400/40
+      text-emerald-300
+      cursor-not-allowed"
+                        />
+                        <p className="mt-1 text-[11px] text-amber-300">
+                          Ranting sudah terkunci. Proses pindah ranting hanya
+                          bisa melalui prosedur resmi (menu Keanggotaan) atau
+                          oleh admin.
+                        </p>
+                      </>
                     ) : (
                       <>
                         <select
@@ -509,6 +529,7 @@ export default function ProfileModal() {
                   try {
                     await saveProfile();
                     toast.success("Profil berhasil disimpan");
+                    setRantingLocked(true);
                     setLegalConfirmOpen(false);
                     close();
                   } catch (err) {
