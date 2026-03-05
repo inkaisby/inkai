@@ -229,7 +229,7 @@ export default function ProfileModal() {
 
     if (requireComplete) {
       toast.error(
-        "Profil belum lengkap. Lengkapi data terlebih dahulu — jendela ini akan muncul lagi sebentar lagi.",
+        "Profil belum lengkap. Lengkapi data terlebih dahulu — jendela ini akan muncul lagi dalam beberapa detik.",
       );
 
       close();
@@ -243,7 +243,7 @@ export default function ProfileModal() {
           if (!state.isOpen) {
             state.openForced();
           }
-        }, 8000);
+        }, 4000);
       }
       return;
     }
@@ -292,8 +292,17 @@ export default function ProfileModal() {
   /* ================= RENDER ================= */
   return (
     <AnimatePresence>
-      <motion.div className="fixed inset-0 z-[200000] flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/60">
-        <motion.div className="relative w-full max-w-[900px] max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20 overflow-hidden flex flex-col">
+      <motion.div
+        className="fixed inset-0 z-[200000] flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/60"
+        onClick={requireComplete ? handleCloseRequest : undefined}
+        role="presentation"
+      >
+        <motion.div
+          className="relative w-full max-w-[900px] max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-[#0A0F14]/90 border border-cyan-400/20 overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+        >
           {!requireComplete && (
             <button
               onClick={handleCloseRequest}

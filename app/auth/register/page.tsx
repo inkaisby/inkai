@@ -56,20 +56,20 @@ export default function RegisterForm() {
       });
 
       if (error) {
-        console.error("SIGNUP ERROR:", error);
         setLoading(false);
 
         const msg = (error.message ?? "").toLowerCase();
         const code = String((error as { code?: string }).code ?? "").toLowerCase();
 
-        // Email sudah terdaftar (berbagai format error Supabase)
+        // Email sudah terdaftar (AuthApiError: "User already registered" dll.)
         const isAlreadyRegistered =
           code === "user_already_exists" ||
           code === "422" ||
-          msg.includes("already") ||
+          msg === "user already registered" ||
           msg.includes("already registered") ||
           msg.includes("already been registered") ||
           msg.includes("user already") ||
+          msg.includes("already") ||
           msg.includes("exist") ||
           msg.includes("registered") ||
           msg.includes("duplicate") ||
@@ -80,6 +80,8 @@ export default function RegisterForm() {
           triggerError("Email sudah terdaftar. Silakan login.");
           return;
         }
+
+        console.error("SIGNUP ERROR:", error);
 
         if (msg.includes("rate limit") || msg.includes("rate_limit")) {
           triggerError(
