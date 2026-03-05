@@ -61,9 +61,9 @@ export async function GET(req: NextRequest) {
     dikonfirmasi_at: string | null;
   }>;
 
-  const tahunIds = [...new Set(list.map((r) => r.tahun_ajaran_id))];
-  const rantingIds = [...new Set(list.map((r) => r.ranting_id))];
-  const profileIds = [...new Set(list.map((r) => r.profile_id))];
+  const tahunIds = Array.from(new Set(list.map((r) => r.tahun_ajaran_id)));
+  const rantingIds = Array.from(new Set(list.map((r) => r.ranting_id)));
+  const profileIds = Array.from(new Set(list.map((r) => r.profile_id)));
 
   const [tahunRes, rantingRes, profileRes] = await Promise.all([
     tahunIds.length > 0

@@ -106,7 +106,8 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
     const tahun = tahunList.find((t) => t.id === tahunId);
     const kyuDanLabel = tahun?.nama ?? "";
     let ok = 0;
-    for (const profileId of selected) {
+    const selectedIds = Array.from(selected);
+    for (const profileId of selectedIds) {
       const a = anggota.find((x) => x.profile_id === profileId);
       const res = await fetch("/api/ukt/pendaftaran", {
         method: "POST",

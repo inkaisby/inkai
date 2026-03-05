@@ -11,6 +11,21 @@ import { getPublicUrl } from "@/app/lib/storage/ijazah";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type PendaftaranRow = {
+  id: string;
+  profile_id: string;
+  ranting_id: string;
+  kyu_dan_terakhir: string;
+  status_bayar: string;
+  total_bayar: number | null;
+  bukti_transfer_path: string | null;
+  file_url: string | null;
+  dikonfirmasi_at: string | null;
+  created_at: string;
+  nama: string;
+  nomor: string;
+};
+
 export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) {
@@ -50,7 +65,7 @@ export async function GET(req: NextRequest) {
   }
 
   const rawList = (rows ?? []) as Array<{ profile_id: string }>;
-  const profileIds = [...new Set(rawList.map((r) => r.profile_id))];
+  const profileIds = Array.from(new Set(rawList.map((r) => r.profile_id)));
   const profileMap = new Map<string, { nama?: string; nomor?: string }>();
   if (profileIds.length > 0) {
     const { data: profiles } = await admin
@@ -62,32 +77,33 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const list = rawList.map((r: Record<string, unknown>) => {
-    const profile = profileMap.get(r.profile_id as string);
-    const buktiPath = (r.bukti_transfer_path as string) ?? null;
+  const list: PendaftaranRow[] = (rawList as any[]).map((r) => {
+    const profile = profileMap.get(String(r.profile_id));
+    const buktiPath = (r as any).bukti_transfer_path ?? null;
     return {
-      id: r.id,
-      profile_id: r.profile_id,
-      ranting_id: r.ranting_id,
-      kyu_dan_terakhir: r.kyu_dan_terakhir ?? "",
-      status_bayar: r.status_bayar ?? "menunggu_bayar",
-      total_bayar: r.total_bayar ?? null,
+      id: String(r.id),
+      profile_id: String(r.profile_id),
+      ranting_id: String(r.ranting_id),
+      kyu_dan_terakhir: (r as any).kyu_dan_terakhir ?? "",
+      status_bayar: (r as any).status_bayar ?? "menunggu_bayar",
+      total_bayar:
+        (r as any).total_bayar != null ? Number((r as any).total_bayar) : null,
       bukti_transfer_path: buktiPath,
       file_url: getPublicUrl(buktiPath) ?? null,
-      dikonfirmasi_at: r.dikonfirmasi_at ?? null,
-      created_at: r.created_at,
+      dikonfirmasi_at: (r as any).dikonfirmasi_at ?? null,
+      created_at: String((r as any).created_at ?? ""),
       nama: profile?.nama ?? "",
       nomor: profile?.nomor ?? "",
     };
   });
 
-  const total_bayar = list.reduce(
-    (sum: number, r: { status_bayar?: string; total_bayar?: number | null }) =>
-      r.status_bayar === "lunas" && r.total_bayar != null ? sum + Number(r.total_bayar) : sum,
-    0
-  );
-  const belum_bayar = list.filter((r: { status_bayar?: string }) => r.status_bayar === "menunggu_bayar").length;
-  const lunas = list.filter((r: { status_bayar?: string }) => r.status_bayar === "lunas").length;
+  const total_bayar = list.reduce((sum, r) => {
+    return r.status_bayar === "lunas" && r.total_bayar != null
+      ? sum + Number(r.total_bayar)
+      : sum;
+  }, 0);
+  const belum_bayar = list.filter((r) => r.status_bayar === "menunggu_bayar").length;
+  const lunas = list.filter((r) => r.status_bayar === "lunas").length;
 
   return NextResponse.json({
     list,
