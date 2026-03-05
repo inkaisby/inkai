@@ -206,6 +206,12 @@ export default function HomeBaseModule() {
     },
   ]);
 
+  // Ringkasan UKT (Event & Ujian) untuk blok Home Base
+  const [uktSummary, setUktSummary] = useState<{
+    tahun_ajaran: { id: string; nama: string } | null;
+    total_peserta: number;
+  }>({ tahun_ajaran: null, total_peserta: 0 });
+
   // Load ranting (dibatasi scope dari API)
   useEffect(() => {
     let cancelled = false;
@@ -216,6 +222,25 @@ export default function HomeBaseModule() {
       cancelled = true;
     };
   }, [loadRanting]);
+
+  // Load ringkasan UKT untuk blok Event & Ujian
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ukt/summary", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && d && typeof d.total_peserta === "number") {
+          setUktSummary({
+            tahun_ajaran: d.tahun_ajaran ?? null,
+            total_peserta: d.total_peserta,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load provinsi + cabang sesuai scope (PP melihat semua)
   useEffect(() => {
@@ -480,9 +505,15 @@ export default function HomeBaseModule() {
             <span className="text-xs text-white/60">Event & Ujian</span>
             <Trophy size={16} className="text-amber-300" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-300">—</div>
+          <div className="mt-2 text-2xl font-bold text-amber-300">
+            {uktSummary.total_peserta}
+          </div>
           <div className="text-[11px] text-white/50 mt-1">
-            Ringkasan event/ujian yang terkait dengan ranting/cabang Anda.
+            Peserta UKT
+            {uktSummary.tahun_ajaran
+              ? ` ${uktSummary.tahun_ajaran.nama}`
+              : ""}{" "}
+            di wilayah Anda.
           </div>
         </div>
 
@@ -701,14 +732,18 @@ export default function HomeBaseModule() {
                   </p>
                 ) : (
                   <div className="border border-teal-500/30 rounded-md overflow-hidden">
-                    <table className="w-full text-[11px]">
+                    <table className="w-full table-fixed text-[11px]">
                       <thead className="bg-teal-500/10 text-teal-100">
                         <tr>
-                          <th className="px-2 py-1.5 text-left">
+                          <th className="px-2 py-1.5 text-left w-[40%]">
                             Nama ranting
                           </th>
-                          <th className="px-2 py-1.5 text-left w-20">Status</th>
-                          <th className="px-2 py-1.5 text-right w-20">Aksi</th>
+                          <th className="px-2 py-1.5 text-left w-[20%]">
+                            Status
+                          </th>
+                          <th className="px-2 py-1.5 text-right w-[40%]">
+                            Aksi
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -732,6 +767,16 @@ export default function HomeBaseModule() {
                               </span>
                             </td>
                             <td className="px-2 py-1.5 text-right space-x-1">
+                              <a
+                                href={`/dashboard/anggota-ranting?ranting_id=${encodeURIComponent(
+                                  r.id,
+                                )}&ranting_nama=${encodeURIComponent(
+                                  r.nama ?? "",
+                                )}`}
+                                className="inline-flex items-center gap-1 rounded-full border border-emerald-500/60 px-2 py-0.5 text-[10px] text-emerald-200 hover:bg-emerald-500/10"
+                              >
+                                Kelola anggota
+                              </a>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -848,7 +893,7 @@ export default function HomeBaseModule() {
 
         {/* RIGHT: EVENT + KWITANSI */}
         <div className="space-y-6">
-          {/* EVENT & UJIAN (PLACEHOLDER RINGKAS) */}
+          {/* EVENT & UJIAN – ringkasan UKT */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Trophy size={18} className="text-amber-300" />
@@ -857,13 +902,35 @@ export default function HomeBaseModule() {
               </h2>
             </div>
             <p className="text-xs text-white/55">
-              Daftar event & ujian di wilayah Anda. Integrasi dapat diarahkan ke
-              modul Event.
+              Pendaftaran UKT (Ujian Kenaikan Tingkat) dan event di wilayah Anda.
             </p>
-            <p className="text-xs text-white/40 italic">
-              (Placeholder) Belum terhubung ke tabel event. Data bisa diisi dari
-              API event per wilayah.
-            </p>
+            <div className="flex items-center justify-between gap-2 text-xs text-white/70">
+              <div>
+                {uktSummary.tahun_ajaran ? (
+                  <span>
+                    <span className="text-white/50">Peserta UKT </span>
+                    <span className="font-medium text-amber-200/90">
+                      {uktSummary.tahun_ajaran.nama}
+                    </span>
+                    <span className="text-white/50">: </span>
+                    <span className="font-semibold text-slate-100">
+                      {uktSummary.total_peserta}
+                    </span>
+                    <span className="text-white/50"> orang</span>
+                  </span>
+                ) : (
+                  <span className="text-white/50">
+                    Belum ada tahun ajaran UKT aktif.
+                  </span>
+                )}
+              </div>
+            </div>
+            <a
+              href="/dashboard/event"
+              className="inline-flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 no-underline"
+            >
+              Buka modul Event & Ujian →
+            </a>
           </div>
 
           {/* KWITANSI PEMBAYARAN – RINGKASAN UNTUK HOME BASE */}

@@ -40,10 +40,11 @@ export function useMenuCRUD() {
       const list = Array.isArray(data) ? data : [];
       setMenus(list);
 
-      // Sinkronkan ke bootstrap store supaya Sidebar ikut realtime
-      if (bootstrap) {
+      // Sinkronkan ke bootstrap store supaya Sidebar ikut realtime (pakai getState agar effect tidak re-run terus)
+      const current = useBootstrapStore.getState().data;
+      if (current) {
         setBootstrap({
-          ...bootstrap,
+          ...current,
           menus: list,
         });
       }
@@ -51,8 +52,7 @@ export function useMenuCRUD() {
       setError(e.message);
       setMenus([]);
     }
-
-  }, [bootstrap, setBootstrap]);
+  }, [setBootstrap]);
 
   /* ================= CRUD ================= */
 const createMenu = async (payload: Partial<MenuRow>) => {

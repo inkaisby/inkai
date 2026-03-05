@@ -59,3 +59,39 @@ export async function uploadIjazah(
   if (error) return { error: error.message || "Gagal mengunggah file" };
   return { path: filePath };
 }
+
+const UKT_BUKTI_FOLDER = "ukt_bukti";
+
+/**
+ * Upload bukti transfer UKT ke bucket ijazah. Path: ukt_bukti/{pendaftaranId}.{ext}
+ * Admin client dipakai agar path tidak harus user_id (uploader bisa ketua/bendahara).
+ */
+export async function uploadUktBukti(
+  pendaftaranId: string,
+  file: File
+): Promise<{ path: string } | { error: string }> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { error: "Tipe file harus PDF atau gambar (JPG, PNG)." };
+  }
+  if (file.size > MAX_SIZE_BYTES) {
+    return { error: "Ukuran file maksimal 1 MB." };
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
+  const safeExt = getAllowedExtensions().includes(ext) ? ext : "pdf";
+  const filePath = `${UKT_BUKTI_FOLDER}/${pendaftaranId}.${safeExt}`;
+
+  const admin = createSupabaseAdminClient();
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await admin.storage
+    .from(BUCKET_IJAZAH)
+    .upload(filePath, buffer, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: true,
+    });
+
+  if (error) return { error: error.message || "Gagal mengunggah file" };
+  return { path: filePath };
+}
