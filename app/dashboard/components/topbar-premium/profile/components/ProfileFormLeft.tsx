@@ -74,34 +74,36 @@ export default function ProfileFormLeft({
         onChange={(v) => update("nama", v)}
         error={errors.nama}
         dataField="nama"
-        disabled={!canEditNomor}
       />
 
       {/* ================= NO. ANGGOTA (hanya admin yang boleh mengisi) ================= */}
-      <BlockInput
-        label="No. Anggota"
-        value={profile.nomor}
-        onChange={(v) => update("nomor", v)}
-        error={errors.nomor}
-        dataField="nomor"
-        placeholder="Nomor keanggotaan (hanya admin yang dapat mengisi)"
-        disabled={!canEditNomor}
-      />
+      {canEditNomor && (
+        <BlockInput
+          label="No. Anggota"
+          value={profile.nomor}
+          onChange={(v) => update("nomor", v)}
+          error={errors.nomor}
+          dataField="nomor"
+          placeholder="Nomor keanggotaan (hanya admin yang dapat mengisi)"
+        />
+      )}
 
       {/* ================= STATUS KEANGGOTAAN (hanya admin yang boleh mengubah) ================= */}
-      <BlockSelect
-        label="Status Keanggotaan"
-        value={profile.status}
-        onChange={(v) => update("status", v)}
-        options={[
-          { label: "— Pilih status —", value: "" },
-          { label: "Aktif", value: "AKTIF" },
-          { label: "Nonaktif", value: "NONAKTIF" },
-        ]}
-        error={errors.status}
-        dataField="status"
-        disabled={!canEditNomor}
-      />
+      {canEditNomor && (
+        <BlockSelect
+          label="Status Keanggotaan"
+          value={profile.status}
+          onChange={(v) => update("status", v)}
+          options={[
+            { label: "— Pilih status —", value: "" },
+            { label: "Aktif", value: "AKTIF" },
+            { label: "Nonaktif", value: "NONAKTIF" },
+          ]}
+          error={errors.status}
+          dataField="status"
+          disabled={!canEditNomor}
+        />
+      )}
 
       {/* ================= EMAIL ================= */}
       <BlockInput
