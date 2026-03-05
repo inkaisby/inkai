@@ -57,6 +57,10 @@ export async function GET(req: NextRequest) {
         email_allowed: profileRow.email_allowed,
         app_role: profileRow.app_role,
         profile_completed: isProfileCompleted(profileRow as Record<string, unknown>),
+        province_id: profileRow.province_id ?? null,
+        regency_id: profileRow.regency_id ?? null,
+        district_id: profileRow.district_id ?? null,
+        village_id: profileRow.village_id ?? null,
       }
     : null;
 

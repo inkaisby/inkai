@@ -197,6 +197,30 @@ export default function useProfileData() {
         // ignore
       }
 
+      // Wilayah (Kecamatan/Kelurahan): fallback dari /api/me bila RPC get_profile_self tidak mengembalikan district_id/village_id
+      try {
+        const meRes = await fetch("/api/me", { credentials: "include" });
+        if (meRes.ok) {
+          const meJson = (await meRes.json()) as {
+            profile?: {
+              province_id?: number | string | null;
+              regency_id?: number | string | null;
+              district_id?: number | string | null;
+              village_id?: number | string | null;
+            };
+          };
+          const p = meJson.profile;
+          if (p) {
+            if (p.province_id != null && p.province_id !== "") normalized.provinceId = String(p.province_id);
+            if (p.regency_id != null && p.regency_id !== "") normalized.regencyId = String(p.regency_id);
+            if (p.district_id != null && p.district_id !== "") normalized.districtId = String(p.district_id);
+            if (p.village_id != null && p.village_id !== "") normalized.villageId = String(p.village_id);
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       setProfile(normalized);
     } finally {
       setLoading(false);
