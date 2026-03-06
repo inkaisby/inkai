@@ -38,6 +38,20 @@ type ActivityRow = {
   created_at: string;
 };
 
+type ClientInfo = {
+  ip: string | null;
+  user_agent: string | null;
+  forwarded_for: string | null;
+  vercel: {
+    country: string | null;
+    region: string | null;
+    city: string | null;
+    latitude: string | null;
+    longitude: string | null;
+  };
+  provider: string | null;
+};
+
 interface Props {
   user: UserRow | null;
   /** Saat berubah (Realtime), refetch structural, functional, activity */
@@ -49,6 +63,8 @@ export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
   const [functional, setFunctional] = useState<UserFunctionalRole[]>([]);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+  const [clientInfoLoading, setClientInfoLoading] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) {
@@ -83,6 +99,31 @@ export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
       mounted = false;
     };
   }, [user?.user_id, user?.email, refreshTrigger]);
+
+  // Info perangkat sesi yang sedang dipakai (IP, user-agent)
+  useEffect(() => {
+    if (!user?.user_id) {
+      setClientInfo(null);
+      return;
+    }
+    let mounted = true;
+    setClientInfoLoading(true);
+    fetch("/api/me/client-info", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: ClientInfo | null) => {
+        if (!mounted) return;
+        setClientInfo(d);
+      })
+      .catch(() => {
+        if (mounted) setClientInfo(null);
+      })
+      .finally(() => {
+        if (mounted) setClientInfoLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [user?.user_id]);
 
   if (!user) {
     return (
@@ -149,6 +190,52 @@ export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
             <dd>{user.created_at ? new Date(user.created_at).toLocaleString("id-ID") : "—"}</dd>
           </div>
         </dl>
+      </section>
+
+      {/* ================= PERANGKAT SAAT INI ================= */}
+      <section className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <h3 className="text-sm font-semibold text-cyan-300/90 mb-3">
+          Perangkat saat ini (sesi yang sedang dipakai)
+        </h3>
+        {clientInfoLoading ? (
+          <div className="flex justify-center py-4">
+            <JarvisLoader label="Memuat info perangkat…" />
+          </div>
+        ) : !clientInfo ? (
+          <p className="text-sm text-white/50">Info perangkat tidak tersedia.</p>
+        ) : (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <div>
+              <dt className="text-white/50">IP</dt>
+              <dd className="font-mono text-white/90">{clientInfo.ip ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-white/50">Lokasi (Vercel)</dt>
+              <dd className="text-white/80">
+                {clientInfo.vercel?.city || clientInfo.vercel?.region || clientInfo.vercel?.country
+                  ? [clientInfo.vercel.city, clientInfo.vercel.region, clientInfo.vercel.country]
+                      .filter(Boolean)
+                      .join(", ")
+                  : "—"}
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-white/50">User-Agent</dt>
+              <dd className="font-mono text-[12px] text-white/70 break-words">
+                {clientInfo.user_agent ?? "—"}
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-white/50">Forwarded-For</dt>
+              <dd className="font-mono text-[12px] text-white/60 break-words">
+                {clientInfo.forwarded_for ?? "—"}
+              </dd>
+            </div>
+          </dl>
+        )}
+        <p className="mt-3 text-[12px] text-white/45">
+          Catatan: IP provider/ISP biasanya perlu lookup pihak ketiga, dan IP bisa berupa NAT/CGNAT.
+        </p>
       </section>
 
       {/* ================= JABATAN STRUKTURAL ================= */}

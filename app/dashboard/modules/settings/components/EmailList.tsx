@@ -28,6 +28,7 @@ export interface UserRow {
   structural_role: string | null;
   email_allowed: boolean;
   profile_completed: boolean;
+  profile_missing?: string[];
   status: string | null;
   province_id: number | null;
   regency_id: number | null;
@@ -78,6 +79,7 @@ function apiRowToUserRow(r: Record<string, unknown>): UserRow {
     structural_role: (r.structural_role as string) ?? null,
     email_allowed: Boolean(r.email_allowed),
     profile_completed: Boolean(r.profile_completed),
+    profile_missing: Array.isArray(r.profile_missing) ? (r.profile_missing as unknown[]).map((v) => String(v)) : undefined,
     status: (r.status as string) ?? null,
     province_id: toNumOrNull(r.province_id),
     regency_id: toNumOrNull(r.regency_id),
@@ -264,8 +266,15 @@ export default function EmailList({
                     <td className="p-3">
                       {u.nama ?? "-"}
                       {!u.profile_completed && (
-                        <span className="ml-2 text-xs text-red-400">
-                          (Belum Lengkap)
+                        <span
+                          className="ml-2 text-xs text-red-400"
+                          title={
+                            u.profile_missing?.length
+                              ? `Belum lengkap: ${u.profile_missing.join(", ")}`
+                              : "Profil belum lengkap"
+                          }
+                        >
+                          (Belum Lengkap{u.profile_missing?.length ? `: ${u.profile_missing[0]}` : ""})
                         </span>
                       )}
                     </td>

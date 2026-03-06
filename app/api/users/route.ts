@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
+import { getProfileMissingLabels, isProfileCompleted } from "@/app/lib/profileCompleted";
 
 type ProfileRow = {
   id: string;
@@ -225,7 +226,8 @@ export async function GET(req: NextRequest) {
         structural_level: p?.structural_level ?? null,
         structural_role: p?.structural_role ?? null,
         email_allowed: p?.email_allowed ?? false,
-        profile_completed: p?.profile_completed ?? false,
+        profile_completed: isProfileCompleted((p ?? null) as Record<string, unknown> | null),
+        profile_missing: getProfileMissingLabels((p ?? null) as Record<string, unknown> | null),
         status: p ? "ACTIVE" : "INCOMPLETE",
 
         created_at: p?.created_at ?? u.created_at ?? null,
