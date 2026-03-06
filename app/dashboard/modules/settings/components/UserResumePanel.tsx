@@ -40,9 +40,11 @@ type ActivityRow = {
 
 interface Props {
   user: UserRow | null;
+  /** Saat berubah (Realtime), refetch structural, functional, activity */
+  refreshTrigger?: number;
 }
 
-export default function UserResumePanel({ user }: Props) {
+export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
   const [structural, setStructural] = useState<UserStructuralRole[]>([]);
   const [functional, setFunctional] = useState<UserFunctionalRole[]>([]);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
@@ -80,7 +82,7 @@ export default function UserResumePanel({ user }: Props) {
     return () => {
       mounted = false;
     };
-  }, [user?.user_id, user?.email]);
+  }, [user?.user_id, user?.email, refreshTrigger]);
 
   if (!user) {
     return (

@@ -42,6 +42,8 @@ interface EmailListProps {
   sessionEmail: string | null;
   selectedUser: UserRow | null;
   onSelectUser: (user: UserRow | null) => void;
+  /** Saat berubah, refetch daftar dan sync selectedUser dengan data terbaru */
+  refreshTrigger?: number;
 }
 
 const PAGE_SIZE = 6;
@@ -91,6 +93,7 @@ export default function EmailList({
   sessionEmail,
   selectedUser,
   onSelectUser,
+  refreshTrigger = 0,
 }: EmailListProps) {
   const { selectedContext } = useScope();
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -116,6 +119,7 @@ export default function EmailList({
 
   /* ===============================
    * LOAD USERS (API dengan scope + konteks)
+   * refreshTrigger: saat Realtime mendeteksi perubahan, refetch dan sync selectedUser
    * =============================== */
   useEffect(() => {
     let mounted = true;
@@ -136,7 +140,13 @@ export default function EmailList({
             ok: res.ok,
             ...(errMsg && { message: errMsg }),
           });
-          setUsers(list.map((r) => apiRowToUserRow(r as Record<string, unknown>)));
+          const newRows = list.map((r) => apiRowToUserRow(r as Record<string, unknown>));
+          setUsers(newRows);
+          /* Sync selectedUser dengan data terbaru jika user terpilih masih ada di list */
+          if (selectedUser?.user_id && res.ok) {
+            const updated = newRows.find((u) => u.user_id === selectedUser.user_id);
+            if (updated) onSelectUser(updated);
+          }
         }
         if (!res.ok) return;
       } catch {
@@ -153,7 +163,7 @@ export default function EmailList({
     return () => {
       mounted = false;
     };
-  }, [contextRantingId]);
+  }, [contextRantingId, refreshTrigger, selectedUser?.user_id, onSelectUser]);
 
   /* AUTO SELECT LOGIN USER */
   useEffect(() => {

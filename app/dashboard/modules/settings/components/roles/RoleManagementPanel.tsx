@@ -53,9 +53,11 @@ interface Props {
   userEmail?: string | null;
   /** Domisili user (regency_id) dari Profil — untuk hint saat pilih Cabang */
   userRegencyId?: string | null;
+  /** Saat berubah (Realtime), refetch data role */
+  refreshTrigger?: number;
 }
 
-export default function RoleManagementPanel({ userId, userEmail, userRegencyId }: Props) {
+export default function RoleManagementPanel({ userId, userEmail, userRegencyId, refreshTrigger = 0 }: Props) {
   const [loading, setLoading] = useState(true);
   const [userRegencyName, setUserRegencyName] = useState<string | null>(null);
   const [structuralMaster, setStructuralMaster] = useState<
@@ -172,7 +174,7 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId }
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshTrigger]);
 
   /* Resolve nama kabupaten/kota dari domisili user (untuk hint saat pilih Cabang) */
   useEffect(() => {

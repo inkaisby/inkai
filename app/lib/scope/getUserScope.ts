@@ -64,6 +64,20 @@ export async function getUserScope(
     ranting_ids = Array.from(new Set(ranting_ids.concat(fromCabang)));
   }
 
+  // Sertakan ranting dari profil (saat daftar/lengkapi profil mengisi ranting) — satu email bisa punya beberapa ranting (dari role + dari profil)
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("ranting_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const profileRantingId =
+    profile?.ranting_id != null && String(profile.ranting_id).trim()
+      ? String(profile.ranting_id).trim()
+      : null;
+  if (profileRantingId) {
+    ranting_ids = Array.from(new Set(ranting_ids.concat(profileRantingId)));
+  }
+
   return {
     is_pp: false,
     provinsi_ids,

@@ -35,6 +35,28 @@ export async function POST(req: NextRequest) {
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
 
+  /* Validasi duplikat dalam batch: NIK dan No. Anggota harus unik per entry */
+  const seenNik = new Set<string>();
+  const seenNomor = new Set<string>();
+  for (const raw of entries) {
+    const nik = (raw.nik ?? "").trim();
+    const nomor = (raw.nomor ?? "").trim();
+    if (nik && seenNik.has(nik)) {
+      return NextResponse.json(
+        { message: `NIK ${nik} duplikat dalam data. NIK harus unik.` },
+        { status: 400 }
+      );
+    }
+    if (nomor && seenNomor.has(nomor)) {
+      return NextResponse.json(
+        { message: `No. Anggota ${nomor} duplikat dalam data. No. Anggota harus unik.` },
+        { status: 400 }
+      );
+    }
+    if (nik) seenNik.add(nik);
+    if (nomor) seenNomor.add(nomor);
+  }
+
   const results: Array<{ id: string; nama: string; nik: string | null; nomor: string | null }> = [];
 
   for (const raw of entries) {
@@ -52,12 +74,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    if (!nik && !nomor) {
-      return NextResponse.json(
-        { message: "Setiap entry minimal harus punya NIK atau No. Anggota" },
-        { status: 400 },
-      );
-    }
     if (!nama) {
       return NextResponse.json({ message: "Nama wajib diisi" }, { status: 400 });
     }
@@ -94,8 +110,36 @@ export async function POST(req: NextRequest) {
         nama,
         ranting_id: rantingId,
       };
-      if (nik && !existing.nik) updatePayload.nik = nik;
-      if (nomor && !existing.nomor) updatePayload.nomor = nomor;
+      if (nik && !existing.nik) {
+        const { data: dupNik } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("nik", nik)
+          .neq("id", existing.id)
+          .maybeSingle();
+        if (dupNik) {
+          return NextResponse.json(
+            { message: "NIK sudah dipakai oleh anggota lain." },
+            { status: 400 }
+          );
+        }
+        updatePayload.nik = nik;
+      }
+      if (nomor && !existing.nomor) {
+        const { data: dupNomor } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("nomor", nomor)
+          .neq("id", existing.id)
+          .maybeSingle();
+        if (dupNomor) {
+          return NextResponse.json(
+            { message: "No. Anggota sudah dipakai oleh anggota lain." },
+            { status: 400 }
+          );
+        }
+        updatePayload.nomor = nomor;
+      }
 
       const { error: updateErr } = await admin
         .from("profiles")
@@ -111,8 +155,37 @@ export async function POST(req: NextRequest) {
         nomor: nomor || existing.nomor || null,
       });
     } else {
-      // Insert profil baru (belum punya user_id)
+      /* Insert profil baru: pastikan NIK/No. Anggota belum dipakai profil lain */
+      if (nik) {
+        const { data: dupNik } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("nik", nik)
+          .maybeSingle();
+        if (dupNik) {
+          return NextResponse.json(
+            { message: "NIK sudah dipakai oleh anggota lain." },
+            { status: 400 }
+          );
+        }
+      }
+      if (nomor) {
+        const { data: dupNomor } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("nomor", nomor)
+          .maybeSingle();
+        if (dupNomor) {
+          return NextResponse.json(
+            { message: "No. Anggota sudah dipakai oleh anggota lain." },
+            { status: 400 }
+          );
+        }
+      }
+
       const insertPayload: Record<string, unknown> = {
+        user_id: null,
+        email: "",
         nama,
         nik: nik || null,
         nomor: nomor || null,

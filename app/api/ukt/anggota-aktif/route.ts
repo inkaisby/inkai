@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
 
   const rantingId = req.nextUrl.searchParams.get("ranting_id")?.trim();
   const tahunAjaranId = req.nextUrl.searchParams.get("tahun_ajaran_id")?.trim() || null;
+  const statusFilter = req.nextUrl.searchParams.get("status")?.trim().toUpperCase() || "AKTIF";
   if (!rantingId) return NextResponse.json({ message: "ranting_id wajib" }, { status: 400 });
+  const statusValue = statusFilter === "NONAKTIF" ? "NONAKTIF" : "AKTIF";
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
@@ -21,9 +23,8 @@ export async function GET(req: NextRequest) {
 
   const { data: profiles, error: e1 } = await admin
     .from("profiles")
-    .select("id, user_id, nama, nomor, status, nik")
+    .select("id, user_id, nama, nomor, status, nik, avatar_path")
     .eq("ranting_id", rantingId)
-    .not("nomor", "is", null)
     .order("nama");
   if (e1) return NextResponse.json({ message: e1.message }, { status: 500 });
 
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
     nomor?: string | null;
     status?: string | null;
     nik?: string | null;
+    avatar_path?: string | null;
   }>;
   const ids = list.map((p) => p.id);
 
@@ -72,16 +74,27 @@ export async function GET(req: NextRequest) {
     return "—";
   };
 
-  const aktif = list.filter((p) => (p.status ?? "").toUpperCase() === "AKTIF");
-  const result = aktif.map((p) => ({
-    profile_id: p.id,
-    nama: p.nama ?? "",
-    nomor: p.nomor ?? "",
-    nik: p.nik ?? "",
-    status: p.status ?? "",
-    kyu_dan_terakhir: fmt(p.id),
-    sudah_daftar: terdaftarSet.has(p.id),
-  }));
+  const filtered = list.filter((p) => (p.status ?? "").toUpperCase() === statusValue);
+  const result = filtered.map((p) => {
+    let avatarUrl: string | null = null;
+    if (p.avatar_path) {
+      const { data } = admin.storage
+        .from("avatars_v2")
+        .getPublicUrl(p.avatar_path);
+      avatarUrl = data?.publicUrl ?? null;
+    }
+    return {
+      profile_id: p.id,
+      user_id: (p as { user_id?: string | null }).user_id ?? null,
+      nama: p.nama ?? "",
+      nomor: p.nomor ?? "",
+      nik: p.nik ?? "",
+      status: p.status ?? "",
+      kyu_dan_terakhir: fmt(p.id),
+      sudah_daftar: terdaftarSet.has(p.id),
+      avatar_url: avatarUrl,
+    };
+  });
 
   return NextResponse.json(result);
 }

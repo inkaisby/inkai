@@ -1,12 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Menu, MapPin } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 import { NotificationProvider } from "./context/NotificationContext";
-import { useScope } from "./context/ScopeContext";
 
 import TitleDynamic from "./components/TitleDynamic";
 import NotificationNode from "./components/NotificationNode";
@@ -27,13 +26,10 @@ export default function TopbarContainer() {
 /* ====================================================== */
 function TopbarContent() {
   const pathname = usePathname();
-  const { contextOptions, selectedContext, setSelectedContext, loading: scopeLoading } = useScope();
 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
-
-  const showKonteks = contextOptions.length > 1;
 
   // 🔥 TITLE TANPA QUERY DATABASE (suffix responsive di TitleDynamic)
   const title = useMemo(() => {
@@ -81,24 +77,6 @@ function TopbarContent() {
           <div className="min-w-0 flex-1 truncate">
             <TitleDynamic title={title} />
           </div>
-
-          {showKonteks && !scopeLoading && (
-            <div className="flex items-center gap-2 ml-2">
-              <MapPin size={16} className="text-cyan-400/80" />
-              <select
-                suppressHydrationWarning
-                value={selectedContext}
-                onChange={(e) => setSelectedContext(e.target.value)}
-                className="text-sm bg-black/50 border border-cyan-500/40 rounded px-2 py-1 text-cyan-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-              >
-                {contextOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       </Header>
 

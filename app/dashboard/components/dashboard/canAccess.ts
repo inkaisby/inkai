@@ -1,8 +1,8 @@
 // app/dashboard/components/dashboard/canAccess.ts
 
 /**
- * Menu yang tampil ke SEMUA user (tanpa syarat wilayah / level struktural / role fungsional).
- * Isi konten di dalam halaman tetap bisa berbeda per level/fungsional (filter data di masing-masing module).
+ * Menu yang tampil ke SEMUA user level 2+ (tanpa syarat lain).
+ * Kohai (level 1) hanya boleh Dashboard + Keanggotaan (dicek di bawah).
  */
 const UNIVERSAL_MENU_KEYS = new Set<string>([
   "dashboard",
@@ -10,6 +10,14 @@ const UNIVERSAL_MENU_KEYS = new Set<string>([
   "ujian",
   "event",
 ]);
+
+/** Level tertinggi user dari structural_roles atau profile_structural_level. */
+function getEffectiveMaxLevel(user: SessionUserAccess): number {
+  const fromRoles = user.structural_roles?.filter((r) => r.active).map((r) => r.structural_level) ?? [];
+  const fromProfile = user.profile_structural_level != null ? [user.profile_structural_level] : [];
+  const all = [...fromRoles, ...fromProfile];
+  return all.length ? Math.max(...all) : 0;
+}
 
 /* ================= TYPES ================= */
 
@@ -60,7 +68,14 @@ export function canAccessMenu(
   if (ROOT_EMAIL && email && email === ROOT_EMAIL) return true;
   if ((user.app_role ?? "").toUpperCase() === "SUPERADMIN") return true;
 
-  // Menu universal: tampil ke SEMUA user (termasuk yang email_allowed = false)
+  const maxLevel = getEffectiveMaxLevel(user);
+
+  // Kohai (level 1): hanya Dashboard dan Keanggotaan
+  if (maxLevel === 1) {
+    return menu.key === "dashboard" || menu.key === "keanggotaan";
+  }
+
+  // Menu universal: tampil ke user level 2+ (termasuk yang email_allowed = false)
   if (menu.key && UNIVERSAL_MENU_KEYS.has(menu.key)) {
     return true;
   }

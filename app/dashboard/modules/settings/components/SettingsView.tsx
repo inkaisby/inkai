@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 
 import EmailList, { UserRow } from "./EmailList";
 import ProfilePanel from "./ProfilePanel";
@@ -48,6 +49,8 @@ export default function SettingsView({
   saving,
 }: SettingsViewProps) {
   const [mode, setMode] = useState<Mode>("users");
+  /** Trigger refresh semua tab saat ada perubahan Realtime (profiles, roles) */
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // USERS MODE STATE
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
@@ -77,6 +80,50 @@ export default function SettingsView({
       setLeftWidth(Number(saved));
     }
   }, []);
+
+  /* ================= REALTIME: profiles, user_structural_roles, user_functional_roles ================= */
+  useEffect(() => {
+    if (mode !== "users" || !selectedUser?.user_id) return;
+
+    const uid = selectedUser.user_id;
+    const channel = supabase
+      .channel(`settings_realtime:${uid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${uid}`,
+        },
+        () => setRefreshTrigger((p) => p + 1)
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_structural_roles",
+          filter: `user_id=eq.${uid}`,
+        },
+        () => setRefreshTrigger((p) => p + 1)
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_functional_roles",
+          filter: `user_id=eq.${uid}`,
+        },
+        () => setRefreshTrigger((p) => p + 1)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [mode, selectedUser?.user_id]);
 
   /* ================= RESIZE HELPERS ================= */
   const clamp = (v: number) => Math.min(720, Math.max(320, v));
@@ -168,6 +215,7 @@ export default function SettingsView({
                 sessionEmail={sessionEmail}
                 selectedUser={selectedUser}
                 onSelectUser={setSelectedUser}
+                refreshTrigger={refreshTrigger}
               />
             </div>
 
@@ -295,6 +343,7 @@ export default function SettingsView({
                               ? String(selectedUser.regency_id).replace(/\./g, "").trim()
                               : null
                           }
+                          refreshTrigger={refreshTrigger}
                         />
                       )}
                     </div>
