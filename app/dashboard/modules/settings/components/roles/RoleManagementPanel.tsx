@@ -389,14 +389,36 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId, 
 
   /* ================= TOGGLE ACTIVE ================= */
   const toggleStructural = async (id: string, active: boolean) => {
-    await supabase
-      .from("user_structural_roles")
-      .update({ active: !active })
-      .eq("id", id);
-
+    const newActive = !active;
+    const res = await fetch("/api/settings/structural-role", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id, active: newActive }),
+    });
+    if (!res.ok) {
+      const data = (await res.json()) as { message?: string };
+      alert(data?.message ?? "Gagal mengubah status");
+      return;
+    }
     setUserStructural((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, active: !active } : r)),
+      prev.map((r) => (r.id === id ? { ...r, active: newActive } : r)),
     );
+  };
+
+  /* ================= HAPUS JABATAN ================= */
+  const deleteStructural = async (id: string) => {
+    if (!confirm("Yakin hapus jabatan ini?")) return;
+    const res = await fetch(
+      `/api/settings/structural-role?id=${encodeURIComponent(id)}`,
+      { method: "DELETE", credentials: "include" }
+    );
+    if (!res.ok) {
+      const data = (await res.json()) as { message?: string };
+      alert(data?.message ?? "Gagal menghapus");
+      return;
+    }
+    setUserStructural((prev) => prev.filter((r) => r.id !== id));
   };
 
   if (loading) {
@@ -574,14 +596,23 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId, 
                   )}
                 </div>
 
-                <button
-                  onClick={() => toggleStructural(r.id, r.active)}
-                  className={`px-3 py-1 text-xs rounded ${
-                    r.active ? "bg-emerald-600/70" : "bg-red-600/70"
-                  }`}
-                >
-                  {r.active ? "Aktif" : "Nonaktif"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleStructural(r.id, r.active)}
+                    className={`px-3 py-1 text-xs rounded ${
+                      r.active ? "bg-emerald-600/70" : "bg-red-600/70"
+                    }`}
+                  >
+                    {r.active ? "Aktif" : "Nonaktif"}
+                  </button>
+                  <button
+                    onClick={() => deleteStructural(r.id)}
+                    className="px-3 py-1 text-xs rounded bg-red-900/50 text-red-300 hover:bg-red-800/60 border border-red-600/40"
+                    title="Hapus jabatan"
+                  >
+                    Hapus
+                  </button>
+                </div>
               </div>
             );
           })}

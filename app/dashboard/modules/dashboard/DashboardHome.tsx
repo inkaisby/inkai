@@ -21,6 +21,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
+import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
 
 /* ================= TYPES ================= */
 type RantingItem = {
@@ -125,9 +126,12 @@ const feedPostStyles: Record<FeedPost["type"], { leftBar: string; placeholder: s
 };
 
 /* ================= COMPONENT ================= */
-/** Statistik & Akses Cepat Modul hanya untuk: superadmin atau ketua per wilayah (PP, Pengprov, Ketua Cabang, Ketua Ranting). */
+/** Statistik & Akses Cepat Modul untuk: superadmin, ketua per wilayah (scope), atau user level 2+ (Ketua Ranting ke atas). */
 function useShowAdminDashboard() {
   const { scope, app_role, loading } = useScope();
+  const { data: bootstrap } = useBootstrapStore();
+  const user = bootstrap?.user ?? null;
+
   const isSuperadmin = (app_role ?? "").toUpperCase() === "SUPERADMIN";
   const isKetuaWilayah =
     scope != null &&
@@ -135,7 +139,14 @@ function useShowAdminDashboard() {
       (scope.ranting_ids?.length ?? 0) > 0 ||
       (scope.cabang_ids?.length ?? 0) > 0 ||
       (scope.provinsi_ids?.length ?? 0) > 0);
-  return !loading && (isSuperadmin || isKetuaWilayah);
+
+  const fromRoles = user?.structural_roles?.filter((r) => r.active).map((r) => r.structural_level) ?? [];
+  const fromProfile = user?.profile_structural_level != null ? [user.profile_structural_level] : [];
+  const allLevels = [...fromRoles, ...fromProfile];
+  const maxLevel = allLevels.length ? Math.max(...allLevels) : 0;
+  const isLevel2Plus = maxLevel >= 2;
+
+  return !loading && (isSuperadmin || isKetuaWilayah || isLevel2Plus);
 }
 
 export default function DashboardHome() {

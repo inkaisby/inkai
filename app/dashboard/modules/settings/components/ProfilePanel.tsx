@@ -342,17 +342,17 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
         return;
       }
       setDirty(false);
-      const roleChanged =
-        "structural_level" in payload ||
-        "ranting_id" in payload ||
-        "app_role" in payload ||
-        "email_allowed" in payload ||
-        "email" in payload;
-      const msg = roleChanged
-        ? "Profil berhasil disimpan.\n\nUser perlu refresh halaman (F5) atau logout lalu login ulang agar menu ter-update."
-        : "Profil berhasil disimpan";
-      alert(msg);
-    } catch {
+      const roleRelated =
+        form.ranting_id != null ||
+        form.structural_level != null ||
+        form.app_role != null;
+      alert(
+        roleRelated
+          ? "Profil berhasil disimpan.\n\nUser perlu refresh halaman (F5) atau logout lalu login ulang agar menu ter-update."
+          : "Profil berhasil disimpan"
+      );
+    } catch (err) {
+      console.error("[ProfilePanel] save error:", err);
       alert("Gagal menyimpan profil");
     } finally {
       setSaving(false);

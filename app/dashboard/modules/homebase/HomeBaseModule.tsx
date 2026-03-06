@@ -73,11 +73,11 @@ export default function HomeBaseModule() {
   }) as { role_name: string; active: boolean }[];
 
   const userLevelAtLeast2 = useMemo(() => {
-    if (profileStructuralLevel != null && profileStructuralLevel >= 2) return true;
-    const maxFromRoles = (structuralRoles as { structural_level?: number }[]).reduce(
-      (max, r) => Math.max(max, r.structural_level ?? 0),
-      0,
-    );
+    if (profileStructuralLevel != null && profileStructuralLevel >= 2)
+      return true;
+    const maxFromRoles = (
+      structuralRoles as { structural_level?: number }[]
+    ).reduce((max, r) => Math.max(max, r.structural_level ?? 0), 0);
     return maxFromRoles >= 2;
   }, [profileStructuralLevel, structuralRoles]);
 
@@ -100,23 +100,24 @@ export default function HomeBaseModule() {
       .catch(() => setFeatureConfig(null));
   }, []);
 
-  const minLevelCreateRanting = featureConfig?.homebase_min_level_create_ranting ?? 3;
+  const minLevelCreateRanting =
+    featureConfig?.homebase_min_level_create_ranting ?? 3;
   const userLevelAtLeastForCreate = useMemo(() => {
-    if (profileStructuralLevel != null && profileStructuralLevel >= minLevelCreateRanting)
+    if (
+      profileStructuralLevel != null &&
+      profileStructuralLevel >= minLevelCreateRanting
+    )
       return true;
-    const maxFromRoles = (structuralRoles as { structural_level?: number }[]).reduce(
-      (max, r) => Math.max(max, r.structural_level ?? 0),
-      0,
-    );
+    const maxFromRoles = (
+      structuralRoles as { structural_level?: number }[]
+    ).reduce((max, r) => Math.max(max, r.structural_level ?? 0), 0);
     return maxFromRoles >= minLevelCreateRanting;
   }, [profileStructuralLevel, structuralRoles, minLevelCreateRanting]);
 
   const userLevelAtLeast3 = userLevelAtLeastForCreate;
 
   const canUseDomisiliPreFill = useMemo(
-    () =>
-      userLevelAtLeast3 ||
-      (app_role ?? "").toUpperCase() === "SUPERADMIN",
+    () => userLevelAtLeast3 || (app_role ?? "").toUpperCase() === "SUPERADMIN",
     [userLevelAtLeast3, app_role],
   );
 
@@ -137,7 +138,8 @@ export default function HomeBaseModule() {
     [featureConfig?.homebase_roles_keanggotaan_block],
   );
   const rolesEvent = useMemo(
-    () => featureConfig?.homebase_roles_event_block ?? ["PELATIH", "SEKRETARIS"],
+    () =>
+      featureConfig?.homebase_roles_event_block ?? ["PELATIH", "SEKRETARIS"],
     [featureConfig?.homebase_roles_event_block],
   );
   const rolesKwitansi = useMemo(
@@ -149,21 +151,30 @@ export default function HomeBaseModule() {
     () =>
       (structuralRoles as { role_name?: string }[]).some((r) =>
         roleNameMatchesAny(r.role_name ?? "", rolesKeanggotaan),
-      ) || functionalRoles.some((r) => roleNameMatchesAny(r.role_name ?? "", rolesKeanggotaan)),
+      ) ||
+      functionalRoles.some((r) =>
+        roleNameMatchesAny(r.role_name ?? "", rolesKeanggotaan),
+      ),
     [structuralRoles, functionalRoles, rolesKeanggotaan],
   );
   const hasRoleForEvent = useMemo(
     () =>
       (structuralRoles as { role_name?: string }[]).some((r) =>
         roleNameMatchesAny(r.role_name ?? "", rolesEvent),
-      ) || functionalRoles.some((r) => roleNameMatchesAny(r.role_name ?? "", rolesEvent)),
+      ) ||
+      functionalRoles.some((r) =>
+        roleNameMatchesAny(r.role_name ?? "", rolesEvent),
+      ),
     [structuralRoles, functionalRoles, rolesEvent],
   );
   const hasRoleForKwitansi = useMemo(
     () =>
       (structuralRoles as { role_name?: string }[]).some((r) =>
         roleNameMatchesAny(r.role_name ?? "", rolesKwitansi),
-      ) || functionalRoles.some((r) => roleNameMatchesAny(r.role_name ?? "", rolesKwitansi)),
+      ) ||
+      functionalRoles.some((r) =>
+        roleNameMatchesAny(r.role_name ?? "", rolesKwitansi),
+      ),
     [structuralRoles, functionalRoles, rolesKwitansi],
   );
 
@@ -723,7 +734,8 @@ export default function HomeBaseModule() {
                 </h2>
               </div>
               <p className="text-[11px] text-white/50">
-                Hanya cabang di wilayah Anda (sesuai profil). Data dibatasi di server.
+                Hanya cabang di wilayah Anda (sesuai profil). Data dibatasi di
+                server.
               </p>
               <div className="relative">
                 <input
@@ -857,7 +869,9 @@ export default function HomeBaseModule() {
                             setRantingForm({
                               nama: "",
                               aktif: true,
-                              cabang_id: String(selectedRanting.cabang_id ?? ""),
+                              cabang_id: String(
+                                selectedRanting.cabang_id ?? "",
+                              ),
                               province_id: String(
                                 selectedRanting.province_id ?? "",
                               ),
@@ -1052,7 +1066,9 @@ export default function HomeBaseModule() {
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <UserCheck size={18} className="text-emerald-300" />
-                <h2 className="text-sm font-medium text-white/90">Keanggotaan</h2>
+                <h2 className="text-sm font-medium text-white/90">
+                  Keanggotaan
+                </h2>
               </div>
               <p className="text-xs text-white/55">
                 Ringkasan anggota di ranting/cabang Anda. Detail lengkap ada di
@@ -1060,15 +1076,21 @@ export default function HomeBaseModule() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <div className="text-emerald-300 font-semibold text-lg">—</div>
+                  <div className="text-emerald-300 font-semibold text-lg">
+                    —
+                  </div>
                   <div className="text-white/60 mt-1">Anggota aktif</div>
                 </div>
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <div className="text-emerald-300 font-semibold text-lg">—</div>
+                  <div className="text-emerald-300 font-semibold text-lg">
+                    —
+                  </div>
                   <div className="text-white/60 mt-1">Kyu / Dan tercatat</div>
                 </div>
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <div className="text-emerald-300 font-semibold text-lg">—</div>
+                  <div className="text-emerald-300 font-semibold text-lg">
+                    —
+                  </div>
                   <div className="text-white/60 mt-1">Pelatihan diikuti</div>
                 </div>
               </div>
@@ -1093,7 +1115,8 @@ export default function HomeBaseModule() {
                 </h2>
               </div>
               <p className="text-xs text-white/55">
-                Pendaftaran UKT (Ujian Kenaikan Tingkat) dan event di wilayah Anda.
+                Pendaftaran UKT (Ujian Kenaikan Tingkat) dan event di wilayah
+                Anda.
               </p>
               <div className="flex items-center justify-between gap-2 text-xs text-white/70">
                 <div>
@@ -1126,43 +1149,44 @@ export default function HomeBaseModule() {
           )}
 
           {showKwitansiBlock && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <CreditCard size={18} className="text-teal-300" />
-                  <h2 className="text-sm font-medium text-white/90">
-                    Kwitansi Pembayaran
-                  </h2>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={18} className="text-teal-300" />
+                    <h2 className="text-sm font-medium text-white/90">
+                      Kwitansi Pembayaran
+                    </h2>
+                  </div>
+                  <p className="text-xs text-white/55">
+                    Ringkasan aktivitas pembayaran di wilayah Anda. Detail
+                    lengkap dan cetak kwitansi ada di modul Keuangan.
+                  </p>
                 </div>
-                <p className="text-xs text-white/55">
-                  Ringkasan aktivitas pembayaran di wilayah Anda. Detail lengkap
-                  dan cetak kwitansi ada di modul Keuangan.
-                </p>
               </div>
+              <div className="flex items-center justify-between text-xs text-white/70">
+                <div>
+                  <div className="text-[11px] text-white/50">
+                    Contoh data demo — nantinya bisa diisi dari tabel
+                    pembayaran.
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wide text-white/40">
+                    Total demo kwitansi
+                  </div>
+                  <div className="text-lg font-semibold text-slate-100">
+                    {payments.length}
+                  </div>
+                </div>
+              </div>
+              <a
+                href="/dashboard/keuangan"
+                className="inline-flex items-center gap-1.5 text-xs text-teal-300 hover:text-teal-200 no-underline"
+              >
+                Buka modul Keuangan untuk kelola kwitansi →
+              </a>
             </div>
-            <div className="flex items-center justify-between text-xs text-white/70">
-              <div>
-                <div className="text-[11px] text-white/50">
-                  Contoh data demo — nantinya bisa diisi dari tabel pembayaran.
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wide text-white/40">
-                  Total demo kwitansi
-                </div>
-                <div className="text-lg font-semibold text-slate-100">
-                  {payments.length}
-                </div>
-              </div>
-            </div>
-            <a
-              href="/dashboard/keuangan"
-              className="inline-flex items-center gap-1.5 text-xs text-teal-300 hover:text-teal-200 no-underline"
-            >
-              Buka modul Keuangan untuk kelola kwitansi →
-            </a>
-          </div>
           )}
         </div>
       </div>
@@ -1200,7 +1224,9 @@ export default function HomeBaseModule() {
             </div>
             <form
               className="p-4 sm:p-6 space-y-3 overflow-y-auto flex-1 min-h-0 overscroll-contain"
-              style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+              style={
+                { WebkitOverflowScrolling: "touch" } as React.CSSProperties
+              }
               onSubmit={(e) => {
                 e.preventDefault();
                 handleRantingFormSubmit();
@@ -1229,8 +1255,8 @@ export default function HomeBaseModule() {
                     </span>
                   </div>
                   <div>
-                    Wilayah: Provinsi ID {selectedRanting.province_id ?? "—"}
-                    , Kab/Kota ID {selectedRanting.regency_id ?? "—"}, Kec ID{" "}
+                    Wilayah: Provinsi ID {selectedRanting.province_id ?? "—"},
+                    Kab/Kota ID {selectedRanting.regency_id ?? "—"}, Kec ID{" "}
                     {selectedRanting.district_id ?? "—"}
                   </div>
                   <div>
@@ -1397,7 +1423,6 @@ export default function HomeBaseModule() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
