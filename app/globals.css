@@ -96,6 +96,46 @@
   animation: pulse-cyan 2.2s infinite ease-in-out;
 }
 
+/* ================= DASHBOARD FULL COLOR & ELEGANT ================= */
+
+/* Live indicator pulse */
+@keyframes live-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+.dashboard-live-pulse {
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+/* Card gradient shine */
+@keyframes gradient-shine {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.dashboard-card-glow {
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+}
+
 /* ================= SETTINGS UI ================= */
 
 .section-header {

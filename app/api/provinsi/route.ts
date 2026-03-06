@@ -5,7 +5,7 @@ import { getUserScope } from "@/app/lib/scope/getUserScope";
 
 export const runtime = "nodejs";
 
-/** GET: Daftar provinsi organisasi INKAI (filter by scope: PP = semua, lain = hanya provinsi di scope) */
+/** GET: Daftar provinsi organisasi INKAI (filter by scope: PP/Superadmin = semua, lain = hanya provinsi di scope) */
 export async function GET() {
   const user = await getSessionUser();
   if (!user) {
@@ -14,8 +14,15 @@ export async function GET() {
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("app_role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const isSuperadmin = (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
+  const canSeeAllProvinsi = scope.is_pp || isSuperadmin;
 
-  if (!scope.is_pp && scope.provinsi_ids.length === 0) {
+  if (!canSeeAllProvinsi && scope.provinsi_ids.length === 0) {
     return NextResponse.json([]);
   }
 
@@ -24,7 +31,7 @@ export async function GET() {
     .select("id, nama, aktif")
     .order("nama");
 
-  if (!scope.is_pp) {
+  if (!canSeeAllProvinsi) {
     query = query.in("id", scope.provinsi_ids);
   }
 

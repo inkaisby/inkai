@@ -1,7 +1,8 @@
 /**
  * GET: Ringkasan UKT untuk Home Base (total peserta di ranting user, tahun ajaran terbaru).
+ * Query ?ranting_ids=uuid1,uuid2 untuk filter per ranting (scope tetap berlaku).
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
@@ -9,14 +10,24 @@ import { getUserScope } from "@/app/lib/scope/getUserScope";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const raw = req.nextUrl.searchParams.get("ranting_ids")?.trim() ?? "";
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+
+  let rantingIds: string[] = [];
+  if (raw) {
+    rantingIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    if (rantingIds.length > 0 && !scope.is_pp && scope.ranting_ids.length > 0) {
+      const allowed = new Set(scope.ranting_ids);
+      rantingIds = rantingIds.filter((id) => allowed.has(id));
+    }
+  }
 
   const { data: tahunList } = await admin
     .from("ukt_tahun_ajaran")
@@ -35,19 +46,20 @@ export async function GET() {
   }
 
   let total = 0;
-  if (scope.is_pp) {
+  const idsToUse = rantingIds.length > 0 ? rantingIds : (scope.is_pp ? [] : scope.ranting_ids);
+  if (scope.is_pp && idsToUse.length === 0) {
     const { count, error } = await admin
       .from("ukt_pendaftaran")
       .select("id", { count: "exact", head: true })
       .eq("tahun_ajaran_id", tahun.id)
       .neq("status_bayar", "batal");
     if (!error && count != null) total = count;
-  } else if (scope.ranting_ids.length > 0) {
+  } else if (idsToUse.length > 0) {
     const { count, error } = await admin
       .from("ukt_pendaftaran")
       .select("id", { count: "exact", head: true })
       .eq("tahun_ajaran_id", tahun.id)
-      .in("ranting_id", scope.ranting_ids)
+      .in("ranting_id", idsToUse)
       .neq("status_bayar", "batal");
     if (!error && count != null) total = count;
   }
