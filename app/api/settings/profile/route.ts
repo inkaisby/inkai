@@ -9,6 +9,7 @@ import { logActivity } from "@/app/lib/activityLog";
 
 const ALLOWED_KEYS = [
   "nama",
+  "email",
   "nik",
   "telepon",
   "jenis_kelamin",
@@ -159,6 +160,18 @@ export async function PUT(req: NextRequest) {
         { message: error.message },
         { status: 500 }
       );
+    }
+
+    // Jika email diubah, update juga di Auth
+    if (typeof payload.email === "string" && payload.email.trim()) {
+      const newEmail = payload.email.trim().toLowerCase();
+      const { error: authErr } = await admin.auth.admin.updateUserById(
+        userId,
+        { email: newEmail }
+      );
+      if (authErr) {
+        console.warn("[API settings/profile] Auth email update failed:", authErr.message);
+      }
     }
 
     let targetEmail: string | null =

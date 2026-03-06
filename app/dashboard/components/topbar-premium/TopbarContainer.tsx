@@ -33,10 +33,11 @@ function TopbarContent() {
 
   // 🔥 TITLE TANPA QUERY DATABASE (suffix responsive di TitleDynamic)
   const title = useMemo(() => {
-    if (pathname === "/dashboard") return "Dashboard";
+    if (pathname === "/dashboard") return "Home";
     const segments = pathname.split("/").filter(Boolean);
     const key = segments[1];
-    if (!key) return "Dashboard";
+    if (!key) return "Home";
+    if (key === "home-base") return "Dashboard";
     return key.replace(/-/g, " ").toUpperCase();
   }, [pathname]);
 

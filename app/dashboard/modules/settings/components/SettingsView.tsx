@@ -12,11 +12,14 @@ import UserActivityLogPanel from "./logs/UserActivityLogPanel";
 import UserResumePanel from "./UserResumePanel";
 import { ModeButton } from "./ModeButton";
 import RoleManagementPanel from "./roles/RoleManagementPanel";
+import FeatureConfigPanel from "./FeatureConfigPanel";
+import QuickLevelUpPanel from "./QuickLevelUpPanel";
+import QuickFunctionalPanel from "./QuickFunctionalPanel";
 
 // ⬇️ DATABASE MODE
 import DatabaseView from "./database/DatabaseView";
 
-type Mode = "users" | "menu" | "database";
+type Mode = "users" | "menu" | "database" | "feature";
 type Tab = "resume" | "profile" | "password" | "roles" | "logs";
 
 const STORAGE_KEY = "settings:leftPanelWidth";
@@ -197,6 +200,13 @@ export default function SettingsView({
             subtitle="Audit & Struktur"
             onClick={() => setMode("database")}
           />
+          <ModeButton
+            active={mode === "feature"}
+            variant="menu"
+            title="Fitur"
+            subtitle="Konfigurasi RBAC"
+            onClick={() => setMode("feature")}
+          />
         </div>
       </header>
 
@@ -208,6 +218,10 @@ export default function SettingsView({
             style={{ width: leftWidth }}
             className="flex flex-col border-r border-white/10"
           >
+            <div className="p-3 border-b border-white/10 space-y-3">
+              <QuickLevelUpPanel />
+              <QuickFunctionalPanel />
+            </div>
             <div className="section-header">Daftar Pengguna</div>
 
             <div className="flex-1 min-h-0 overflow-y-auto">
@@ -370,6 +384,13 @@ export default function SettingsView({
       {mode === "database" && (
         <section className="section-card h-[640px]">
           <DatabaseView />
+        </section>
+      )}
+
+      {/* ================= FEATURE CONFIG MODE ================= */}
+      {mode === "feature" && (
+        <section className="section-card">
+          <FeatureConfigPanel />
         </section>
       )}
     </div>

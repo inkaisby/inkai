@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
+import { getFeatureConfig } from "@/app/lib/featureConfig";
 
 export const runtime = "nodejs";
 
@@ -47,7 +48,13 @@ export async function GET(req: NextRequest) {
     .order("nama");
 
   // Selalu terapkan scope untuk non-PP/Superadmin — filter wilayah hanya mempersempit hasil dalam scope (cegah bocor data).
-  if (!canSeeAllRanting) {
+  // Pengecualian: user tanpa scope yang melengkapi profil — jika kirim province_id, tampilkan ranting di wilayah tersebut.
+  const isProfileCompletionFlow =
+    !canSeeAllRanting &&
+    scope.ranting_ids.length === 0 &&
+    Boolean(provinceId);
+
+  if (!canSeeAllRanting && !isProfileCompletionFlow) {
     if (scope.ranting_ids.length === 0) {
       // Tanpa scope: hanya kembalikan context_ranting milik user (untuk tampilan nama), atau kosong
       if (contextRantingId) {
@@ -212,13 +219,34 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("app_role")
+    .select("app_role, structural_level")
     .eq("user_id", user.id)
     .maybeSingle();
   const email = (user.email ?? "").toLowerCase();
   const isRoot = ROOT_EMAIL && email && email === ROOT_EMAIL;
   const isSuperAdmin =
     isRoot || (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
+
+  // POST ranting: level minimal dari app_feature_config (default 3)
+  if (!isSuperAdmin) {
+    const config = await getFeatureConfig();
+    const minLevel = config.homebase_min_level_create_ranting;
+    const { data: structural } = await admin.rpc("get_user_structural_roles", {
+      p_user_id: user.id,
+    });
+    const levels = (structural ?? [])
+      .filter((r: { active: boolean }) => r.active)
+      .map((r: { structural_level: number }) => r.structural_level);
+    const profileLevel = profile?.structural_level ?? 0;
+    const maxLevel = Math.max(0, ...levels, profileLevel);
+    if (maxLevel < minLevel) {
+      return NextResponse.json(
+        { message: `Hanya level ${minLevel}+ yang dapat menambah ranting` },
+        { status: 403 },
+      );
+    }
+  }
+
   const canManageAll = scope.is_pp || isSuperAdmin;
 
   if (!canManageAll) {
@@ -389,13 +417,34 @@ export async function DELETE(req: NextRequest) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("app_role")
+    .select("app_role, structural_level")
     .eq("user_id", user.id)
     .maybeSingle();
   const email = (user.email ?? "").toLowerCase();
   const isRoot = ROOT_EMAIL && email && email === ROOT_EMAIL;
   const isSuperAdmin =
     isRoot || (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
+
+  // DELETE ranting: level minimal dari app_feature_config (default 3)
+  if (!isSuperAdmin) {
+    const config = await getFeatureConfig();
+    const minLevel = config.homebase_min_level_delete_ranting;
+    const { data: structural } = await admin.rpc("get_user_structural_roles", {
+      p_user_id: user.id,
+    });
+    const levels = (structural ?? [])
+      .filter((r: { active: boolean }) => r.active)
+      .map((r: { structural_level: number }) => r.structural_level);
+    const profileLevel = profile?.structural_level ?? 0;
+    const maxLevel = Math.max(0, ...levels, profileLevel);
+    if (maxLevel < minLevel) {
+      return NextResponse.json(
+        { message: `Hanya level ${minLevel}+ yang dapat menghapus ranting` },
+        { status: 403 },
+      );
+    }
+  }
+
   const canManageAll = scope.is_pp || isSuperAdmin;
 
   if (!canManageAll && scope.ranting_ids.length === 0) {

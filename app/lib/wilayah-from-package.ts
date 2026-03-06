@@ -71,7 +71,7 @@ export async function getVillagesFromPackage(
     }));
 }
 
-/** Resolve nama kelurahan atau kecamatan by ID (untuk tampilan, bukan hanya angka). */
+/** Resolve nama kelurahan, kecamatan, atau kabupaten/kota by ID (untuk tampilan, bukan hanya angka). */
 export async function getAreaNameById(id: string | number | null | undefined): Promise<string | null> {
   const raw = id == null ? "" : String(id).replace(/\./g, "").trim();
   if (!raw) return null;
@@ -90,6 +90,13 @@ export async function getAreaNameById(id: string | number | null | undefined): P
       const prefix6 = raw.slice(0, 6);
       for (const d of distList) {
         if (toId(d.code) === prefix6) return d.name ?? null;
+      }
+    }
+    // Kabupaten/Kota (regency) — 4 digit
+    if (raw.length >= 4) {
+      const regList = await getRegencies();
+      for (const r of regList) {
+        if (toId(r.code) === raw) return r.name ?? null;
       }
     }
   } catch {

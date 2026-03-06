@@ -307,6 +307,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
         body: JSON.stringify({
           user_id: user.user_id,
           nama: form.nama,
+          email: form.email,
           nik: form.nik,
           telepon: form.telepon,
           jenis_kelamin: form.jenis_kelamin,
@@ -341,7 +342,16 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
         return;
       }
       setDirty(false);
-      alert("Profil berhasil disimpan");
+      const roleChanged =
+        "structural_level" in payload ||
+        "ranting_id" in payload ||
+        "app_role" in payload ||
+        "email_allowed" in payload ||
+        "email" in payload;
+      const msg = roleChanged
+        ? "Profil berhasil disimpan.\n\nUser perlu refresh halaman (F5) atau logout lalu login ulang agar menu ter-update."
+        : "Profil berhasil disimpan";
+      alert(msg);
     } catch {
       alert("Gagal menyimpan profil");
     } finally {
@@ -366,13 +376,19 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
             label="Nama Lengkap"
             value={form.nama}
             onChange={(v) => update("nama", v)}
+            placeholder="Nama lengkap"
           />
           <Input
             label="NIK"
             value={form.nik}
             onChange={(v) => update("nik", v)}
           />
-          <Input label="Email" value={form.email} readOnly />
+          <Input
+            label="Email"
+            value={form.email}
+            onChange={(v) => update("email", v)}
+            placeholder="email@contoh.com"
+          />
           <Input
             label="Telepon"
             value={form.telepon}

@@ -189,7 +189,7 @@ export async function GET(req: NextRequest) {
       profileList.map((p) => [p.user_id ?? p.id, p])
     );
 
-    const result = usersToShow.map((u) => {
+    let result = usersToShow.map((u) => {
       const p = profileMap.get(u.id) as ProfileRow | undefined;
 
       return {
@@ -252,6 +252,14 @@ export async function GET(req: NextRequest) {
           : null,
       };
     });
+
+    // Filter by email jika ?email= diberikan (untuk lookup / quick level-up)
+    const emailParam = req.nextUrl.searchParams.get("email")?.trim()?.toLowerCase();
+    if (emailParam) {
+      result = result.filter(
+        (u) => (u.email ?? "").toLowerCase().includes(emailParam)
+      );
+    }
 
     return NextResponse.json(result);
   } catch (err) {

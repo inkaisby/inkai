@@ -49,16 +49,22 @@ export type SessionUserAccess = {
   functional_roles?: {
     role_name: string;
     active: boolean;
+    context_id?: string | null;
   }[];
 };
 
 /* ================= ACCESS FUNCTION ================= */
 const ROOT_EMAIL = process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL?.toLowerCase() ?? null;
 
+/**
+ * @param activeContextId - Opsional. Jika menu punya context_required dan required_functional_role,
+ *   dan activeContextId diberikan, user harus punya role untuk context tersebut.
+ *   Tanpa activeContextId: cek role di konteks mana pun (agregasi).
+ */
 export function canAccessMenu(
   menu: MenuAccess,
-
   user: SessionUserAccess | null,
+  activeContextId?: string | null,
 ): boolean {
   if (!user) return false;
 
@@ -87,6 +93,14 @@ export function canAccessMenu(
 
   if (menu.superadmin_only) return false;
 
+  // home-base: structural >= 2 ATAU functional role aktif (user tanpa role tidak boleh)
+  if (menu.key === "home-base") {
+    const hasStructural = maxLevel >= 2;
+    const hasFunctional =
+      user.functional_roles?.some((r) => r.active) ?? false;
+    return hasStructural || hasFunctional;
+  }
+
   if (
     menu.required_structural_level !== null &&
     menu.required_structural_level !== undefined
@@ -103,12 +117,23 @@ export function canAccessMenu(
   }
 
   if (menu.required_functional_role) {
-    const hasRole =
-      user.functional_roles?.some(
-        (r) =>
-          r.active &&
-          r.role_name === menu.required_functional_role,
-      ) ?? false;
+    const requiredRole = menu.required_functional_role;
+    let hasRole: boolean;
+
+    if (menu.context_required && activeContextId) {
+      hasRole =
+        user.functional_roles?.some(
+          (r) =>
+            r.active &&
+            r.role_name === requiredRole &&
+            (r.context_id ?? null) === activeContextId,
+        ) ?? false;
+    } else {
+      hasRole =
+        user.functional_roles?.some(
+          (r) => r.active && r.role_name === requiredRole,
+        ) ?? false;
+    }
 
     if (!hasRole) return false;
   }

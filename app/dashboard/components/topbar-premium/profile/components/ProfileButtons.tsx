@@ -11,6 +11,8 @@ interface ProfileButtonsProps {
   save: () => void;
   isSaving: boolean;
   canNext: boolean;
+  /** Jika false, tombol Simpan Profil dinonaktifkan (mis. foto profil kosong) */
+  canSave?: boolean;
 }
 
 export default function ProfileButtons({
@@ -21,6 +23,7 @@ export default function ProfileButtons({
   save,
   isSaving,
   canNext,
+  canSave = true,
 }: ProfileButtonsProps) {
   return (
     <div className="w-full px-6 py-4 border-t border-cyan-700/30 bg-[#0a0f14]/50 backdrop-blur-md flex justify-between items-center">
@@ -56,10 +59,10 @@ export default function ProfileButtons({
           <button
             type="button"
             onClick={save}
-            disabled={isSaving}
+            disabled={isSaving || !canSave}
             className={clsx(
               "px-5 py-2 rounded-lg text-sm font-semibold transition",
-              isSaving
+              isSaving || !canSave
                 ? "bg-gray-600 text-gray-300 cursor-not-allowed"
                 : "bg-gradient-to-r from-cyan-400 to-cyan-300 text-black shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:shadow-[0_0_25px_rgba(0,255,255,0.8)]",
             )}

@@ -40,9 +40,12 @@ export default function useCompletionScore(
       return { score: 0, filledCount: 0, totalFields: REQUIRED_FIELDS.length };
     }
 
-    const filledCount = REQUIRED_FIELDS.filter((key) =>
-      isFilled(profile[key]),
-    ).length;
+    const filledCount = REQUIRED_FIELDS.filter((key) => {
+      if (key === "avatarPath") {
+        return isFilled(profile.avatarPath) || isFilled(profile.avatarUrl) || isFilled(profile.avatarFile);
+      }
+      return isFilled(profile[key]);
+    }).length;
     const totalFields = REQUIRED_FIELDS.length;
     const score = Math.round((filledCount / totalFields) * 100);
 

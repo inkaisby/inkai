@@ -705,7 +705,7 @@ export default function AnggotaRantingModule() {
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-sm text-emerald-50 space-y-3">
               <p>
                 Halaman ini menampilkan daftar anggota aktif di satu ranting. Silakan pilih
-                ranting dari <span className="font-semibold">Home Base</span> (panel Cabang per kabupaten/kota)
+                ranting dari <span className="font-semibold">Dashboard</span> (panel Cabang per kabupaten/kota)
                 lalu klik <span className="font-semibold">Kelola anggota</span>, atau lengkapi profil Anda dengan ranting.
               </p>
               <button
@@ -713,7 +713,7 @@ export default function AnggotaRantingModule() {
                 onClick={() => router.push("/dashboard/home-base")}
                 className="mt-2 inline-flex items-center rounded-lg border border-emerald-400/60 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-500/10"
               >
-                Ke Home Base
+                Ke Dashboard
               </button>
             </div>
           )}

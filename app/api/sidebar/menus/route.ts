@@ -29,14 +29,17 @@ export async function GET() {
 
   const { data: functionalRows } = await admin
     .from("user_functional_roles")
-    .select("role, active")
+    .select("role, active, context_id")
     .eq("user_id", user.id)
     .eq("active", true);
 
-  const functional_roles = (functionalRows ?? []).map((r: { role: string; active: boolean }) => ({
-    role_name: r.role,
-    active: r.active,
-  }));
+  const functional_roles = (functionalRows ?? []).map(
+    (r: { role: string; active: boolean; context_id?: string | null }) => ({
+      role_name: r.role,
+      active: r.active,
+      context_id: r.context_id ?? null,
+    }),
+  );
 
   const scope = await getUserScope(admin, user.id);
 

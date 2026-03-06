@@ -181,7 +181,7 @@ export default function DashboardHome() {
       {/* Header — elegan, satu aksen */}
       <div>
         <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-wide">
-          Dashboard
+          Home
         </h1>
         <p className="text-sm text-white/60 mt-1">
           Ringkasan, feed, Instagram per wilayah, dan marketplace
@@ -407,7 +407,7 @@ export default function DashboardHome() {
 
       {/* Footer — minimal */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-white/50">
-        Dashboard — Stories ranting, feed, Instagram per wilayah, dan marketplace.
+        Home — Stories ranting, feed, Instagram per wilayah, dan marketplace.
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Users,
   UserCheck,
@@ -54,6 +55,7 @@ const accentCard =
 const EMPTY_STRUCTURAL_ROLES: { structural_level?: number }[] = [];
 
 export default function HomeBaseModule() {
+  const router = useRouter();
   const { scope, app_role } = useScope();
   const profileRegencyId = useBootstrapStore(
     (s) => s.data?.user?.profile_regency_id ?? null,
@@ -65,14 +67,51 @@ export default function HomeBaseModule() {
     const roles = s.data?.user?.structural_roles;
     return roles ?? EMPTY_STRUCTURAL_ROLES;
   });
-  const userLevelAtLeast3 = useMemo(() => {
-    if (profileStructuralLevel != null && profileStructuralLevel >= 3) return true;
+  const functionalRoles = useBootstrapStore((s) => {
+    const roles = s.data?.user?.functional_roles;
+    return roles ?? [];
+  }) as { role_name: string; active: boolean }[];
+
+  const userLevelAtLeast2 = useMemo(() => {
+    if (profileStructuralLevel != null && profileStructuralLevel >= 2) return true;
     const maxFromRoles = (structuralRoles as { structural_level?: number }[]).reduce(
       (max, r) => Math.max(max, r.structural_level ?? 0),
       0,
     );
-    return maxFromRoles >= 3;
+    return maxFromRoles >= 2;
   }, [profileStructuralLevel, structuralRoles]);
+
+  const hasActiveFunctionalRole = useMemo(
+    () => functionalRoles.some((r) => r.active),
+    [functionalRoles],
+  );
+
+  const [featureConfig, setFeatureConfig] = useState<{
+    homebase_min_level_create_ranting: number;
+    homebase_roles_keanggotaan_block: string[];
+    homebase_roles_event_block: string[];
+    homebase_roles_kwitansi_block: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/feature-config", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => setFeatureConfig(data))
+      .catch(() => setFeatureConfig(null));
+  }, []);
+
+  const minLevelCreateRanting = featureConfig?.homebase_min_level_create_ranting ?? 3;
+  const userLevelAtLeastForCreate = useMemo(() => {
+    if (profileStructuralLevel != null && profileStructuralLevel >= minLevelCreateRanting)
+      return true;
+    const maxFromRoles = (structuralRoles as { structural_level?: number }[]).reduce(
+      (max, r) => Math.max(max, r.structural_level ?? 0),
+      0,
+    );
+    return maxFromRoles >= minLevelCreateRanting;
+  }, [profileStructuralLevel, structuralRoles, minLevelCreateRanting]);
+
+  const userLevelAtLeast3 = userLevelAtLeastForCreate;
 
   const canUseDomisiliPreFill = useMemo(
     () =>
@@ -89,6 +128,59 @@ export default function HomeBaseModule() {
   useEffect(() => {
     canUseDomisiliPreFillRef.current = canUseDomisiliPreFill;
   }, [canUseDomisiliPreFill]);
+
+  const roleNameMatchesAny = (roleName: string, patterns: string[]) =>
+    patterns.some((p) => roleName?.toUpperCase().includes(p));
+
+  const rolesKeanggotaan = useMemo(
+    () => featureConfig?.homebase_roles_keanggotaan_block ?? ["SEKRETARIS"],
+    [featureConfig?.homebase_roles_keanggotaan_block],
+  );
+  const rolesEvent = useMemo(
+    () => featureConfig?.homebase_roles_event_block ?? ["PELATIH", "SEKRETARIS"],
+    [featureConfig?.homebase_roles_event_block],
+  );
+  const rolesKwitansi = useMemo(
+    () => featureConfig?.homebase_roles_kwitansi_block ?? ["BENDAHARA"],
+    [featureConfig?.homebase_roles_kwitansi_block],
+  );
+
+  const hasRoleForKeanggotaan = useMemo(
+    () =>
+      (structuralRoles as { role_name?: string }[]).some((r) =>
+        roleNameMatchesAny(r.role_name ?? "", rolesKeanggotaan),
+      ) || functionalRoles.some((r) => roleNameMatchesAny(r.role_name ?? "", rolesKeanggotaan)),
+    [structuralRoles, functionalRoles, rolesKeanggotaan],
+  );
+  const hasRoleForEvent = useMemo(
+    () =>
+      (structuralRoles as { role_name?: string }[]).some((r) =>
+        roleNameMatchesAny(r.role_name ?? "", rolesEvent),
+      ) || functionalRoles.some((r) => roleNameMatchesAny(r.role_name ?? "", rolesEvent)),
+    [structuralRoles, functionalRoles, rolesEvent],
+  );
+  const hasRoleForKwitansi = useMemo(
+    () =>
+      (structuralRoles as { role_name?: string }[]).some((r) =>
+        roleNameMatchesAny(r.role_name ?? "", rolesKwitansi),
+      ) || functionalRoles.some((r) => roleNameMatchesAny(r.role_name ?? "", rolesKwitansi)),
+    [structuralRoles, functionalRoles, rolesKwitansi],
+  );
+
+  const showKeanggotaanBlock = userLevelAtLeast2 || hasRoleForKeanggotaan;
+  const showEventBlock = userLevelAtLeast2 || hasRoleForEvent;
+  const showKwitansiBlock = userLevelAtLeast2 || hasRoleForKwitansi;
+
+  const isSuperadmin = (app_role ?? "").toUpperCase() === "SUPERADMIN";
+  const canAccessHomeBase =
+    isSuperadmin || userLevelAtLeast2 || hasActiveFunctionalRole;
+
+  const bootstrapData = useBootstrapStore((s) => s.data);
+  useEffect(() => {
+    if (bootstrapData && canAccessHomeBase === false) {
+      router.replace("/dashboard");
+    }
+  }, [bootstrapData, canAccessHomeBase, router]);
 
   const [rantingList, setRantingList] = useState<RantingRow[]>([]);
   const [rantingLoading, setRantingLoading] = useState(true);
@@ -524,7 +616,9 @@ export default function HomeBaseModule() {
   const totalRanting = rantingList.length;
   const totalRantingAktif = rantingList.filter((r) => r.aktif).length;
 
-  const isSuperadmin = (app_role ?? "").toUpperCase() === "SUPERADMIN";
+  if (bootstrapData && !canAccessHomeBase) {
+    return null;
+  }
 
   return (
     <div className="space-y-8 pb-8">
@@ -532,7 +626,7 @@ export default function HomeBaseModule() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white tracking-wide">
-            Home Base
+            Dashboard
           </h1>
           <p className="text-sm text-white/60 mt-1">
             Ringkasan wilayah, ranting, keanggotaan, event, dan kwitansi di
@@ -566,47 +660,53 @@ export default function HomeBaseModule() {
           </div>
         </div>
 
-        <div className={accentCard.replace("teal", "emerald")}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-white/60">Anggota</span>
-            <Users size={16} className="text-emerald-300" />
+        {showKeanggotaanBlock && (
+          <div className={accentCard.replace("teal", "emerald")}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-white/60">Anggota</span>
+              <Users size={16} className="text-emerald-300" />
+            </div>
+            <div className="mt-2 text-2xl font-bold text-emerald-300">—</div>
+            <div className="text-[11px] text-white/50 mt-1">
+              Integrasi ke modul Keanggotaan; angka ini bisa diisi dari API
+              keanggotaan per wilayah.
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-300">—</div>
-          <div className="text-[11px] text-white/50 mt-1">
-            Integrasi ke modul Keanggotaan; angka ini bisa diisi dari API
-            keanggotaan per wilayah.
-          </div>
-        </div>
+        )}
 
-        <div className={accentCard.replace("teal", "amber")}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-white/60">Event & Ujian</span>
-            <Trophy size={16} className="text-amber-300" />
+        {showEventBlock && (
+          <div className={accentCard.replace("teal", "amber")}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-white/60">Event & Ujian</span>
+              <Trophy size={16} className="text-amber-300" />
+            </div>
+            <div className="mt-2 text-2xl font-bold text-amber-300">
+              {uktSummary.total_peserta}
+            </div>
+            <div className="text-[11px] text-white/50 mt-1">
+              Peserta UKT
+              {uktSummary.tahun_ajaran
+                ? ` ${uktSummary.tahun_ajaran.nama}`
+                : ""}{" "}
+              di wilayah Anda.
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-300">
-            {uktSummary.total_peserta}
-          </div>
-          <div className="text-[11px] text-white/50 mt-1">
-            Peserta UKT
-            {uktSummary.tahun_ajaran
-              ? ` ${uktSummary.tahun_ajaran.nama}`
-              : ""}{" "}
-            di wilayah Anda.
-          </div>
-        </div>
+        )}
 
-        <div className={accentCard.replace("teal", "slate")}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-white/60">Kwitansi Bulan Ini</span>
-            <CreditCard size={16} className="text-slate-300" />
+        {showKwitansiBlock && (
+          <div className={accentCard.replace("teal", "slate")}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-white/60">Kwitansi Bulan Ini</span>
+              <CreditCard size={16} className="text-slate-300" />
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-200">
+              {payments.length}
+            </div>
+            <div className="text-[11px] text-white/50 mt-1">
+              Jumlah kwitansi yang siap dicetak (contoh data demo).
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-200">
-            {payments.length}
-          </div>
-          <div className="text-[11px] text-white/50 mt-1">
-            Jumlah kwitansi yang siap dicetak (contoh data demo).
-          </div>
-        </div>
+        )}
       </div>
 
       {/* MAIN GRID */}
@@ -749,36 +849,38 @@ export default function HomeBaseModule() {
                       <div className="font-semibold text-teal-200">
                         Ranting di cabang ini
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRantingFormMode("create");
-                          setRantingForm({
-                            nama: "",
-                            aktif: true,
-                            cabang_id: String(selectedRanting.cabang_id ?? ""),
-                            province_id: String(
-                              selectedRanting.province_id ?? "",
-                            ),
-                            regency_id: String(
-                              selectedRanting.regency_id ?? "",
-                            ),
-                            district_id: "",
-                            instagram_url: "",
-                            alamat: "",
-                            ketua_nama: "",
-                            sekretaris_nama: "",
-                            bendahara_nama: "",
-                            pelatih_nama: "",
-                          });
-                          setRantingFormError(null);
-                          setRantingModalOpen(true);
-                        }}
-                        className="inline-flex items-center gap-1 rounded-full border border-teal-500/40 px-2 py-1 text-[10px] text-teal-200 hover:bg-teal-500/10"
-                      >
-                        <PlusCircle size={11} />
-                        Tambah ranting
-                      </button>
+                      {userLevelAtLeast3 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRantingFormMode("create");
+                            setRantingForm({
+                              nama: "",
+                              aktif: true,
+                              cabang_id: String(selectedRanting.cabang_id ?? ""),
+                              province_id: String(
+                                selectedRanting.province_id ?? "",
+                              ),
+                              regency_id: String(
+                                selectedRanting.regency_id ?? "",
+                              ),
+                              district_id: "",
+                              instagram_url: "",
+                              alamat: "",
+                              ketua_nama: "",
+                              sekretaris_nama: "",
+                              bendahara_nama: "",
+                              pelatih_nama: "",
+                            });
+                            setRantingFormError(null);
+                            setRantingModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full border border-teal-500/40 px-2 py-1 text-[10px] text-teal-200 hover:bg-teal-500/10"
+                        >
+                          <PlusCircle size={11} />
+                          Tambah ranting
+                        </button>
+                      )}
                     </div>
                     <div className="text-[11px] text-white/60">
                       Cabang:{" "}
@@ -891,48 +993,50 @@ export default function HomeBaseModule() {
                                 <Info size={10} />
                                 Detail & Ubah
                               </button>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  const ok = window.confirm(
-                                    `Hapus ranting \"${r.nama}\"?`,
-                                  );
-                                  if (!ok) return;
-                                  try {
-                                    const res = await fetch(
-                                      `/api/ranting?id=${encodeURIComponent(
-                                        r.id,
-                                      )}`,
-                                      {
-                                        method: "DELETE",
-                                        credentials: "include",
-                                      },
+                              {userLevelAtLeast3 && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const ok = window.confirm(
+                                      `Hapus ranting \"${r.nama}\"?`,
                                     );
-                                    if (!res.ok) {
-                                      console.error(
-                                        "[HomeBase] Gagal hapus ranting",
-                                        await res.text(),
+                                    if (!ok) return;
+                                    try {
+                                      const res = await fetch(
+                                        `/api/ranting?id=${encodeURIComponent(
+                                          r.id,
+                                        )}`,
+                                        {
+                                          method: "DELETE",
+                                          credentials: "include",
+                                        },
                                       );
-                                      return;
+                                      if (!res.ok) {
+                                        console.error(
+                                          "[HomeBase] Gagal hapus ranting",
+                                          await res.text(),
+                                        );
+                                        return;
+                                      }
+                                      setRantingList((prev) =>
+                                        prev.filter((x) => x.id !== r.id),
+                                      );
+                                      if (selectedRanting.id === r.id) {
+                                        setSelectedRanting(null);
+                                      }
+                                    } catch (e) {
+                                      console.error(
+                                        "[HomeBase] Error hapus ranting",
+                                        e,
+                                      );
                                     }
-                                    setRantingList((prev) =>
-                                      prev.filter((x) => x.id !== r.id),
-                                    );
-                                    if (selectedRanting.id === r.id) {
-                                      setSelectedRanting(null);
-                                    }
-                                  } catch (e) {
-                                    console.error(
-                                      "[HomeBase] Error hapus ranting",
-                                      e,
-                                    );
-                                  }
-                                }}
-                                className="inline-flex items-center gap-1 rounded-full border border-red-500/60 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"
-                              >
-                                <Trash2 size={10} />
-                                Hapus
-                              </button>
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full border border-red-500/60 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                                >
+                                  <Trash2 size={10} />
+                                  Hapus
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -944,82 +1048,84 @@ export default function HomeBaseModule() {
             )}
           </div>
 
-          {/* KEANGGOTAAN (RINGKAS) */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <UserCheck size={18} className="text-emerald-300" />
-              <h2 className="text-sm font-medium text-white/90">Keanggotaan</h2>
+          {showKeanggotaanBlock && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserCheck size={18} className="text-emerald-300" />
+                <h2 className="text-sm font-medium text-white/90">Keanggotaan</h2>
+              </div>
+              <p className="text-xs text-white/55">
+                Ringkasan anggota di ranting/cabang Anda. Detail lengkap ada di
+                menu Keanggotaan.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <div className="text-emerald-300 font-semibold text-lg">—</div>
+                  <div className="text-white/60 mt-1">Anggota aktif</div>
+                </div>
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <div className="text-emerald-300 font-semibold text-lg">—</div>
+                  <div className="text-white/60 mt-1">Kyu / Dan tercatat</div>
+                </div>
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <div className="text-emerald-300 font-semibold text-lg">—</div>
+                  <div className="text-white/60 mt-1">Pelatihan diikuti</div>
+                </div>
+              </div>
+              <a
+                href="/dashboard/keanggotaan"
+                className="inline-flex items-center gap-1.5 text-xs text-emerald-300 hover:text-emerald-200 no-underline"
+              >
+                Buka modul Keanggotaan →
+              </a>
             </div>
-            <p className="text-xs text-white/55">
-              Ringkasan anggota di ranting/cabang Anda. Detail lengkap ada di
-              menu Keanggotaan.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <div className="text-emerald-300 font-semibold text-lg">—</div>
-                <div className="text-white/60 mt-1">Anggota aktif</div>
-              </div>
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <div className="text-emerald-300 font-semibold text-lg">—</div>
-                <div className="text-white/60 mt-1">Kyu / Dan tercatat</div>
-              </div>
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <div className="text-emerald-300 font-semibold text-lg">—</div>
-                <div className="text-white/60 mt-1">Pelatihan diikuti</div>
-              </div>
-            </div>
-            <a
-              href="/dashboard/keanggotaan"
-              className="inline-flex items-center gap-1.5 text-xs text-emerald-300 hover:text-emerald-200 no-underline"
-            >
-              Buka modul Keanggotaan →
-            </a>
-          </div>
+          )}
         </div>
 
         {/* RIGHT: EVENT + KWITANSI */}
         <div className="space-y-6">
-          {/* EVENT & UJIAN – ringkasan UKT */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Trophy size={18} className="text-amber-300" />
-              <h2 className="text-sm font-medium text-white/90">
-                Event & Ujian
-              </h2>
-            </div>
-            <p className="text-xs text-white/55">
-              Pendaftaran UKT (Ujian Kenaikan Tingkat) dan event di wilayah Anda.
-            </p>
-            <div className="flex items-center justify-between gap-2 text-xs text-white/70">
-              <div>
-                {uktSummary.tahun_ajaran ? (
-                  <span>
-                    <span className="text-white/50">Peserta UKT </span>
-                    <span className="font-medium text-amber-200/90">
-                      {uktSummary.tahun_ajaran.nama}
-                    </span>
-                    <span className="text-white/50">: </span>
-                    <span className="font-semibold text-slate-100">
-                      {uktSummary.total_peserta}
-                    </span>
-                    <span className="text-white/50"> orang</span>
-                  </span>
-                ) : (
-                  <span className="text-white/50">
-                    Belum ada tahun ajaran UKT aktif.
-                  </span>
-                )}
+          {showEventBlock && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Trophy size={18} className="text-amber-300" />
+                <h2 className="text-sm font-medium text-white/90">
+                  Event & Ujian
+                </h2>
               </div>
+              <p className="text-xs text-white/55">
+                Pendaftaran UKT (Ujian Kenaikan Tingkat) dan event di wilayah Anda.
+              </p>
+              <div className="flex items-center justify-between gap-2 text-xs text-white/70">
+                <div>
+                  {uktSummary.tahun_ajaran ? (
+                    <span>
+                      <span className="text-white/50">Peserta UKT </span>
+                      <span className="font-medium text-amber-200/90">
+                        {uktSummary.tahun_ajaran.nama}
+                      </span>
+                      <span className="text-white/50">: </span>
+                      <span className="font-semibold text-slate-100">
+                        {uktSummary.total_peserta}
+                      </span>
+                      <span className="text-white/50"> orang</span>
+                    </span>
+                  ) : (
+                    <span className="text-white/50">
+                      Belum ada tahun ajaran UKT aktif.
+                    </span>
+                  )}
+                </div>
+              </div>
+              <a
+                href="/dashboard/event"
+                className="inline-flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 no-underline"
+              >
+                Buka modul Event & Ujian →
+              </a>
             </div>
-            <a
-              href="/dashboard/event"
-              className="inline-flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 no-underline"
-            >
-              Buka modul Event & Ujian →
-            </a>
-          </div>
+          )}
 
-          {/* KWITANSI PEMBAYARAN – RINGKASAN UNTUK HOME BASE */}
+          {showKwitansiBlock && (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col gap-1">
@@ -1057,6 +1163,7 @@ export default function HomeBaseModule() {
               Buka modul Keuangan untuk kelola kwitansi →
             </a>
           </div>
+          )}
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import useProfileData, { type ProfileData } from "./hooks/useProfileData";
 import useAutoSave from "./hooks/useAutoSave";
 import useWizard from "./hooks/useWizard";
 import useRantingOptions from "./hooks/useRantingOptions";
+import useCompletionScore from "./hooks/useCompletionScore";
 import { useBootstrapStore } from "../../../store/bootstrapStore";
 
 import {
@@ -106,6 +107,7 @@ export default function ProfileModal() {
     (bootstrapUser?.app_role ?? "").toUpperCase() === "SUPERADMIN";
 
   const { currentStep, nextStep, prevStep, maxStep } = useWizard();
+  const { score: completionScore } = useCompletionScore(profile);
   const { options: rantingOptions, loading: rantingLoading } =
     useRantingOptions({
       provinceId: profile?.provinceId ?? null,
@@ -494,13 +496,24 @@ export default function ProfileModal() {
       border border-cyan-400/40
       text-cyan-200"
                         >
-                          <option value="">Pilih Ranting</option>
+                          <option value="">
+                            {rantingLoading
+                              ? "Memuat..."
+                              : rantingOptions.length === 0
+                                ? "Ranting belum tersedia di wilayah anda pilih"
+                                : "Pilih Ranting"}
+                          </option>
                           {rantingOptions.map((r) => (
                             <option key={r.value} value={r.value}>
                               {r.label}
                             </option>
                           ))}
                         </select>
+                        {!rantingLoading && rantingOptions.length === 0 && (
+                          <p className="mt-1 text-xs text-amber-400">
+                            Ranting belum tersedia di wilayah anda pilih.
+                          </p>
+                        )}
                         <p className="mt-1 flex items-start gap-2 text-xs text-amber-300">
                           <span className="mt-[1px] inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-400 text-[10px] font-bold">
                             !
@@ -529,6 +542,7 @@ export default function ProfileModal() {
             prev={prevStep}
             isSaving={saving}
             canNext={canNext}
+            canSave={completionScore === 100}
             save={() => {
               setLegalConfirmOpen(true);
             }}
