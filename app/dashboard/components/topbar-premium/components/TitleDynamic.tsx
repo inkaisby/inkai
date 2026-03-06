@@ -10,16 +10,14 @@ export default function TitleDynamic({ title }: { title: string }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
       className="
-        text-lg sm:text-xl font-semibold text-cyan-200 truncate
+        text-base sm:text-xl font-semibold text-cyan-200 truncate
         drop-shadow-[0_0_6px_rgba(0,255,255,0.5)]
       "
       title={title}
     >
       {title}
-      <span className="text-cyan-300/90 font-normal">
-        {" | "}
-        <span className="sm:hidden">INKAI</span>
-        <span className="hidden sm:inline">Institut Karate-Do Indonesia</span>
+      <span className="hidden sm:inline text-cyan-300/90 font-normal">
+        {" | "}Institut Karate-Do Indonesia
       </span>
     </motion.h2>
   );

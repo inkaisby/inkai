@@ -59,7 +59,7 @@ function TopbarContent() {
         {/* <HologramScanline /> */}
         {/* <GoldCyanFX /> */}
 
-        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-24 sm:pr-28">
+        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-44 sm:pr-28">
           <button
             type="button"
             suppressHydrationWarning
@@ -81,7 +81,7 @@ function TopbarContent() {
       </Header>
 
       {/* HUD */}
-      <div className="fixed top-3 right-6 z-50 flex items-center gap-5 pointer-events-auto">
+      <div className="fixed top-3 right-3 sm:right-6 z-50 flex items-center gap-3 sm:gap-5 pointer-events-auto">
         <NotificationNode />
         <ConnectionPulse />
         <AvatarMenu />

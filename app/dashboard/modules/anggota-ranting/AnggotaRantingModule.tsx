@@ -8,6 +8,7 @@ import { toast } from "react-hot-toast";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 import JarvisLoader from "@/components/JarvisLoader";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TOAST_DURATION_MS = 3500;
 
@@ -63,6 +64,8 @@ export default function AnggotaRantingModule() {
     dan: 0,
   });
   const [editFormLoading, setEditFormLoading] = useState(false);
+  const [singleNameConfirmed, setSingleNameConfirmed] = useState(false);
+  const [editNameConfirmed, setEditNameConfirmed] = useState(false);
 
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
   const [rantingListLoading, setRantingListLoading] = useState(true);
@@ -395,6 +398,82 @@ export default function AnggotaRantingModule() {
     () => data.filter((a) => (a.nik ?? "").trim() !== "" && (a.nomor ?? "").trim() !== "").length,
     [data],
   );
+
+  const duplicateLookup = useMemo(() => {
+    const nikMap = new Map<string, AnggotaRow>();
+    const nomorMap = new Map<string, AnggotaRow>();
+    const normalizeName = (s: string) =>
+      s
+        .trim()
+        .replace(/[^a-z0-9\s]/gi, " ")
+        .replace(/\s+/g, " ")
+        .toLowerCase();
+    const nameMap = new Map<string, AnggotaRow[]>();
+    for (const a of [...data, ...dataNonAktif]) {
+      const nik = (a.nik ?? "").trim();
+      if (nik) nikMap.set(nik, a);
+      const nomor = (a.nomor ?? "").trim();
+      if (nomor) nomorMap.set(nomor, a);
+      const key = normalizeName(a.nama ?? "");
+      if (key) {
+        const arr = nameMap.get(key) ?? [];
+        arr.push(a);
+        nameMap.set(key, arr);
+      }
+    }
+    return { nikMap, nomorMap, nameMap, normalizeName };
+  }, [data, dataNonAktif]);
+
+  const singleNikDup = useMemo(() => {
+    const nik = singleForm.nik.trim();
+    if (!nik) return null;
+    return duplicateLookup.nikMap.get(nik) ?? null;
+  }, [singleForm.nik, duplicateLookup]);
+  const singleNomorDup = useMemo(() => {
+    const nomor = singleForm.nomor.trim();
+    if (!nomor) return null;
+    return duplicateLookup.nomorMap.get(nomor) ?? null;
+  }, [singleForm.nomor, duplicateLookup]);
+  const singleNamaDup = useMemo(() => {
+    const key = duplicateLookup.normalizeName(singleForm.nama ?? "");
+    if (!key) return null;
+    const list = duplicateLookup.nameMap.get(key) ?? [];
+    return list.length > 0 ? list[0] : null;
+  }, [singleForm.nama, duplicateLookup]);
+
+  const editNikDup = useMemo(() => {
+    const nik = editForm.nik.trim();
+    if (!nik) return null;
+    const found = duplicateLookup.nikMap.get(nik) ?? null;
+    if (!found) return null;
+    if (editingMember?.profile_id && found.profile_id === editingMember.profile_id) return null;
+    return found;
+  }, [editForm.nik, duplicateLookup, editingMember?.profile_id]);
+  const editNomorDup = useMemo(() => {
+    const nomor = editForm.nomor.trim();
+    if (!nomor) return null;
+    const found = duplicateLookup.nomorMap.get(nomor) ?? null;
+    if (!found) return null;
+    if (editingMember?.profile_id && found.profile_id === editingMember.profile_id) return null;
+    return found;
+  }, [editForm.nomor, duplicateLookup, editingMember?.profile_id]);
+  const editNamaDup = useMemo(() => {
+    const key = duplicateLookup.normalizeName(editForm.nama ?? "");
+    if (!key) return null;
+    const list = duplicateLookup.nameMap.get(key) ?? [];
+    const found = list.find((a) => a.profile_id !== editingMember?.profile_id) ?? null;
+    return found;
+  }, [editForm.nama, duplicateLookup, editingMember?.profile_id]);
+
+  useEffect(() => {
+    setSingleNameConfirmed(false);
+  }, [singleForm.nama]);
+  useEffect(() => {
+    setEditNameConfirmed(false);
+  }, [editForm.nama, editingMember?.profile_id, showEditForm]);
+
+  const disableSingleSubmit = !!(singleNikDup || singleNomorDup || (singleNamaDup && !singleNameConfirmed));
+  const disableEditSubmit = !!(editNikDup || editNomorDup || (editNamaDup && !editNameConfirmed));
 
   const statusChartData = useMemo(
     () => [
@@ -1086,6 +1165,11 @@ export default function AnggotaRantingModule() {
                     className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                     placeholder="16 digit NIK"
                   />
+                  {singleNikDup && (
+                    <p className="text-[11px] text-rose-300/90">
+                      NIK sudah dipakai oleh <span className="font-semibold">{singleNikDup.nama}</span>.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] text-white/60">No. Anggota</label>
@@ -1098,6 +1182,12 @@ export default function AnggotaRantingModule() {
                     className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                     placeholder="Nomor keanggotaan (unik)"
                   />
+                  {singleNomorDup && (
+                    <p className="text-[11px] text-rose-300/90">
+                      No. Anggota sudah dipakai oleh{" "}
+                      <span className="font-semibold">{singleNomorDup.nama}</span>.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] text-white/60">Nama lengkap</label>
@@ -1110,47 +1200,69 @@ export default function AnggotaRantingModule() {
                     className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                     placeholder="Nama sesuai identitas"
                   />
+                  {singleNamaDup && !singleNameConfirmed && (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-amber-200/90">
+                        Nama mirip/sama sudah ada:{" "}
+                        <span className="font-semibold">{singleNamaDup.nama}</span>. Tetap simpan?
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setSingleNameConfirmed(true)}
+                        className="shrink-0 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-100 hover:bg-amber-500/20"
+                      >
+                        Ya, lanjut
+                      </button>
+                    </div>
+                  )}
+                  {singleNamaDup && singleNameConfirmed && (
+                    <p className="text-[11px] text-emerald-200/80">
+                      Duplikat nama sudah dikonfirmasi. Anda bisa lanjut simpan.
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[11px] text-white/60">Kyu</label>
-                    <select
-                      value={singleForm.kyu_level}
-                      onChange={(e) =>
-                        setSingleForm((f) => ({
-                          ...f,
-                          kyu_level: Number(e.target.value),
-                        }))
+                    <Select
+                      value={String(singleForm.kyu_level)}
+                      onValueChange={(v) =>
+                        setSingleForm((f) => ({ ...f, kyu_level: Number(v) }))
                       }
-                      className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-emerald-400/80 focus:outline-none"
                     >
-                      <option value={0}>—</option>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                        <option key={n} value={n}>
-                          Kyu {n}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-8 text-xs bg-white/[0.04] border-white/15 text-white/90 focus:ring-cyan-400/20">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">—</SelectItem>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Kyu {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[11px] text-white/60">Dan</label>
-                    <select
-                      value={singleForm.dan}
-                      onChange={(e) =>
-                        setSingleForm((f) => ({
-                          ...f,
-                          dan: Number(e.target.value),
-                        }))
+                    <Select
+                      value={String(singleForm.dan)}
+                      onValueChange={(v) =>
+                        setSingleForm((f) => ({ ...f, dan: Number(v) }))
                       }
-                      className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-emerald-400/80 focus:outline-none"
                     >
-                      <option value={0}>—</option>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                        <option key={n} value={n}>
-                          Dan {n}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-8 text-xs bg-white/[0.04] border-white/15 text-white/90 focus:ring-cyan-400/20">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">—</SelectItem>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Dan {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -1160,7 +1272,8 @@ export default function AnggotaRantingModule() {
                 </span>
                 <button
                   type="submit"
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+                  disabled={disableSingleSubmit}
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                   Simpan
                 </button>
@@ -1205,6 +1318,11 @@ export default function AnggotaRantingModule() {
                         className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                         placeholder="16 digit NIK"
                       />
+                      {editNikDup && (
+                        <p className="text-[11px] text-rose-300/90">
+                          NIK sudah dipakai oleh <span className="font-semibold">{editNikDup.nama}</span>.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] text-white/60">No. Anggota</label>
@@ -1217,6 +1335,12 @@ export default function AnggotaRantingModule() {
                         className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                         placeholder="Nomor keanggotaan"
                       />
+                      {editNomorDup && (
+                        <p className="text-[11px] text-rose-300/90">
+                          No. Anggota sudah dipakai oleh{" "}
+                          <span className="font-semibold">{editNomorDup.nama}</span>.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] text-white/60">Nama lengkap</label>
@@ -1229,6 +1353,26 @@ export default function AnggotaRantingModule() {
                         className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                         placeholder="Nama sesuai identitas"
                       />
+                      {editNamaDup && !editNameConfirmed && (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[11px] text-amber-200/90">
+                            Nama mirip/sama sudah ada:{" "}
+                            <span className="font-semibold">{editNamaDup.nama}</span>. Tetap simpan?
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setEditNameConfirmed(true)}
+                            className="shrink-0 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-100 hover:bg-amber-500/20"
+                          >
+                            Ya, lanjut
+                          </button>
+                        </div>
+                      )}
+                      {editNamaDup && editNameConfirmed && (
+                        <p className="text-[11px] text-emerald-200/80">
+                          Duplikat nama sudah dikonfirmasi. Anda bisa lanjut simpan.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] text-white/60">Status keanggotaan</label>
@@ -1260,50 +1404,52 @@ export default function AnggotaRantingModule() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[11px] text-white/60">Kyu</label>
-                        <select
-                          value={editForm.kyu_level}
-                          onChange={(e) =>
-                            setEditForm((f) => ({
-                              ...f,
-                              kyu_level: Number(e.target.value),
-                            }))
+                        <Select
+                          value={String(editForm.kyu_level)}
+                          onValueChange={(v) =>
+                            setEditForm((f) => ({ ...f, kyu_level: Number(v) }))
                           }
-                          className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-emerald-400/80 focus:outline-none"
                         >
-                          <option value={0}>—</option>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                            <option key={n} value={n}>
-                              Kyu {n}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-8 text-xs bg-white/[0.04] border-white/15 text-white/90 focus:ring-cyan-400/20">
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">—</SelectItem>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                              <SelectItem key={n} value={String(n)}>
+                                Kyu {n}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[11px] text-white/60">Dan</label>
-                        <select
-                          value={editForm.dan}
-                          onChange={(e) =>
-                            setEditForm((f) => ({
-                              ...f,
-                              dan: Number(e.target.value),
-                            }))
+                        <Select
+                          value={String(editForm.dan)}
+                          onValueChange={(v) =>
+                            setEditForm((f) => ({ ...f, dan: Number(v) }))
                           }
-                          className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-emerald-400/80 focus:outline-none"
                         >
-                          <option value={0}>—</option>
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                            <option key={n} value={n}>
-                              Dan {n}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-8 text-xs bg-white/[0.04] border-white/15 text-white/90 focus:ring-cyan-400/20">
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">—</SelectItem>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                              <SelectItem key={n} value={String(n)}>
+                                Dan {n}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  disabled={editFormLoading}
+                  disabled={editFormLoading || disableEditSubmit}
                   className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                   {editFormLoading ? "Menyimpan…" : "Simpan"}
