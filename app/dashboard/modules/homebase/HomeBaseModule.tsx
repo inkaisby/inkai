@@ -53,6 +53,7 @@ const accentCard =
   "rounded-lg border border-teal-500/25 bg-teal-500/5 shadow-[0_0_20px_rgba(45,212,191,0.15)]";
 
 const EMPTY_STRUCTURAL_ROLES: { structural_level?: number }[] = [];
+const EMPTY_FUNCTIONAL_ROLES: { role_name: string; active: boolean }[] = [];
 
 export default function HomeBaseModule() {
   const router = useRouter();
@@ -69,15 +70,20 @@ export default function HomeBaseModule() {
   });
   const functionalRoles = useBootstrapStore((s) => {
     const roles = s.data?.user?.functional_roles;
-    return roles ?? [];
-  }) as { role_name: string; active: boolean }[];
+    return roles ?? EMPTY_FUNCTIONAL_ROLES;
+  });
 
+  /** Level 2–5 (Ketua Ranting s/d PP) boleh akses Home Base. */
   const userLevelAtLeast2 = useMemo(() => {
     if (profileStructuralLevel != null && profileStructuralLevel >= 2)
       return true;
-    const maxFromRoles = (
-      structuralRoles as { structural_level?: number }[]
-    ).reduce((max, r) => Math.max(max, r.structural_level ?? 0), 0);
+    const activeRoles = (
+      structuralRoles as { structural_level?: number; active?: boolean }[]
+    ).filter((r) => r.active !== false);
+    const maxFromRoles = activeRoles.reduce(
+      (max, r) => Math.max(max, r.structural_level ?? 0),
+      0,
+    );
     return maxFromRoles >= 2;
   }, [profileStructuralLevel, structuralRoles]);
 
@@ -108,9 +114,13 @@ export default function HomeBaseModule() {
       profileStructuralLevel >= minLevelCreateRanting
     )
       return true;
-    const maxFromRoles = (
-      structuralRoles as { structural_level?: number }[]
-    ).reduce((max, r) => Math.max(max, r.structural_level ?? 0), 0);
+    const activeRoles = (
+      structuralRoles as { structural_level?: number; active?: boolean }[]
+    ).filter((r) => r.active !== false);
+    const maxFromRoles = activeRoles.reduce(
+      (max, r) => Math.max(max, r.structural_level ?? 0),
+      0,
+    );
     return maxFromRoles >= minLevelCreateRanting;
   }, [profileStructuralLevel, structuralRoles, minLevelCreateRanting]);
 

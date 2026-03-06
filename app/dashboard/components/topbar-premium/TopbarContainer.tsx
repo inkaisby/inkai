@@ -6,13 +6,28 @@ import { useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 import { NotificationProvider } from "./context/NotificationContext";
+import { useBootstrapStore } from "../../store/bootstrapStore";
 
 import TitleDynamic from "./components/TitleDynamic";
 import NotificationNode from "./components/NotificationNode";
 import AvatarMenu from "./components/AvatarMenu";
-import ConnectionPulse from "./components/ConnectionPulse";
 import NotificationPanel from "./components/NotificationPanel";
-//import SettingsModalProvider from "./profile/settings/modal/SettingsModalProvider";
+
+const ROLE_MAP: Record<string, string> = {
+  SUPERADMIN: "Superadmin",
+  ADMIN: "Admin",
+  USER: "User",
+  KETUA_PP: "Ketua PP",
+  KETUA_CABANG: "Ketua Cabang",
+  KETUA_RANTING: "Ketua Ranting",
+  PENGPROV: "Pengprov",
+  SEKRETARIS: "Sekretaris",
+  BENDAHARA: "Bendahara",
+};
+
+function formatRole(r: string) {
+  return ROLE_MAP[r] ?? r.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 /* ====================================================== */
 export default function TopbarContainer() {
@@ -26,10 +41,25 @@ export default function TopbarContainer() {
 /* ====================================================== */
 function TopbarContent() {
   const pathname = usePathname();
+  const user = useBootstrapStore((s) => s.data?.user ?? null);
 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  const { userLabel, jabatan } = useMemo(() => {
+    if (!user) return { userLabel: null as string | null, jabatan: null as string | null };
+    const nama = user.nama && String(user.nama).trim() !== "" ? String(user.nama).trim() : user.email ?? "Pengguna";
+    const structural = (user.structural_roles ?? []) as Array<{ role_name?: string; structural_level?: number; active?: boolean }>;
+    const activeStructural = structural.filter((r) => r.active !== false);
+    const top = activeStructural.sort((a, b) => (b.structural_level ?? 0) - (a.structural_level ?? 0))[0];
+    let jabatanVal: string | null = null;
+    if ((user.app_role ?? "").toUpperCase() === "SUPERADMIN") jabatanVal = "Superadmin";
+    else if (top?.role_name) jabatanVal = formatRole(top.role_name);
+    else if (user.app_role) jabatanVal = formatRole(user.app_role);
+    const userLabelVal = jabatanVal ? `${nama} · ${jabatanVal}` : nama;
+    return { userLabel: userLabelVal, jabatan: jabatanVal };
+  }, [user]);
 
   // 🔥 TITLE TANPA QUERY DATABASE (suffix responsive di TitleDynamic)
   const title = useMemo(() => {
@@ -53,14 +83,14 @@ function TopbarContent() {
               transition: { duration: 0.25 },
             }
           : {})}
-        className="relative z-40 w-full h-16 px-4 flex items-center bg-[#0d0d0d]/80 border-b border-cyan-500/30"
+        className="relative z-40 w-full h-16 px-4 flex items-center bg-[#0a0a0a]/90 backdrop-blur-md border-b border-cyan-500/20 shadow-[0_1px_0_rgba(34,211,238,0.08)]"
       >
         {/* FX RINGAN (boleh disable total jika perlu) */}
         {/* <HologramBorder /> */}
         {/* <HologramScanline /> */}
         {/* <GoldCyanFX /> */}
 
-        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-44 sm:pr-28">
+        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-48 sm:pr-72">
           <button
             type="button"
             suppressHydrationWarning
@@ -69,7 +99,7 @@ function TopbarContent() {
                 new CustomEvent("toggle-sidebar", { detail: true }),
               )
             }
-            className="flex-shrink-0 p-2 rounded text-cyan-300 hover:text-white transition cursor-pointer"
+            className="flex-shrink-0 p-2 rounded-lg text-cyan-300/90 hover:text-cyan-200 hover:bg-white/5 transition-colors cursor-pointer"
             aria-label="Toggle sidebar"
           >
             <Menu size={20} />
@@ -81,10 +111,26 @@ function TopbarContent() {
         </div>
       </Header>
 
-      {/* HUD */}
-      <div className="fixed top-3 right-3 sm:right-6 z-50 flex items-center gap-3 sm:gap-5 pointer-events-auto">
+      {/* HUD — nama/jabatan + notifikasi + avatar */}
+      <div className="fixed top-3 right-3 sm:right-6 z-50 flex items-center gap-2 sm:gap-3 pointer-events-auto">
+        {/* Mobile: hanya jabatan. Desktop: nama · jabatan */}
+        {jabatan && (
+          <span
+            className="sm:hidden text-sm text-cyan-200/90 truncate max-w-[120px]"
+            title={jabatan}
+          >
+            {jabatan}
+          </span>
+        )}
+        {userLabel && (
+          <span
+            className="hidden sm:block text-sm text-cyan-200/90 truncate max-w-[180px]"
+            title={userLabel}
+          >
+            {userLabel}
+          </span>
+        )}
         <NotificationNode />
-        <ConnectionPulse />
         <AvatarMenu />
       </div>
 

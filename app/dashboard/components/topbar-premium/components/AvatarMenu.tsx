@@ -82,6 +82,7 @@ export default function AvatarMenu() {
     session?.user?.user_metadata?.avatar_url ||
     session?.user?.user_metadata?.picture ||
     session?.user?.user_metadata?.avatar ||
+    bootstrap?.user?.avatar_url ||
     null;
 
   /* ===============================
@@ -180,16 +181,32 @@ export default function AvatarMenu() {
               z-[99999]
             "
           >
-            {/* User Name + Role */}
-            <div className="pb-2 mb-2 border-b border-cyan-500/20 space-y-0.5">
-              <div className="text-cyan-300 text-sm font-medium truncate">
-                {displayName ?? session?.user?.email ?? "Pengguna"}
+            {/* Avatar + User Name + Role */}
+            <div className="pb-2 mb-2 border-b border-cyan-500/20 flex items-center gap-3">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full overflow-hidden bg-white/10 border border-cyan-500/30">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- user avatar
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <User size={20} className="text-cyan-300/70" />
+                  </div>
+                )}
               </div>
-              {roleLabel && (
-                <div className="text-cyan-400/80 text-xs truncate">
-                  {roleLabel}
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="text-cyan-300 text-sm font-medium truncate">
+                  {displayName ?? session?.user?.email ?? "Pengguna"}
                 </div>
-              )}
+                {roleLabel && (
+                  <div className="text-cyan-400/80 text-xs truncate">
+                    {roleLabel}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Profil */}

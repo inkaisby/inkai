@@ -11,10 +11,11 @@ export type BootstrapScope = {
   ranting_ids?: string[];
 };
 
-/** User dari bootstrap (session + scope + nama untuk AvatarMenu). */
+/** User dari bootstrap (session + scope + nama + avatar untuk AvatarMenu). */
 export type BootstrapUser = SessionUserAccess & {
   scope?: BootstrapScope;
   nama?: string | null;
+  avatar_url?: string | null;
 };
 
 /** Satu panggilan /api/sidebar/menus mengisi ini. Dipakai layout (auth gate), Sidebar (menu), Settings (session), ScopeContext. */

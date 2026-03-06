@@ -59,6 +59,12 @@ export async function GET() {
       ? String(profile.regency_id).replace(/\./g, "").trim()
       : null;
 
+  let avatar_url: string | null = null;
+  if (profile?.avatar_path) {
+    const { data } = admin.storage.from("avatars_v2").getPublicUrl(profile.avatar_path);
+    avatar_url = data?.publicUrl ?? null;
+  }
+
   return NextResponse.json({
     user: {
       email: user.email ?? null,
@@ -70,6 +76,7 @@ export async function GET() {
       profile_regency_id: profileRegencyId,
       functional_roles,
       scope,
+      avatar_url,
     },
     profile_completed,
     menus: menus ?? [],
