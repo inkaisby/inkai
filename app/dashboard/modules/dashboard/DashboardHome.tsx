@@ -47,43 +47,21 @@ type MarketplaceItem = {
   href: string;
 };
 
-/* ================= MOCK DATA ================= */
-const mockFeed: FeedPost[] = [
-  {
-    id: "1",
-    title: "Gashuku Nasional 2025",
-    body: "Pendaftaran dibuka. Ayo daftar dan raih pengalaman berlatih bersama seluruh anggota INKAI.",
-    image: null,
-    date: "2 jam",
-    likes: 24,
-    type: "event",
-  },
-  {
-    id: "2",
-    title: "Pengumuman Ujian Kyu",
-    body: "Ujian kyu periode Maret akan dilaksanakan di dojo masing-masing. Silakan koordinasi dengan pelatih.",
-    image: null,
-    date: "1 hari",
-    likes: 12,
-    type: "pengumuman",
-  },
-  {
-    id: "3",
-    title: "Jadwal Latihan Pekan Ini",
-    body: "Senin–Jumat 16.00–18.00, Sabtu 08.00–10.00. Tetap semangat!",
-    image: null,
-    date: "2 hari",
-    likes: 8,
-    type: "dojo",
-  },
-];
-
-const mockMarketplace: MarketplaceItem[] = [
-  { id: "m1", title: "Seragam INKAI", price: "Rp 350.000", image: null, href: "/dashboard" },
-  { id: "m2", title: "Sabuk Latihan", price: "Rp 85.000", image: null, href: "/dashboard" },
-  { id: "m3", title: "Buku Panduan Kyu", price: "Rp 75.000", image: null, href: "/dashboard" },
-  { id: "m4", title: "Tas Dojo", price: "Rp 120.000", image: null, href: "/dashboard" },
-];
+/** Format created_at ke relatif (2 jam, 1 hari, 2 hari) atau tanggal */
+function formatFeedDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffM = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMs / 3600000);
+  const diffD = Math.floor(diffMs / 86400000);
+  if (diffM < 60) return diffM <= 1 ? "Baru saja" : `${diffM} menit`;
+  if (diffH < 24) return diffH <= 1 ? "1 jam" : `${diffH} jam`;
+  if (diffD < 7) return diffD <= 1 ? "1 hari" : `${diffD} hari`;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
 
 /* Palet utama: teal/cyan + amber — elegan, tidak norak */
 const storyAccents = ["teal", "amber", "slate"] as const;
@@ -136,7 +114,42 @@ function useShowAdminDashboard() {
 export default function DashboardHome() {
   const [rantingList, setRantingList] = useState<RantingItem[]>([]);
   const [rantingLoading, setRantingLoading] = useState(true);
+  const [feed, setFeed] = useState<FeedPost[]>([]);
+  const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
+  const [homeLoading, setHomeLoading] = useState(true);
   const showAdminDashboard = useShowAdminDashboard();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/home", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : { feed: [], marketplace: [] }))
+      .then((data: { feed?: Array<{ id: string; title: string; body: string; image: string | null; date: string; likes: number; type: FeedPost["type"] }>; marketplace?: MarketplaceItem[] }) => {
+        if (cancelled) return;
+        const feedList = Array.isArray(data.feed) ? data.feed : [];
+        setFeed(
+          feedList.map((r) => ({
+            id: r.id,
+            title: r.title,
+            body: r.body,
+            image: r.image ?? null,
+            date: formatFeedDate(r.date),
+            likes: r.likes ?? 0,
+            type: r.type,
+          }))
+        );
+        setMarketplace(Array.isArray(data.marketplace) ? data.marketplace : []);
+      })
+      .catch(() => {
+        if (!cancelled) setFeed([]);
+        if (!cancelled) setMarketplace([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHomeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,7 +242,12 @@ export default function DashboardHome() {
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-sm font-medium text-white/90">Feed</h2>
           <div className="space-y-4">
-            {mockFeed.map((post) => {
+            {homeLoading ? (
+              <p className="text-sm text-white/50">Memuat feed…</p>
+            ) : feed.length === 0 ? (
+              <p className="text-sm text-white/50">Belum ada feed.</p>
+            ) : (
+            feed.map((post) => {
               const style = feedPostStyles[post.type];
               return (
                 <article
@@ -278,7 +296,8 @@ export default function DashboardHome() {
                   </div>
                 </article>
               );
-            })}
+            })
+            )}
           </div>
         </div>
 
@@ -348,7 +367,12 @@ export default function DashboardHome() {
               Seragam, sabuk, dan perlengkapan dojo.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {mockMarketplace.map((item) => (
+              {homeLoading ? (
+                <p className="text-xs text-white/50 col-span-2">Memuat…</p>
+              ) : marketplace.length === 0 ? (
+                <p className="text-xs text-white/50 col-span-2">Belum ada item marketplace.</p>
+              ) : (
+              marketplace.map((item) => (
                 <Link
                   key={item.id}
                   href={item.href}
@@ -360,7 +384,8 @@ export default function DashboardHome() {
                   <div className="text-xs font-medium text-white/90 truncate">{item.title}</div>
                   <div className="text-xs text-amber-400/90 mt-0.5">{item.price}</div>
                 </Link>
-              ))}
+              ))
+              )}
             </div>
             <Link
               href="/dashboard"
