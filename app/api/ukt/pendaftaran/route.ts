@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
   if (includeBatal) {
     const { data: batalRows } = await admin
       .from("ukt_pendaftaran")
-      .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, batal_at, alasan_batal, refund_jumlah, refund_status, refund_at, refund_catatan, refund_bukti_path")
+      .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, batal_at, alasan_batal, refund_jumlah, refund_status, refund_at, refund_catatan, refund_bukti_path")
       .eq("tahun_ajaran_id", tahunAjaranId)
       .eq("ranting_id", rantingId)
       .eq("status_bayar", "batal")
@@ -165,6 +165,7 @@ export async function GET(req: NextRequest) {
         refund_catatan: (r.refund_catatan as string | null) ?? null,
         refund_bukti_path: rbp,
         refund_bukti_file_url: getPublicUrl(rbp) ?? null,
+        kwitansi_token: (r.kwitansi_token as string | null) ?? null,
       };
     });
   }
