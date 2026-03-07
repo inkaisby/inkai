@@ -16,7 +16,7 @@ export async function GET() {
 
   const admin = createSupabaseAdminClient();
 
-  const [feedRes, marketplaceRes] = await Promise.all([
+  const [feedRes, marketplaceRes, igRes] = await Promise.all([
     admin
       .from("home_feed")
       .select("id, title, body, image_path, type, likes, created_at")
@@ -26,6 +26,11 @@ export async function GET() {
     admin
       .from("home_marketplace")
       .select("id, title, price, image_path, href")
+      .order("order_index", { ascending: false })
+      .limit(20),
+    admin
+      .from("home_instagram_feed")
+      .select("id, image_url, caption, post_url")
       .order("order_index", { ascending: false })
       .limit(20),
   ]);
@@ -48,5 +53,12 @@ export async function GET() {
     href: (r.href as string) || "/dashboard",
   }));
 
-  return NextResponse.json({ feed, marketplace });
+  const instagramFeed = (igRes.data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id,
+    image_url: (r.image_url as string) ?? "",
+    caption: (r.caption as string) ?? "",
+    post_url: (r.post_url as string) ?? "",
+  }));
+
+  return NextResponse.json({ feed, marketplace, instagramFeed });
 }

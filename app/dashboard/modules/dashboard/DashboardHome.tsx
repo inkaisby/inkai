@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Users,
-  UserCheck,
   Trophy,
   Calendar,
   Instagram,
@@ -47,6 +45,13 @@ type MarketplaceItem = {
   href: string;
 };
 
+type InstagramFeedItem = {
+  id: string;
+  image_url: string;
+  caption: string;
+  post_url: string;
+};
+
 /** Format created_at ke relatif (2 jam, 1 hari, 2 hari) atau tanggal */
 function formatFeedDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -68,15 +73,11 @@ const storyAccents = ["teal", "amber", "slate"] as const;
 
 /* ================= STATS & MODULES ================= */
 const stats = [
-  { label: "Total Siswa", value: "—", href: "/dashboard/siswa", accent: "teal", icon: Users },
-  { label: "Anggota Aktif", value: "—", href: "/dashboard/keanggotaan", accent: "emerald", icon: UserCheck },
   { label: "Event Aktif", value: "—", href: "/dashboard/event", accent: "amber", icon: Trophy },
   { label: "Jadwal Terdekat", value: "—", href: "/dashboard/jadwal", accent: "slate", icon: Calendar },
 ];
 
 const accentStyles: Record<string, { card: string; border: string; text: string; icon: string }> = {
-  teal: { card: "bg-teal-500/10", border: "border-teal-500/25", text: "text-teal-200", icon: "text-teal-400" },
-  emerald: { card: "bg-emerald-500/10", border: "border-emerald-500/25", text: "text-emerald-200", icon: "text-emerald-400" },
   amber: { card: "bg-amber-500/10", border: "border-amber-500/25", text: "text-amber-200", icon: "text-amber-400" },
   slate: { card: "bg-slate-500/10", border: "border-slate-500/25", text: "text-slate-200", icon: "text-slate-400" },
 };
@@ -116,6 +117,7 @@ export default function DashboardHome() {
   const [rantingLoading, setRantingLoading] = useState(true);
   const [feed, setFeed] = useState<FeedPost[]>([]);
   const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
+  const [instagramFeed, setInstagramFeed] = useState<InstagramFeedItem[]>([]);
   const [homeLoading, setHomeLoading] = useState(true);
   const showAdminDashboard = useShowAdminDashboard();
 
@@ -123,7 +125,11 @@ export default function DashboardHome() {
     let cancelled = false;
     fetch("/api/home", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : { feed: [], marketplace: [] }))
-      .then((data: { feed?: Array<{ id: string; title: string; body: string; image: string | null; date: string; likes: number; type: FeedPost["type"] }>; marketplace?: MarketplaceItem[] }) => {
+      .then((data: {
+        feed?: Array<{ id: string; title: string; body: string; image: string | null; date: string; likes: number; type: FeedPost["type"] }>;
+        marketplace?: MarketplaceItem[];
+        instagramFeed?: InstagramFeedItem[];
+      }) => {
         if (cancelled) return;
         const feedList = Array.isArray(data.feed) ? data.feed : [];
         setFeed(
@@ -138,10 +144,12 @@ export default function DashboardHome() {
           }))
         );
         setMarketplace(Array.isArray(data.marketplace) ? data.marketplace : []);
+        setInstagramFeed(Array.isArray(data.instagramFeed) ? data.instagramFeed : []);
       })
       .catch(() => {
         if (!cancelled) setFeed([]);
         if (!cancelled) setMarketplace([]);
+        if (!cancelled) setInstagramFeed([]);
       })
       .finally(() => {
         if (!cancelled) setHomeLoading(false);
@@ -325,6 +333,40 @@ export default function DashboardHome() {
             </div>
           )}
 
+          {/* Feed IG — unggahan Instagram */}
+          {instagramFeed.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <h2 className="text-sm font-medium text-white/90 flex items-center gap-2 mb-3">
+                <Instagram size={16} className="text-white/60" />
+                Feed IG
+              </h2>
+              <div className="flex gap-3 overflow-x-auto pb-1 -mx-1">
+                {instagramFeed.map((post) => (
+                  <a
+                    key={post.id}
+                    href={post.post_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 w-[140px] rounded-lg border border-white/10 bg-white/[0.04] overflow-hidden hover:border-pink-500/30 hover:bg-white/[0.06] transition-colors no-underline block"
+                  >
+                    <div className="aspect-square relative bg-white/5">
+                      <Image
+                        src={post.image_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="140px"
+                      />
+                    </div>
+                    <p className="p-2 text-[11px] text-white/80 line-clamp-2" title={post.caption}>
+                      {post.caption || "—"}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Instagram per wilayah — border halus */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
             <h2 className="text-sm font-medium text-white/90 flex items-center gap-2 mb-2">
@@ -378,8 +420,12 @@ export default function DashboardHome() {
                   href={item.href}
                   className="block rounded-lg border border-white/10 bg-white/[0.04] p-2.5 hover:bg-white/[0.07] hover:border-teal-500/20 transition-colors no-underline"
                 >
-                  <div className="aspect-square rounded bg-white/5 flex items-center justify-center mb-1.5">
-                    <ShoppingBag className="w-6 h-6 text-teal-400/60" />
+                  <div className="aspect-square rounded bg-white/5 flex items-center justify-center mb-1.5 overflow-hidden relative">
+                    {item.image ? (
+                      <Image src={item.image} alt="" fill className="object-cover" sizes="120px" />
+                    ) : (
+                      <ShoppingBag className="w-6 h-6 text-teal-400/60" />
+                    )}
                   </div>
                   <div className="text-xs font-medium text-white/90 truncate">{item.title}</div>
                   <div className="text-xs text-amber-400/90 mt-0.5">{item.price}</div>
