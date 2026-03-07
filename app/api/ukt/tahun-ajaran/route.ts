@@ -56,10 +56,12 @@ export async function GET() {
       console.error("[ukt/tahun-ajaran GET]", cabangRes.error);
       return NextResponse.json({ message: (cabangRes as { error: { message: string } }).error.message }, { status: 500 });
     }
-    const byId = new Map((globalRes.data ?? []).map((r: { id: string }) => [r.id, r]));
-    (cabangRes.data ?? []).forEach((r: { id: string }) => byId.set(r.id, r));
-    data = Array.from(byId.values()).sort((a: { tahun?: number; periode?: string }, b: { tahun?: number; periode?: string }) => {
-      if ((b.tahun ?? 0) !== (a.tahun ?? 0)) return (b.tahun ?? 0) - (a.tahun ?? 0);
+    type TahunRow = { id: string; nama: string; tahun: number; periode: string };
+    const byId = new Map<string, TahunRow>();
+    (globalRes.data ?? []).forEach((r: TahunRow) => byId.set(r.id, r));
+    (cabangRes.data ?? []).forEach((r: TahunRow) => byId.set(r.id, r));
+    data = Array.from(byId.values()).sort((a, b) => {
+      if (b.tahun !== a.tahun) return b.tahun - a.tahun;
       return (b.periode === "II" ? 1 : 0) - (a.periode === "II" ? 1 : 0);
     });
   }
