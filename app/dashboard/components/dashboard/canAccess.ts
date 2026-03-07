@@ -3,11 +3,11 @@
 /**
  * Menu yang tampil ke SEMUA user level 2+ (tanpa syarat lain).
  * Kohai (level 1) hanya boleh Dashboard + Keanggotaan (dicek di bawah).
+ * UKT (ujian) tidak di sini: hanya level 2–5 (dicek khusus di bawah).
  */
 const UNIVERSAL_MENU_KEYS = new Set<string>([
   "dashboard",
   "keanggotaan",
-  "ujian",
   "event",
 ]);
 
@@ -79,6 +79,11 @@ export function canAccessMenu(
   // Kohai (level 1): hanya Dashboard dan Keanggotaan
   if (maxLevel === 1) {
     return menu.key === "dashboard" || menu.key === "keanggotaan";
+  }
+
+  // UKT (Ujian Kenaikan Tingkat): hanya level 2–5 (Ranting, Cabang, Pengprov, PP)
+  if (menu.key === "ujian" || menu.key === "audit-ujian") {
+    return maxLevel >= 2 && maxLevel <= 5;
   }
 
   // Menu universal: tampil ke user level 2+ (termasuk yang email_allowed = false)

@@ -1,13 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BarChart3, ChevronDown, ChevronUp, ClipboardList, FileCheck, Settings2, UserPlus } from "lucide-react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
+import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
 import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
 import PendaftaranUKT, { type AnggotaAktifSelected } from "../event/components/PendaftaranUKT";
 import ResumeUKT from "../event/components/ResumeUKT";
 import KelolaUKTCabang from "../event/components/KelolaUKTCabang";
+
+const ROOT_EMAIL = process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL?.toLowerCase() ?? null;
+
+function getMaxLevel(user: { structural_roles?: { structural_level: number; active?: boolean }[]; profile_structural_level?: number | null } | null): number {
+  if (!user) return 0;
+  const fromRoles = (user.structural_roles ?? []).filter((r) => r.active !== false).map((r) => r.structural_level ?? 0);
+  const fromProfile = user.profile_structural_level != null ? [user.profile_structural_level] : [];
+  const all = [...fromRoles, ...fromProfile];
+  return all.length ? Math.max(...all) : 0;
+}
 
 type UjianRow = {
   id: string;
@@ -40,6 +51,15 @@ type ViewAudit = "ringkasan" | "pendaftaran";
 
 export default function AuditUjianModule() {
   const { scope } = useScope();
+  const user = useBootstrapStore((s) => s.data?.user ?? null);
+  const canAccessUKT = useMemo(() => {
+    if (!user) return false;
+    if (ROOT_EMAIL && (user.email?.toLowerCase() ?? "") === ROOT_EMAIL) return true;
+    if ((user.app_role ?? "").toUpperCase() === "SUPERADMIN") return true;
+    const maxLevel = getMaxLevel(user);
+    return maxLevel >= 2 && maxLevel <= 5;
+  }, [user]);
+
   const [data, setData] = useState<Ringkasan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +82,22 @@ export default function AuditUjianModule() {
   const handleSelectionChange = useCallback((members: AnggotaAktifSelected[]) => {
     setPendingSelection(members);
   }, []);
+
+  if (user != null && !canAccessUKT) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 p-6">
+        <p className="text-center text-zinc-400">
+          Akses dibatasi. Menu UKT (Ujian Kenaikan Tingkat) hanya untuk level struktural 2–5 (Ranting, Cabang, Pengprov, PP).
+        </p>
+        <Link
+          href="/dashboard/home-base"
+          className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10"
+        >
+          Kembali ke Dashboard
+        </Link>
+      </div>
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;

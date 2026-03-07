@@ -134,7 +134,7 @@ export default function Sidebar() {
       />
       <aside
         className={`fixed lg:relative inset-y-0 left-0 z-30 h-screen bg-[#020617] border-r border-cyan-500/40
-        transition-all duration-200 w-56
+        transition-all duration-200 w-56 max-w-[85vw] sm:max-w-none
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-16"}`}
       >
       <div className="h-16 flex items-center justify-center border-b border-cyan-500/30">
@@ -163,6 +163,10 @@ export default function Sidebar() {
 
         {visibleMenus.map((m) => {
           const Icon = iconMap[m.icon ?? "Circle"] ?? Icons.Circle;
+          const displayName =
+            m.key === "ujian" || m.key === "audit-ujian"
+              ? "UKT (Ujian Kenaikan Tingkat)"
+              : m.name;
 
           const href =
             m.key === "dashboard" ? "/dashboard" : `/dashboard/${m.key}`;
@@ -177,15 +181,22 @@ export default function Sidebar() {
               key={m.id}
               href={href}
               onMouseEnter={() => prefetchForRoute(m.key)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md
+              className={`flex items-center gap-3 px-3 py-2 rounded-md min-w-0
                 ${
                   active
                     ? "bg-cyan-600 text-white"
                     : "text-white/70 hover:bg-cyan-500/10"
                 }`}
             >
-              <Icon size={18} className={m.color ?? "text-cyan-400"} />
-              {isOpen && <span>{m.name}</span>}
+              <Icon size={18} className={`shrink-0 ${m.color ?? "text-cyan-400"}`} />
+              {isOpen && (
+                <span
+                  className="truncate text-sm sm:text-[inherit]"
+                  title={displayName}
+                >
+                  {displayName}
+                </span>
+              )}
             </Link>
           );
         })}
