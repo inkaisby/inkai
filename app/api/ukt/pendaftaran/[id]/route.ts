@@ -33,6 +33,9 @@ export async function PATCH(
     refund_status?: "tidak_ada" | "pending" | "dikembalikan";
     refund_catatan?: string | null;
     refund_bukti_path?: string | null;
+    /** Hasil ujian: diisi Cabang setelah ujian selesai; terintegrasi ke Keanggotaan tab Kyu */
+    lulus?: boolean;
+    tingkat_lulus?: number | null;
   } = {};
   try {
     body = await req.json();
@@ -56,9 +59,17 @@ export async function PATCH(
   }
 
   const scope = await getUserScope(admin, user.id);
-  const canAccess =
+  let canAccess =
     scope.is_pp ||
     (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(row.ranting_id as string));
+  if (!canAccess && scope.cabang_ids.length > 0) {
+    const { data: ranting } = await admin
+      .from("ranting")
+      .select("cabang_id")
+      .eq("id", row.ranting_id)
+      .maybeSingle();
+    canAccess = !!ranting?.cabang_id && scope.cabang_ids.includes(ranting.cabang_id as string);
+  }
   if (!canAccess) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
@@ -94,6 +105,11 @@ export async function PATCH(
     }
     if (body.refund_catatan !== undefined) payload.refund_catatan = body.refund_catatan?.trim() || null;
     if (body.refund_bukti_path !== undefined) payload.refund_bukti_path = body.refund_bukti_path?.trim() || null;
+  }
+  if (body.lulus !== undefined) payload.lulus = !!body.lulus;
+  if (body.tingkat_lulus !== undefined) {
+    const t = body.tingkat_lulus;
+    payload.tingkat_lulus = t == null || t === "" ? null : Math.min(10, Math.max(1, Number(t)));
   }
 
   const { data: updated, error } = await admin

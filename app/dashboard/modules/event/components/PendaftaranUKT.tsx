@@ -29,6 +29,7 @@ function setStoredSelection(tahunId: string, rantingId: string, profileIds: stri
   }
 }
 import { toast } from "react-hot-toast";
+import { QRCodeSVG } from "qrcode.react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import JarvisLoader from "@/components/JarvisLoader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,6 +42,7 @@ type TahunAjaran = {
   cabang_id?: string | null;
   tanggal?: string | null;
   tempat?: string | null;
+  qris_content?: string | null;
 };
 type RantingOption = { id: string; nama: string };
 type AnggotaAktif = {
@@ -244,10 +246,10 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-zinc-100">Pendaftaran UKT</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Pilih tahun ajaran dan ranting, lalu centang anggota yang akan didaftarkan.
+          Pilih tahun ajaran dan ranting. Tabel menampilkan <strong>anggota aktif di ranting</strong>; yang belum terdaftar UKT bisa dicentang untuk didaftarkan.
         </p>
         <p className="mt-1 text-xs text-zinc-500">
-          Centang anggota lalu klik tombol &quot;Daftarkan X peserta&quot; di bawah tabel untuk menyimpan. Hasil centang tampil di kolom kanan sebagai &quot;Menunggu simpan&quot;.
+          Centang anggota lalu klik &quot;Daftarkan X peserta&quot; untuk menyimpan. Baris dengan status &quot;Sudah daftar&quot; tidak bisa dicentang. Hasil centang tampil di kolom kanan sebagai &quot;Menunggu simpan&quot;.
         </p>
       </div>
 
@@ -295,6 +297,23 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
           )}
         </div>
       </div>
+
+      {tahunId && (() => {
+        const selectedTahun = tahunList.find((t) => t.id === tahunId);
+        const qris = selectedTahun?.qris_content?.trim();
+        if (!qris) return null;
+        return (
+          <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            <p className="text-sm font-medium text-zinc-200">Bayar via QRIS — {selectedTahun.nama}</p>
+            <p className="mt-1 text-xs text-zinc-500">Scan QR di bawah untuk transfer/pembayaran UKT.</p>
+            <div className="mt-3 flex items-start gap-4">
+              <div className="rounded-lg border border-white/10 bg-white p-2">
+                <QRCodeSVG value={qris} size={140} level="M" />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="mt-6 flex flex-col gap-2">
         <label className="text-xs font-medium text-zinc-400">Cari anggota (nama / no. anggota)</label>

@@ -292,56 +292,74 @@ export default function TabKyu({
             Riwayat Ujian KYU
           </p>
 
-          {data.map((k, i) => (
-            <div
-              key={k.id}
-              className="flex justify-between items-center rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2"
-            >
-              <div>
-                <p className="text-sm text-cyan-300 font-semibold">
-                  KYU {k.level} – Sabuk {KYU_WARNA_MAP[k.level]}
-                </p>
-                <p className="text-xs text-slate-400">
-                  No. Ijazah: {k.noIjazah}
-                </p>
-              </div>
+          {data.map((k, i) => {
+            const fromUkt = k.id.startsWith("ukt-") || (k as KyuWithMeta & { fromUkt?: boolean }).fromUkt;
+            return (
+              <div
+                key={k.id}
+                className="flex justify-between items-center rounded-lg border border-slate-700/60 bg-slate-900/60 px-3 py-2"
+              >
+                <div>
+                  <p className="text-sm text-cyan-300 font-semibold">
+                    KYU {k.level} – Sabuk {KYU_WARNA_MAP[k.level]}
+                  </p>
+                  {fromUkt ? (
+                    <p className="text-xs text-slate-400">
+                      Dari hasil UKT (terisi otomatis oleh Cabang)
+                      {k.tanggalIjazah ? ` — ${k.tanggalIjazah}` : ""}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-400">
+                      No. Ijazah: {k.noIjazah ?? "—"}
+                    </p>
+                  )}
+                </div>
 
-              <div className="flex gap-2 items-center flex-wrap">
-                {k.fileUrl && (
-                  <a
-                    href={k.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 hover:underline"
-                  >
-                    Lihat ijazah
-                  </a>
-                )}
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full ${
-                    k.verified
-                      ? "bg-emerald-400/20 text-emerald-300"
-                      : "bg-yellow-400/20 text-yellow-300"
-                  }`}
-                >
-                  {k.verified ? "Terverifikasi" : "Draft"}
-                </span>
-
-                <button
-                  onClick={() => handleEdit(i)}
-                  className="text-xs text-cyan-300"
-                >
-                  ✏️
-                </button>
-                <button
-                  onClick={() => handleDelete(i)}
-                  className="text-xs text-red-400"
-                >
-                  🗑️
-                </button>
+                <div className="flex gap-2 items-center flex-wrap">
+                  {fromUkt && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-400/20 text-violet-300">
+                      Dari hasil UKT
+                    </span>
+                  )}
+                  {k.fileUrl && (
+                    <a
+                      href={k.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 hover:underline"
+                    >
+                      Lihat ijazah
+                    </a>
+                  )}
+                  {!fromUkt && (
+                    <>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          k.verified
+                            ? "bg-emerald-400/20 text-emerald-300"
+                            : "bg-yellow-400/20 text-yellow-300"
+                        }`}
+                      >
+                        {k.verified ? "Terverifikasi" : "Draft"}
+                      </span>
+                      <button
+                        onClick={() => handleEdit(i)}
+                        className="text-xs text-cyan-300"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(i)}
+                        className="text-xs text-red-400"
+                      >
+                        🗑️
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

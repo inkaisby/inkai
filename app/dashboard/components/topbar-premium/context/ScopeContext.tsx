@@ -79,12 +79,12 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
   /* Bangun contextOptions dari scope (ranting/cabang) bila perlu */
   useEffect(() => {
     if (!bootstrap?.user?.scope) {
-      setContextOptions([{ value: "all", label: "Semua", type: "all" }]);
+      setContextOptions([{ value: "all", label: "Semua Ranting", type: "all" }]);
       return;
     }
     const sc = bootstrap.user.scope;
     if (sc.is_pp || (sc.ranting_ids.length <= 1 && sc.cabang_ids.length <= 1)) {
-      setContextOptions([{ value: "all", label: "Semua", type: "all" }]);
+      setContextOptions([{ value: "all", label: "Semua Ranting", type: "all" }]);
       return;
     }
 
@@ -109,7 +109,7 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
           if (t.trim()) cabangList = JSON.parse(t) as { id: string; nama: string }[];
         }
         const options: ScopeContextOption[] = [
-          { value: "all", label: "Semua", type: "all" },
+          { value: "all", label: "Semua Ranting", type: "all" },
           ...rantingList.map((r) => ({
             value: r.id,
             label: `Ranting: ${r.nama}`,
@@ -123,7 +123,7 @@ export function ScopeProvider({ children }: ScopeProviderProps) {
         ];
         if (!cancelled) setContextOptions(options);
       } catch {
-        if (!cancelled) setContextOptions([{ value: "all", label: "Semua", type: "all" }]);
+        if (!cancelled) setContextOptions([{ value: "all", label: "Semua Ranting", type: "all" }]);
       } finally {
         if (!cancelled) setOptionsLoading(false);
       }

@@ -14,6 +14,7 @@ const DEFAULT_KPI_ORDER = [
   "anggota",
   "ujian",
   "event",
+  "gashuku",
   "kwitansi",
 ] as const;
 

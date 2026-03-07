@@ -12,7 +12,6 @@ import {
   PlusCircle,
   Trash2,
   Info,
-  RefreshCw,
   Award,
   Calendar,
   GripVertical,
@@ -34,6 +33,8 @@ import {
   YAxis,
   ResponsiveContainer,
   Tooltip,
+  Cell,
+  LabelList,
 } from "recharts";
 import {
   DndContext,
@@ -83,11 +84,66 @@ type PaymentRow = {
   tanggal: string;
 };
 
-/** KPI Card — elegan & mewah: palet gelap dengan aksen emas/champagne */
-const KPI_CARD_BASE =
-  "rounded-xl border border-amber-500/15 bg-slate-800/40 backdrop-blur-sm dashboard-card-glow";
+/** KPI Card — base rounded + backdrop; aksen per widget */
+const KPI_CARD_BASE = "rounded-xl backdrop-blur-sm dashboard-card-glow";
 
-const DEFAULT_KPI_ORDER = ["ranting", "anggota", "event", "kwitansi"] as const;
+/** Warna berbeda & elegan tiap widget */
+const KPI_ACCENTS: Record<
+  string,
+  { card: string; title: string; value: string; link: string; icon: string }
+> = {
+  ranting: {
+    card: "border border-teal-500/20 bg-teal-950/40",
+    title: "text-white/70",
+    value: "text-teal-200",
+    link: "text-teal-300 hover:text-teal-100",
+    icon: "text-teal-400",
+  },
+  anggota: {
+    card: "border border-emerald-500/20 bg-emerald-950/40",
+    title: "text-white/70",
+    value: "text-emerald-200",
+    link: "text-emerald-300 hover:text-emerald-100",
+    icon: "text-emerald-400",
+  },
+  event: {
+    card: "border border-amber-500/20 bg-amber-950/40",
+    title: "text-white/70",
+    value: "text-amber-200",
+    link: "text-amber-300 hover:text-amber-100",
+    icon: "text-amber-400",
+  },
+  kwitansi: {
+    card: "border border-violet-500/20 bg-violet-950/40",
+    title: "text-white/70",
+    value: "text-violet-200",
+    link: "text-violet-300 hover:text-violet-100",
+    icon: "text-violet-400",
+  },
+  gashuku: {
+    card: "border border-rose-500/20 bg-rose-950/40",
+    title: "text-white/70",
+    value: "text-rose-200",
+    link: "text-rose-300 hover:text-rose-100",
+    icon: "text-rose-400",
+  },
+};
+
+const DEFAULT_KPI_ORDER = ["ranting", "anggota", "event", "gashuku", "kwitansi"] as const;
+
+/** Warna bar grafik Anggota per Ranting — berbeda tiap bar, tidak norak */
+const CHART_BAR_COLORS = [
+  "rgba(20, 184, 166, 0.65)",   // teal
+  "rgba(100, 116, 139, 0.7)",   // slate
+  "rgba(245, 158, 11, 0.55)",   // amber
+  "rgba(139, 92, 246, 0.55)",   // violet
+  "rgba(16, 185, 129, 0.6)",    // emerald
+  "rgba(59, 130, 246, 0.55)",   // blue
+  "rgba(244, 63, 94, 0.5)",     // rose
+  "rgba(34, 197, 94, 0.55)",    // green
+  "rgba(168, 85, 247, 0.5)",    // purple
+  "rgba(6, 182, 212, 0.55)",    // cyan
+];
 
 /** Sortable wrapper untuk KPI card (drag handle + transform) */
 function SortableKpiCard({
@@ -753,6 +809,34 @@ export default function HomeBaseModule() {
     return "Wilayah";
   }, [scope]);
 
+  /** Lokasi cabang yang sudah diset dan fix (dari scope), untuk box MapPin — bukan ikut filter dropdown */
+  const fixedLocationLabel = useMemo(() => {
+    if (!scope) return "Wilayah belum ter-set";
+    if (scope.is_pp) return "PP — seluruh Indonesia";
+    if (scope.cabang_ids.length > 0) {
+      const names = scope.cabang_ids
+        .map((id) => cabangList.find((c) => c.id === id)?.nama)
+        .filter(Boolean) as string[];
+      if (names.length > 0) return names.length === 1 ? `Cabang ${names[0]}` : `Cabang: ${names.join(", ")}`;
+      return "Cabang";
+    }
+    if (scope.ranting_ids.length > 0) {
+      const cabangIds = new Set(
+        rantingList
+          .filter((r) => scope.ranting_ids.includes(r.id))
+          .map((r) => r.cabang_id)
+          .filter(Boolean),
+      );
+      const names = Array.from(cabangIds)
+        .map((id) => cabangList.find((c) => c.id === id)?.nama)
+        .filter(Boolean) as string[];
+      if (names.length > 0) return names.length === 1 ? `Cabang ${names[0]}` : `Cabang: ${names.join(", ")}`;
+      return "Ranting";
+    }
+    if (scope.provinsi_ids.length > 0) return "Pengprov";
+    return "Wilayah";
+  }, [scope, cabangList, rantingList]);
+
   /** Opsi kabupaten/kota yang cocok dengan search (untuk dropdown) */
   const filteredWilayahOptions = useMemo(() => {
     const q = wilayahSearch.trim().toLowerCase();
@@ -975,19 +1059,6 @@ export default function HomeBaseModule() {
     }).catch(() => {});
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    setRantingLoading(true);
-    loadRanting()
-      .then(() => {
-        loadUktSummary(rantingIdsForFilter);
-        loadAnggotaSummary(rantingIdsForFilter);
-      })
-      .finally(() => {
-        setRantingLoading(false);
-        setLastUpdated(new Date());
-      });
-  }, [loadRanting, loadUktSummary, loadAnggotaSummary, rantingIdsForFilter]);
-
   useEffect(() => {
     const t = setTimeout(() => setLastUpdated(new Date()), 500);
     return () => clearTimeout(t);
@@ -1028,6 +1099,7 @@ export default function HomeBaseModule() {
     set.add("ranting");
     if (showKeanggotaanBlock) set.add("anggota");
     if (showEventBlock) set.add("event");
+    set.add("gashuku");
     if (showKwitansiBlock) set.add("kwitansi");
     return set;
   }, [showKeanggotaanBlock, showEventBlock, showKwitansiBlock]);
@@ -1109,22 +1181,9 @@ export default function HomeBaseModule() {
                 </SelectContent>
               </Select>
             )}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={rantingLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-800/60 px-3 py-2 text-xs font-medium text-white/90 hover:bg-slate-700/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              title="Segarkan data"
-            >
-              <RefreshCw
-                size={14}
-                className={rantingLoading ? "animate-spin" : undefined}
-              />
-              Segarkan
-            </button>
             <div className="flex items-center gap-2 text-xs text-white/80 bg-slate-800/50 border border-white/10 px-3 py-1.5 rounded-xl">
               <MapPin size={14} className="text-amber-400/70" />
-              <span>{wilayahLabel}</span>
+              <span>{fixedLocationLabel}</span>
               {isSuperadmin && (
                 <span className="ml-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-200/90 border border-amber-400/20">
                   Superadmin
@@ -1151,133 +1210,152 @@ export default function HomeBaseModule() {
               strategy={horizontalListSortingStrategy}
             >
               {layoutLoaded &&
-                orderedKpiIds.map((kpiId) => (
-                  <SortableKpiCard key={kpiId} id={kpiId}>
-                    <div className={`${KPI_CARD_BASE} p-5`}>
-                      {kpiId === "ranting" && (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/70">
-                              Ranting Aktif
-                            </span>
-                            <UserCheck
-                              size={18}
-                              className="text-amber-400/80"
-                            />
-                          </div>
-                          <div className="mt-3 text-3xl font-bold text-amber-100/95">
-                            {rantingLoading ? (
-                              <Skeleton className="h-9 w-14" />
-                            ) : (
-                              totalRantingAktif
-                            )}
-                          </div>
-                          <div className="text-[11px] text-white/50 mt-1">
-                            Dari total {rantingLoading ? "…" : totalRanting}{" "}
-                            ranting di wilayah yang Anda kelola.
-                          </div>
-                          <Link
-                            href="/dashboard/ranting"
-                            className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
-                          >
-                            Lihat ranting →
-                          </Link>
-                        </>
-                      )}
-                      {kpiId === "anggota" && (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/70">
-                              Anggota
-                            </span>
-                            <Users size={18} className="text-amber-400/80" />
-                          </div>
-                          <div className="mt-3 text-3xl font-bold text-amber-100/95">
-                            {anggotaSummaryLoading ? (
-                              <Skeleton className="h-9 w-14" />
-                            ) : (
-                              anggotaSummary.total_aktif
-                            )}
-                          </div>
-                          <div className="text-[11px] text-white/50 mt-1">
-                            Anggota aktif di wilayah terfilter.
-                          </div>
-                          <Link
-                            href="/dashboard/keanggotaan"
-                            className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
-                          >
-                            Buka Keanggotaan →
-                          </Link>
-                        </>
-                      )}
-                      {kpiId === "event" && (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/70">
-                              UKT (Ujian Kenaikan Tingkat)
-                            </span>
-                            <Award size={18} className="text-amber-400/80" />
-                          </div>
-                          <div className="mt-3 text-3xl font-bold text-amber-100/95">
-                            {uktSummaryLoading ? (
-                              <Skeleton className="h-9 w-14" />
-                            ) : (
-                              uktSummary.total_peserta
-                            )}
-                          </div>
-                          <div className="text-[11px] text-white/50 mt-1">
-                            Peserta UKT
-                            {uktSummary.tahun_ajaran
-                              ? ` ${uktSummary.tahun_ajaran.nama}`
-                              : ""}{" "}
-                            di wilayah terfilter.
-                          </div>
-                          <Link
-                            href="/dashboard/ujian"
-                            className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
-                          >
-                            Buka UKT →
-                          </Link>
-                        </>
-                      )}
-                      {kpiId === "kwitansi" && (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/70">
-                              Kwitansi
-                            </span>
-                            <CreditCard
-                              size={18}
-                              className="text-amber-400/80"
-                            />
-                          </div>
-                          <div className="mt-3 text-3xl font-bold text-amber-100/95">
-                            {payments.length}
-                          </div>
-                          <div className="text-[11px] text-white/50 mt-1">
-                            Kwitansi siap dicetak (contoh data demo).
-                          </div>
-                          <Link
-                            href="/dashboard/keuangan"
-                            className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
-                          >
-                            Buka Kwitansi →
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  </SortableKpiCard>
-                ))}
+                orderedKpiIds.map((kpiId) => {
+                  const acc = KPI_ACCENTS[kpiId] ?? KPI_ACCENTS.ranting;
+                  return (
+                    <SortableKpiCard key={kpiId} id={kpiId}>
+                      <div className={`${KPI_CARD_BASE} ${acc.card} p-5`}>
+                        {kpiId === "ranting" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${acc.title}`}>
+                                Ranting Aktif
+                              </span>
+                              <UserCheck size={18} className={acc.icon} />
+                            </div>
+                            <div className={`mt-3 text-3xl font-bold ${acc.value}`}>
+                              {rantingLoading ? (
+                                <Skeleton className="h-9 w-14" />
+                              ) : (
+                                totalRantingAktif
+                              )}
+                            </div>
+                            <div className="text-[11px] text-white/50 mt-1">
+                              Dari total {rantingLoading ? "…" : totalRanting}{" "}
+                              ranting di wilayah yang Anda kelola.
+                            </div>
+                            <Link
+                              href="/dashboard/ranting"
+                              className={`mt-2 inline-flex items-center gap-1 text-[11px] ${acc.link} no-underline transition-colors`}
+                            >
+                              Lihat ranting →
+                            </Link>
+                          </>
+                        )}
+                        {kpiId === "anggota" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${acc.title}`}>
+                                Pertandingan
+                              </span>
+                              <Award size={18} className={acc.icon} />
+                            </div>
+                            <div className={`mt-3 text-3xl font-bold ${acc.value}`}>
+                              —
+                            </div>
+                            <div className="text-[11px] text-white/50 mt-1">
+                              Pertandingan di wilayah terfilter.
+                            </div>
+                            <Link
+                              href="/dashboard/pertandingan"
+                              className={`mt-2 inline-flex items-center gap-1 text-[11px] ${acc.link} no-underline transition-colors`}
+                            >
+                              Buka Pertandingan →
+                            </Link>
+                          </>
+                        )}
+                        {kpiId === "event" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${acc.title}`}>
+                                UKT (Ujian Kenaikan Tingkat)
+                              </span>
+                              <Award size={18} className={acc.icon} />
+                            </div>
+                            <div className={`mt-3 text-3xl font-bold ${acc.value}`}>
+                              {uktSummaryLoading ? (
+                                <Skeleton className="h-9 w-14" />
+                              ) : (
+                                uktSummary.total_peserta
+                              )}
+                            </div>
+                            <div className="text-[11px] text-white/50 mt-1">
+                              Peserta UKT
+                              {uktSummary.tahun_ajaran
+                                ? ` ${uktSummary.tahun_ajaran.nama}`
+                                : ""}{" "}
+                              di wilayah terfilter.
+                            </div>
+                            <Link
+                              href="/dashboard/ujian"
+                              className={`mt-2 inline-flex items-center gap-1 text-[11px] ${acc.link} no-underline transition-colors`}
+                            >
+                              Buka UKT →
+                            </Link>
+                          </>
+                        )}
+                        {kpiId === "kwitansi" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${acc.title}`}>
+                                Kwitansi
+                              </span>
+                              <CreditCard size={18} className={acc.icon} />
+                            </div>
+                            <div className={`mt-3 text-3xl font-bold ${acc.value}`}>
+                              {payments.length}
+                            </div>
+                            <div className="text-[11px] text-white/50 mt-1">
+                              Kwitansi siap dicetak (contoh data demo).
+                            </div>
+                            <Link
+                              href="/dashboard/keuangan"
+                              className={`mt-2 inline-flex items-center gap-1 text-[11px] ${acc.link} no-underline transition-colors`}
+                            >
+                              Buka Kwitansi →
+                            </Link>
+                          </>
+                        )}
+                        {kpiId === "gashuku" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${acc.title}`}>
+                                GASHUKU
+                              </span>
+                              <Calendar size={18} className={acc.icon} />
+                            </div>
+                            <div className="mt-3 space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-white/60">GAZONE</span>
+                                <span className={`font-semibold ${acc.value}`}>—</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-white/60">GASDA</span>
+                                <span className={`font-semibold ${acc.value}`}>—</span>
+                              </div>
+                            </div>
+                            <Link
+                              href="/dashboard/event"
+                              className={`mt-2 inline-flex items-center gap-1 text-[11px] ${acc.link} no-underline transition-colors`}
+                            >
+                              Buka Event →
+                            </Link>
+                          </>
+                        )}
+                      </div>
+                    </SortableKpiCard>
+                  );
+                })}
               {(!layoutLoaded || orderedKpiIds.length === 0) && (
                 <>
-                  <div className={`${KPI_CARD_BASE} p-5`}>
+                  <div className={`${KPI_CARD_BASE} ${KPI_ACCENTS.ranting.card} p-5`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-white/70">
+                      <span className={`text-xs font-medium ${KPI_ACCENTS.ranting.title}`}>
                         Ranting Aktif
                       </span>
-                      <UserCheck size={18} className="text-amber-400/80" />
+                      <UserCheck size={18} className={KPI_ACCENTS.ranting.icon} />
                     </div>
-                    <div className="mt-3 text-3xl font-bold text-amber-100/95">
+                    <div className={`mt-3 text-3xl font-bold ${KPI_ACCENTS.ranting.value}`}>
                       {rantingLoading ? (
                         <Skeleton className="h-9 w-14" />
                       ) : (
@@ -1290,78 +1368,96 @@ export default function HomeBaseModule() {
                     </div>
                     <Link
                       href="/dashboard/ranting"
-                      className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
+                      className={`mt-2 inline-flex items-center gap-1 text-[11px] ${KPI_ACCENTS.ranting.link} no-underline transition-colors`}
                     >
                       Lihat ranting →
                     </Link>
                   </div>
                   {showKeanggotaanBlock && (
-                    <div className={`${KPI_CARD_BASE} p-5`}>
+                    <div className={`${KPI_CARD_BASE} ${KPI_ACCENTS.anggota.card} p-5`}>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-white/70">
-                          Anggota
+                        <span className={`text-xs font-medium ${KPI_ACCENTS.anggota.title}`}>
+                          Pertandingan
                         </span>
-                        <Users size={18} className="text-amber-400/80" />
+                        <Award size={18} className={KPI_ACCENTS.anggota.icon} />
                       </div>
-                      <div className="mt-3 text-3xl font-bold text-amber-100/95">
-                        {anggotaSummaryLoading ? (
-                          <Skeleton className="h-9 w-14" />
-                        ) : (
-                          anggotaSummary.total_aktif
-                        )}
+                      <div className={`mt-3 text-3xl font-bold ${KPI_ACCENTS.anggota.value}`}>
+                        —
                       </div>
                       <div className="text-[11px] text-white/50 mt-1">
-                        Anggota aktif di wilayah terfilter.
+                        Pertandingan di wilayah terfilter.
                       </div>
                       <Link
-                        href="/dashboard/keanggotaan"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
+                        href="/dashboard/pertandingan"
+                        className={`mt-2 inline-flex items-center gap-1 text-[11px] ${KPI_ACCENTS.anggota.link} no-underline transition-colors`}
                       >
-                        Buka Keanggotaan →
+                        Buka Pertandingan →
                       </Link>
                     </div>
                   )}
                   {showEventBlock && (
-                    <>
-                      <div className={`${KPI_CARD_BASE} p-5`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-white/70">
-                            UKT (Ujian Kenaikan Tingkat)
-                          </span>
-                          <Award size={18} className="text-amber-400/80" />
-                        </div>
-                        <div className="mt-3 text-3xl font-bold text-amber-100/95">
-                          {uktSummaryLoading ? (
-                            <Skeleton className="h-9 w-14" />
-                          ) : (
-                            uktSummary.total_peserta
-                          )}
-                        </div>
-                        <div className="text-[11px] text-white/50 mt-1">
-                          Peserta UKT
-                          {uktSummary.tahun_ajaran
-                            ? ` ${uktSummary.tahun_ajaran.nama}`
-                            : ""}{" "}
-                          di wilayah terfilter.
-                        </div>
-                        <Link
-                          href="/dashboard/ujian"
-                          className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
-                        >
-                          Buka UKT →
-                        </Link>
-                      </div>
-                    </>
-                  )}
-                  {showKwitansiBlock && (
-                    <div className={`${KPI_CARD_BASE} p-5`}>
+                    <div className={`${KPI_CARD_BASE} ${KPI_ACCENTS.event.card} p-5`}>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-white/70">
+                        <span className={`text-xs font-medium ${KPI_ACCENTS.event.title}`}>
+                          UKT (Ujian Kenaikan Tingkat)
+                        </span>
+                        <Award size={18} className={KPI_ACCENTS.event.icon} />
+                      </div>
+                      <div className={`mt-3 text-3xl font-bold ${KPI_ACCENTS.event.value}`}>
+                        {uktSummaryLoading ? (
+                          <Skeleton className="h-9 w-14" />
+                        ) : (
+                          uktSummary.total_peserta
+                        )}
+                      </div>
+                      <div className="text-[11px] text-white/50 mt-1">
+                        Peserta UKT
+                        {uktSummary.tahun_ajaran
+                          ? ` ${uktSummary.tahun_ajaran.nama}`
+                          : ""}{" "}
+                        di wilayah terfilter.
+                      </div>
+                      <Link
+                        href="/dashboard/ujian"
+                        className={`mt-2 inline-flex items-center gap-1 text-[11px] ${KPI_ACCENTS.event.link} no-underline transition-colors`}
+                      >
+                        Buka UKT →
+                      </Link>
+                    </div>
+                  )}
+                  <div className={`${KPI_CARD_BASE} ${KPI_ACCENTS.gashuku.card} p-5`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium ${KPI_ACCENTS.gashuku.title}`}>
+                        GASHUKU
+                      </span>
+                      <Calendar size={18} className={KPI_ACCENTS.gashuku.icon} />
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-white/60">GAZONE</span>
+                        <span className={`font-semibold ${KPI_ACCENTS.gashuku.value}`}>—</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-white/60">GASDA</span>
+                        <span className={`font-semibold ${KPI_ACCENTS.gashuku.value}`}>—</span>
+                      </div>
+                    </div>
+                    <Link
+                      href="/dashboard/event"
+                      className={`mt-2 inline-flex items-center gap-1 text-[11px] ${KPI_ACCENTS.gashuku.link} no-underline transition-colors`}
+                    >
+                      Buka Event →
+                    </Link>
+                  </div>
+                  {showKwitansiBlock && (
+                    <div className={`${KPI_CARD_BASE} ${KPI_ACCENTS.kwitansi.card} p-5`}>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium ${KPI_ACCENTS.kwitansi.title}`}>
                           Kwitansi
                         </span>
-                        <CreditCard size={18} className="text-amber-400/80" />
+                        <CreditCard size={18} className={KPI_ACCENTS.kwitansi.icon} />
                       </div>
-                      <div className="mt-3 text-3xl font-bold text-amber-100/95">
+                      <div className={`mt-3 text-3xl font-bold ${KPI_ACCENTS.kwitansi.value}`}>
                         {payments.length}
                       </div>
                       <div className="text-[11px] text-white/50 mt-1">
@@ -1369,7 +1465,7 @@ export default function HomeBaseModule() {
                       </div>
                       <Link
                         href="/dashboard/keuangan"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-200/90 hover:text-amber-100 no-underline transition-colors"
+                        className={`mt-2 inline-flex items-center gap-1 text-[11px] ${KPI_ACCENTS.kwitansi.link} no-underline transition-colors`}
                       >
                         Buka Kwitansi →
                       </Link>
@@ -1409,7 +1505,7 @@ export default function HomeBaseModule() {
                   <BarChart
                     data={chartAnggotaPerRanting}
                     layout="vertical"
-                    margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                    margin={{ top: 4, right: 40, left: 0, bottom: 4 }}
                   >
                     <XAxis
                       type="number"
@@ -1438,9 +1534,24 @@ export default function HomeBaseModule() {
                     />
                     <Bar
                       dataKey="jumlah"
-                      fill="rgba(245, 158, 11, 0.6)"
                       radius={[0, 4, 4, 0]}
-                    />
+                      minPointSize={4}
+                      maxBarSize={28}
+                    >
+                      {chartAnggotaPerRanting.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={CHART_BAR_COLORS[index % CHART_BAR_COLORS.length]}
+                        />
+                      ))}
+                      <LabelList
+                        dataKey="jumlah"
+                        position="right"
+                        fill="rgba(255,255,255,0.9)"
+                        fontSize={11}
+                        formatter={(value: number) => value}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>

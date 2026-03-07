@@ -25,6 +25,7 @@ type PendaftaranRow = {
   created_at: string;
   nama: string;
   nomor: string;
+  kwitansi_token: string | null;
 };
 
 type BatalRow = PendaftaranRow & {
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
 
   const { data: rows, error } = await admin
     .from("ukt_pendaftaran")
-    .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at")
+    .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token")
     .eq("tahun_ajaran_id", tahunAjaranId)
     .eq("ranting_id", rantingId)
     .neq("status_bayar", "batal")
@@ -107,6 +108,7 @@ export async function GET(req: NextRequest) {
       created_at: String((r as any).created_at ?? ""),
       nama: profile?.nama ?? "",
       nomor: profile?.nomor ?? "",
+      kwitansi_token: (r as any).kwitansi_token ? String((r as any).kwitansi_token) : null,
     };
   });
 

@@ -16,6 +16,7 @@ type TahunRow = {
   tempat: string | null;
   ditutup_at: string | null;
   biaya_per_kyu?: Record<string, number> | null;
+  qris_content?: string | null;
 };
 
 const KYU_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
@@ -43,6 +44,8 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
   const [saving, setSaving] = useState(false);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [qrisModal, setQrisModal] = useState<{ id: string; nama: string; qris_content: string } | null>(null);
+  const [qrisSaving, setQrisSaving] = useState(false);
 
   const isCabang = (scope?.cabang_ids?.length ?? 0) > 0 && !scope?.is_pp;
   const isPp = scope?.is_pp === true;
@@ -168,6 +171,34 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
       loadTahunList();
     } finally {
       setClosingId(null);
+    }
+  };
+
+  const handleOpenQrisModal = (row: TahunRow) => {
+    setQrisModal({ id: row.id, nama: row.nama, qris_content: row.qris_content ?? "" });
+  };
+
+  const handleSaveQris = async () => {
+    if (!qrisModal) return;
+    setQrisSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/ukt/tahun-ajaran/${qrisModal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ qris_content: qrisModal.qris_content.trim() || null }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ type: "err", text: (j.message as string) || "Gagal menyimpan QRIS" });
+        return;
+      }
+      setMessage({ type: "ok", text: "QRIS berhasil disimpan. Ranting dapat menampilkan QR untuk pembayaran." });
+      setQrisModal(null);
+      loadTahunList();
+    } finally {
+      setQrisSaving(false);
     }
   };
 
@@ -364,20 +395,31 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {canClose && (
-                          <button
-                            type="button"
-                            disabled={closingId === row.id}
-                            onClick={() => handleTutupTahun(row.id, !ditutup)}
-                            className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition ${
-                              ditutup
-                                ? "border-emerald-500/30 text-emerald-400/90 hover:bg-emerald-500/10"
-                                : "border-amber-500/30 text-amber-400/90 hover:bg-amber-500/10"
-                            } disabled:opacity-50`}
-                          >
-                            {closingId === row.id ? "…" : ditutup ? <><Unlock className="h-3 w-3" /> Buka kembali</> : <><Lock className="h-3 w-3" /> Tutup tahun ajaran</>}
-                          </button>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1">
+                          {canClose && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={closingId === row.id}
+                                onClick={() => handleTutupTahun(row.id, !ditutup)}
+                                className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition ${
+                                  ditutup
+                                    ? "border-emerald-500/30 text-emerald-400/90 hover:bg-emerald-500/10"
+                                    : "border-amber-500/30 text-amber-400/90 hover:bg-amber-500/10"
+                                } disabled:opacity-50`}
+                              >
+                                {closingId === row.id ? "…" : ditutup ? <><Unlock className="h-3 w-3" /> Buka kembali</> : <><Lock className="h-3 w-3" /> Tutup tahun ajaran</>}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenQrisModal(row)}
+                                className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition border-white/20 text-zinc-300 hover:bg-white/10 ${row.qris_content ? "text-emerald-400/90" : ""}`}
+                              >
+                                {row.qris_content ? "Edit QRIS" : "Set QRIS"}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -387,6 +429,40 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
           </div>
         )}
       </div>
+
+      {qrisModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !qrisSaving && setQrisModal(null)}>
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-zinc-200">QRIS — {qrisModal.nama}</h3>
+            <p className="mt-1 text-xs text-zinc-500">Isi payload/URL QRIS dari bank atau payment gateway. Ranting akan melihat QR untuk scan bayar.</p>
+            <textarea
+              value={qrisModal.qris_content}
+              onChange={(e) => setQrisModal((m) => (m ? { ...m, qris_content: e.target.value } : null))}
+              placeholder="Contoh: https://... atau string payload QRIS"
+              rows={4}
+              className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={qrisSaving}
+                onClick={() => setQrisModal(null)}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/5 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={qrisSaving}
+                onClick={handleSaveQris}
+                className="rounded-lg bg-amber-600/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+              >
+                {qrisSaving ? "Menyimpan…" : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

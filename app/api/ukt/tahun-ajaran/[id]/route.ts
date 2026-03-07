@@ -23,7 +23,7 @@ export async function PATCH(
     return NextResponse.json({ message: "id wajib" }, { status: 400 });
   }
 
-  let body: { ditutup_at?: string | null } = {};
+  let body: { ditutup_at?: string | null; qris_content?: string | null } = {};
   try {
     body = await req.json();
   } catch {
@@ -44,19 +44,28 @@ export async function PATCH(
   }
 
   const tahunCabangId = (row as { cabang_id?: string | null }).cabang_id ?? null;
-  const canClose = scope.is_pp || (scope.cabang_ids.length > 0 && (tahunCabangId == null || scope.cabang_ids.includes(tahunCabangId)));
-  if (!canClose) {
-    return NextResponse.json({ message: "Hanya PP atau cabang pemilik UKT yang dapat menutup tahun ajaran" }, { status: 403 });
+  const canEdit = scope.is_pp || (scope.cabang_ids.length > 0 && (tahunCabangId == null || scope.cabang_ids.includes(tahunCabangId)));
+  if (!canEdit) {
+    return NextResponse.json({ message: "Hanya PP atau cabang pemilik UKT yang dapat mengubah tahun ajaran" }, { status: 403 });
   }
 
   const now = new Date().toISOString();
-  const ditutupAt = body.ditutup_at === null || body.ditutup_at === "" ? null : (body.ditutup_at ?? now);
+  const payload: Record<string, unknown> = {};
+  if (body.ditutup_at !== undefined) {
+    payload.ditutup_at = body.ditutup_at === null || body.ditutup_at === "" ? null : (body.ditutup_at ?? now);
+  }
+  if (body.qris_content !== undefined) {
+    payload.qris_content = body.qris_content == null || body.qris_content === "" ? null : String(body.qris_content).trim();
+  }
+  if (Object.keys(payload).length === 0) {
+    return NextResponse.json({ message: "Berikan ditutup_at dan/atau qris_content" }, { status: 400 });
+  }
 
   const { data: updated, error } = await admin
     .from("ukt_tahun_ajaran")
-    .update({ ditutup_at: ditutupAt })
+    .update(payload)
     .eq("id", id)
-    .select("id, nama, ditutup_at")
+    .select("id, nama, ditutup_at, qris_content")
     .single();
 
   if (error) {

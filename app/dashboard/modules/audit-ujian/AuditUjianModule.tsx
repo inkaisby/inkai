@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, ClipboardList, FileCheck, Settings2, UserPlus } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, ChevronUp, ClipboardList, FileCheck, Settings2, UserPlus } from "lucide-react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
 import PendaftaranUKT, { type AnggotaAktifSelected } from "../event/components/PendaftaranUKT";
@@ -36,7 +36,7 @@ type Ringkasan = {
   hasilTerbaru: HasilRow[];
 };
 
-type ViewAudit = "ringkasan" | "pendaftaran" | "kelola";
+type ViewAudit = "ringkasan" | "pendaftaran";
 
 export default function AuditUjianModule() {
   const { scope } = useScope();
@@ -48,6 +48,7 @@ export default function AuditUjianModule() {
   const [filterRantingId, setFilterRantingId] = useState("");
   const [resumeVersion, setResumeVersion] = useState(0);
   const [pendingSelection, setPendingSelection] = useState<AnggotaAktifSelected[]>([]);
+  const [kelolaUktExpanded, setKelolaUktExpanded] = useState(false);
 
   const handleFilterChange = useCallback((tahunId: string, rantingId: string) => {
     setFilterTahunId(tahunId);
@@ -170,65 +171,82 @@ export default function AuditUjianModule() {
         </div>
       </header>
 
-      <nav className="flex flex-wrap gap-1 rounded-lg bg-white/[0.03] p-1">
+      <nav className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setView("pendaftaran")}
-          className={`flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition ${
+          className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
             view === "pendaftaran"
-              ? "bg-white/10 text-zinc-100 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "bg-teal-500/20 text-teal-200 shadow-sm border border-teal-400/25"
+              : "bg-white/[0.04] text-zinc-500 border border-transparent hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15"
           }`}
         >
           <UserPlus className="h-4 w-4 shrink-0" />
-          Pendaftaran UKT
+          Pendaftaran & Kelola UKT
         </button>
         <button
           type="button"
           onClick={() => setView("ringkasan")}
-          className={`flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition ${
+          className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
             view === "ringkasan"
-              ? "bg-white/10 text-zinc-100 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "bg-amber-500/20 text-amber-200 shadow-sm border border-amber-400/25"
+              : "bg-white/[0.04] text-zinc-500 border border-transparent hover:bg-amber-500/10 hover:text-amber-300/90 hover:border-amber-400/15"
           }`}
         >
           <BarChart3 className="h-4 w-4 shrink-0" />
           Ringkasan
         </button>
-        {(scope?.cabang_ids?.length ?? 0) > 0 || scope?.is_pp ? (
-          <button
-            type="button"
-            onClick={() => setView("kelola")}
-            className={`flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition ${
-              view === "kelola"
-                ? "bg-white/10 text-zinc-100 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <Settings2 className="h-4 w-4 shrink-0" />
-            Kelola UKT
-          </button>
-        ) : null}
       </nav>
 
       {view === "pendaftaran" && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="min-w-0">
-            <PendaftaranUKT
-              onFilterChange={handleFilterChange}
-              onRegistrationSuccess={handleRegistrationSuccess}
-              onSelectionChange={handleSelectionChange}
-              refreshTrigger={resumeVersion}
-            />
-          </div>
-          <div className="min-w-0">
-            <ResumeUKT
-              tahunId={filterTahunId}
-              rantingId={filterRantingId}
-              resumeVersion={resumeVersion}
-              pendingSelection={pendingSelection}
-              onBatalSuccess={handleRegistrationSuccess}
-            />
+        <div className="space-y-8">
+          {/* Kelola UKT (tahun, biaya, tutup) — hanya Cabang/PP; kolapsibel */}
+          {((scope?.cabang_ids?.length ?? 0) > 0 || scope?.is_pp) && (
+            <section className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setKelolaUktExpanded((v) => !v)}
+                className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left hover:bg-white/[0.04] transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-5 w-5 text-violet-400/80 shrink-0" />
+                  <div>
+                    <h2 className="text-base font-semibold text-zinc-100">Kelola UKT</h2>
+                    <p className="text-sm text-zinc-500">
+                      Atur tahun ajaran, biaya per kyu, dan tutup tahun.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-zinc-400 shrink-0">
+                  {kelolaUktExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </span>
+              </button>
+              {kelolaUktExpanded && (
+                <div className="border-t border-white/10 px-6 pb-6 pt-2">
+                  <KelolaUKTCabang />
+                </div>
+              )}
+            </section>
+          )}
+          {/* Pendaftaran peserta + Resume */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="min-w-0">
+              <PendaftaranUKT
+                onFilterChange={handleFilterChange}
+                onRegistrationSuccess={handleRegistrationSuccess}
+                onSelectionChange={handleSelectionChange}
+                refreshTrigger={resumeVersion}
+              />
+            </div>
+            <div className="min-w-0">
+              <ResumeUKT
+                tahunId={filterTahunId}
+                rantingId={filterRantingId}
+                resumeVersion={resumeVersion}
+                pendingSelection={pendingSelection}
+                onBatalSuccess={handleRegistrationSuccess}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -372,7 +390,6 @@ export default function AuditUjianModule() {
         </div>
       )}
 
-      {view === "kelola" && <KelolaUKTCabang />}
     </div>
   );
 }

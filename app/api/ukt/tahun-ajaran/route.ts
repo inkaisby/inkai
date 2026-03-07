@@ -23,7 +23,7 @@ export async function GET() {
   if (scope.is_pp) {
     const res = await admin
       .from("ukt_tahun_ajaran")
-      .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu")
+      .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
       .order("tahun", { ascending: false })
       .order("periode", { ascending: false });
     if (res.error) {
@@ -35,14 +35,14 @@ export async function GET() {
     const [globalRes, cabangRes] = await Promise.all([
       admin
         .from("ukt_tahun_ajaran")
-        .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu")
+        .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
         .is("cabang_id", null)
         .order("tahun", { ascending: false })
         .order("periode", { ascending: false }),
       scope.cabang_ids.length > 0
         ? admin
             .from("ukt_tahun_ajaran")
-            .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu")
+            .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
             .in("cabang_id", scope.cabang_ids)
             .order("tahun", { ascending: false })
             .order("periode", { ascending: false })
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin
     .from("ukt_tahun_ajaran")
     .insert(insert)
-    .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu")
+    .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
     .single();
 
   if (error) {

@@ -20,6 +20,7 @@ type PendaftaranItem = {
   bukti_transfer_path: string | null;
   file_url: string | null;
   dikonfirmasi_at: string | null;
+  kwitansi_token?: string | null;
 };
 type BatalItem = PendaftaranItem & {
   batal_at: string | null;
@@ -84,6 +85,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundUploading, setRefundUploading] = useState(false);
   const refundFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [printingKwitansiId, setPrintingKwitansiId] = useState<string | null>(null);
   const [showPesertaBatal, setShowPesertaBatal] = useState(false);
   const [ketuaRanting, setKetuaRanting] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -297,6 +299,75 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
     refetchResume();
   };
 
+  const handleCetakKwitansi = async (r: PendaftaranItem) => {
+    if (r.status_bayar !== "lunas") return;
+    setPrintingKwitansiId(r.id);
+    try {
+      let token = r.kwitansi_token ?? null;
+      if (!token) {
+        const ensureRes = await fetch(`/api/ukt/pendaftaran/${r.id}/ensure-kwitansi-token`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!ensureRes.ok) {
+          alert("Gagal membuat token kwitansi");
+          return;
+        }
+        const ensureData = await ensureRes.json();
+        token = ensureData?.kwitansi_token ?? null;
+        if (!token) {
+          alert("Token kwitansi tidak tersedia");
+          return;
+        }
+        refetchResume();
+      }
+      const verifyRes = await fetch(`/api/kwitansi/verify?token=${encodeURIComponent(token)}`, {
+        credentials: "include",
+      });
+      if (!verifyRes.ok) {
+        alert("Data kwitansi tidak ditemukan");
+        return;
+      }
+      const data = await verifyRes.json();
+      const printUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token)}`
+          : "";
+
+      const [{ default: jsPDF }, { default: qrcode }] = await Promise.all([
+        import("jspdf"),
+        import("qrcode"),
+      ]);
+      const qrDataUrl = await qrcode.toDataURL(printUrl, { width: 120, margin: 1 });
+      const doc = new jsPDF();
+      const formatRp = (n: number) =>
+        new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+      const formatDate = (s: string) =>
+        s ? new Date(s).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : "";
+
+      doc.setFontSize(14);
+      doc.text("KWITANSI PEMBAYARAN", 20, 20);
+      doc.setFontSize(10);
+      doc.text(`No. ${data.no_kwitansi ?? ""}`, 20, 28);
+      doc.text(`Tanggal: ${formatDate(data.tanggal ?? "")}`, 20, 34);
+      doc.text(`Nama: ${data.nama ?? ""}`, 20, 42);
+      doc.text(`No. Anggota: ${data.nomor ?? ""}`, 20, 48);
+      doc.text(`Event: ${data.event ?? ""}`, 20, 54);
+      doc.text(`Ranting: ${data.ranting ?? ""}`, 20, 60);
+      doc.text(`Terbilang: ${formatRp(Number(data.nominal ?? 0))}`, 20, 68);
+      doc.addImage(qrDataUrl, "PNG", 20, 78, 30, 30);
+      doc.setFontSize(8);
+      doc.text("Scan QR untuk cetak ulang", 52, 98);
+
+      doc.save(`kwitansi-${(data.no_kwitansi ?? "ukt").replace(/\s/g, "-")}.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert("Gagal membuat PDF kwitansi");
+    } finally {
+      setPrintingKwitansiId(null);
+    }
+  };
+
   const rantingNama = rantingList.find((r) => r.id === rantingId)?.nama ?? "—";
   const tahunNama = tahunList.find((t) => t.id === tahunId)?.nama ?? "—";
 
@@ -415,9 +486,19 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         {r.status_bayar === "lunas" ? (
-                          <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400/90">
-                            ✓ Lunas (sudah diverifikasi)
-                          </span>
+                          <>
+                            <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400/90">
+                              ✓ Lunas (sudah diverifikasi)
+                            </span>
+                            <button
+                              type="button"
+                              disabled={printingKwitansiId === r.id}
+                              onClick={() => handleCetakKwitansi(r)}
+                              className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-xs text-zinc-200 hover:bg-white/15 disabled:opacity-50 w-fit"
+                            >
+                              {printingKwitansiId === r.id ? "Membuat PDF…" : "Cetak kwitansi"}
+                            </button>
+                          </>
                         ) : r.status_bayar === "bukti_uploaded" || r.file_url ? (
                           <button
                             type="button"
