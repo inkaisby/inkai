@@ -276,7 +276,7 @@ export default function DashboardHome() {
                       </div>
                       {post.image ? (
                         <div className="aspect-video bg-black/30 relative">
-                          <Image src={post.image} alt="" fill className="object-cover" />
+                          <Image src={post.image} alt="" fill className="object-cover" unoptimized />
                         </div>
                       ) : (
                         <div className={`aspect-video bg-gradient-to-br ${style.placeholder} flex items-center justify-center`}>
@@ -351,11 +351,12 @@ export default function DashboardHome() {
                   >
                     <div className="aspect-square relative bg-white/5">
                       <Image
-                        src={post.image_url}
+                        src={post.image_url || "https://placehold.co/400x400/1e293b/64748b?text=IG"}
                         alt=""
                         fill
                         className="object-cover"
                         sizes="140px"
+                        unoptimized
                       />
                     </div>
                     <p className="p-2 text-[11px] text-white/80 line-clamp-2" title={post.caption}>
@@ -422,7 +423,7 @@ export default function DashboardHome() {
                 >
                   <div className="aspect-square rounded bg-white/5 flex items-center justify-center mb-1.5 overflow-hidden relative">
                     {item.image ? (
-                      <Image src={item.image} alt="" fill className="object-cover" sizes="120px" />
+                      <Image src={item.image} alt="" fill className="object-cover" sizes="120px" unoptimized />
                     ) : (
                       <ShoppingBag className="w-6 h-6 text-teal-400/60" />
                     )}
