@@ -35,7 +35,7 @@ export async function PATCH(
     refund_bukti_path?: string | null;
     /** Hasil ujian: diisi Cabang setelah ujian selesai; terintegrasi ke Keanggotaan tab Kyu */
     lulus?: boolean;
-    tingkat_lulus?: number | null;
+    tingkat_lulus?: number | string | null;
   } = {};
   try {
     body = await req.json();
@@ -109,7 +109,8 @@ export async function PATCH(
   if (body.lulus !== undefined) payload.lulus = !!body.lulus;
   if (body.tingkat_lulus !== undefined) {
     const t = body.tingkat_lulus;
-    payload.tingkat_lulus = t == null || t === "" ? null : Math.min(10, Math.max(1, Number(t)));
+    const num = typeof t === "number" ? t : Number(t);
+    payload.tingkat_lulus = t == null || t === "" || Number.isNaN(num) ? null : Math.min(10, Math.max(1, num));
   }
 
   const { data: updated, error } = await admin
