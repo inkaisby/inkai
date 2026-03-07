@@ -8,11 +8,6 @@ import {
   UserCheck,
   Trophy,
   Calendar,
-  GraduationCap,
-  CreditCard,
-  ClipboardList,
-  BarChart3,
-  Settings,
   Instagram,
   ShoppingBag,
   Heart,
@@ -99,17 +94,6 @@ const stats = [
   { label: "Anggota Aktif", value: "—", href: "/dashboard/keanggotaan", accent: "emerald", icon: UserCheck },
   { label: "Event Aktif", value: "—", href: "/dashboard/event", accent: "amber", icon: Trophy },
   { label: "Jadwal Terdekat", value: "—", href: "/dashboard/jadwal", accent: "slate", icon: Calendar },
-];
-
-const modules = [
-  { title: "Manajemen Siswa", desc: "Data siswa, status, wilayah, kartu digital", href: "/dashboard/siswa", accent: "teal", icon: GraduationCap },
-  { title: "Keanggotaan", desc: "Kyu, Dan, mutasi, kartu anggota", href: "/dashboard/keanggotaan", accent: "emerald", icon: UserCheck },
-  { title: "Absensi", desc: "Harian & rekap kehadiran", href: "/dashboard/absensi", accent: "teal", icon: ClipboardList },
-  { title: "Event & Ujian", desc: "Gashuku, kejuaraan, ujian", href: "/dashboard/event", accent: "amber", icon: Trophy },
-  { title: "Keuangan", desc: "Iuran & transaksi", href: "/dashboard/keuangan", accent: "emerald", icon: CreditCard },
-  { title: "Penilaian", desc: "Nilai teknik & fisik", href: "/dashboard/penilaian", accent: "slate", icon: BarChart3 },
-  { title: "Pengguna", desc: "User, role, permission", href: "/dashboard/user", accent: "slate", icon: Users },
-  { title: "Pengaturan", desc: "Sistem & keamanan", href: "/dashboard/settings", accent: "slate", icon: Settings },
 ];
 
 const accentStyles: Record<string, { card: string; border: string; text: string; icon: string }> = {
@@ -387,34 +371,6 @@ export default function DashboardHome() {
           </div>
         </div>
       </div>
-
-      {/* Akses Cepat Modul — hanya untuk ketua per wilayah; user biasa tidak lihat */}
-      {showAdminDashboard && (
-        <div>
-          <h2 className="text-sm font-medium text-white/90 mb-3">Akses Cepat Modul</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {modules.map((m) => {
-              const Icon = m.icon;
-              const st = accentStyles[m.accent] ?? accentStyles.slate;
-              return (
-                <Link
-                  key={m.title}
-                  href={m.href}
-                  className={`flex items-center gap-4 rounded-xl border ${st.border} ${st.card} p-4 hover:bg-white/[0.05] transition-colors no-underline`}
-                >
-                  <div className={`h-10 w-10 flex items-center justify-center rounded-lg border ${st.border} ${st.icon}`}>
-                    <Icon size={20} strokeWidth={1.5} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-white/95">{m.title}</div>
-                    <div className="text-sm text-white/55 mt-0.5">{m.desc}</div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Footer — minimal */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-white/50">
