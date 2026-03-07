@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 type KwitansiData = {
@@ -18,7 +18,11 @@ type KwitansiData = {
 };
 
 const formatCurrency = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(v);
 
 export default function PrintKwitansiPage() {
   const searchParams = useSearchParams();
@@ -34,7 +38,9 @@ export default function PrintKwitansiPage() {
       setLoading(false);
       return;
     }
-    fetch(`/api/kwitansi/verify?token=${encodeURIComponent(token)}`, { credentials: "include" })
+    fetch(`/api/kwitansi/verify?token=${encodeURIComponent(token)}`, {
+      credentials: "include",
+    })
       .then((r) => {
         if (!r.ok) throw new Error("Kwitansi tidak ditemukan");
         return r.json();
@@ -44,7 +50,9 @@ export default function PrintKwitansiPage() {
       .finally(() => setLoading(false));
 
     if (typeof window !== "undefined") {
-      setPrintUrl(`${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token)}`);
+      setPrintUrl(
+        `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token)}`,
+      );
     }
   }, [token]);
 
@@ -71,7 +79,9 @@ export default function PrintKwitansiPage() {
   return (
     <div className="min-h-screen bg-white p-8 print:p-4">
       <div className="mx-auto max-w-lg">
-        <h1 className="text-lg font-bold text-slate-900">KWITANSI PEMBAYARAN</h1>
+        <h1 className="text-lg font-bold text-slate-900">
+          KWITANSI PEMBAYARAN
+        </h1>
         <p className="mt-2 text-sm text-slate-600">No. {data.no_kwitansi}</p>
         <p className="text-sm text-slate-600">
           Tanggal:{" "}
@@ -84,11 +94,17 @@ export default function PrintKwitansiPage() {
             : "—"}
         </p>
         <div className="mt-6 space-y-1 text-sm text-slate-800">
-          <p>Sudah terima dari : <strong>{data.nama}</strong></p>
+          <p>
+            Sudah terima dari : <strong>{data.nama}</strong>
+          </p>
           {data.nomor && <p>No. Anggota : {data.nomor}</p>}
           <p>Ranting : {data.ranting}</p>
-          <p>Untuk pembayaran : {data.jenis} — {data.event}</p>
-          <p>Sejumlah : <strong>{formatCurrency(data.nominal)}</strong></p>
+          <p>
+            Untuk pembayaran : {data.jenis} — {data.event}
+          </p>
+          <p>
+            Sejumlah : <strong>{formatCurrency(data.nominal)}</strong>
+          </p>
         </div>
         <div className="mt-8 flex justify-between">
           <div>
@@ -100,7 +116,8 @@ export default function PrintKwitansiPage() {
             )}
           </div>
           <p className="text-right text-sm text-slate-600">
-            Petugas,<br />
+            Petugas,
+            <br />
             <span className="mt-4 inline-block border-b border-slate-400 w-32" />
           </p>
         </div>
