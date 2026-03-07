@@ -87,12 +87,7 @@ type PaymentRow = {
 const KPI_CARD_BASE =
   "rounded-xl border border-amber-500/15 bg-slate-800/40 backdrop-blur-sm dashboard-card-glow";
 
-const DEFAULT_KPI_ORDER = [
-  "ranting",
-  "anggota",
-  "event",
-  "kwitansi",
-] as const;
+const DEFAULT_KPI_ORDER = ["ranting", "anggota", "event", "kwitansi"] as const;
 
 /** Sortable wrapper untuk KPI card (drag handle + transform) */
 function SortableKpiCard({
@@ -321,7 +316,9 @@ export default function HomeBaseModule() {
     null,
   );
   /** Selector wilayah bertingkat: Provinsi → Cabang → Ranting (tampilan: Jawa Timur / Surabaya / Gading) */
-  const [wilayahProvinsiId, setWilayahProvinsiId] = useState<string | null>(null);
+  const [wilayahProvinsiId, setWilayahProvinsiId] = useState<string | null>(
+    null,
+  );
   const [wilayahCabangId, setWilayahCabangId] = useState<string | null>(null);
   const [wilayahRantingId, setWilayahRantingId] = useState<string | null>(null);
   const [selectedRanting, setSelectedRanting] = useState<RantingRow | null>(
@@ -632,7 +629,11 @@ export default function HomeBaseModule() {
           const provinces = Array.isArray(provData) ? provData : [];
           const provinceIds = provinces
             .map((p: { id?: string; code?: string }) =>
-              String((p as { id?: string }).id ?? (p as { code?: string }).code ?? "").trim(),
+              String(
+                (p as { id?: string }).id ??
+                  (p as { code?: string }).code ??
+                  "",
+              ).trim(),
             )
             .filter((id) => id !== "");
 
@@ -648,7 +649,9 @@ export default function HomeBaseModule() {
               const arr = Array.isArray(data) ? data : [];
               for (const r of arr) {
                 const id = String(
-                  (r as { id?: string }).id ?? (r as { code?: string }).code ?? "",
+                  (r as { id?: string }).id ??
+                    (r as { code?: string }).code ??
+                    "",
                 );
                 if (!id) continue;
                 const name =
@@ -689,7 +692,9 @@ export default function HomeBaseModule() {
             const arr = Array.isArray(data) ? data : [];
             for (const r of arr) {
               const id = String(
-                (r as { id?: string }).id ?? (r as { code?: string }).code ?? "",
+                (r as { id?: string }).id ??
+                  (r as { code?: string }).code ??
+                  "",
               );
               if (!id || !allowedSet.has(id)) continue;
               const name =
@@ -711,11 +716,7 @@ export default function HomeBaseModule() {
     return () => {
       cancelled = true;
     };
-  }, [
-    expandWilayahForPp,
-    rantingList,
-    allowedRegencyIds,
-  ]);
+  }, [expandWilayahForPp, rantingList, allowedRegencyIds]);
 
   // Pre-fill kabupaten/kota: Superadmin atau level ≥ 3 pakai domisili profil; else satu cabang saja.
   // Jangan isi lagi setelah user sengaja hapus/ubah (supaya filter sesuai yang diketik).
@@ -1452,352 +1453,351 @@ export default function HomeBaseModule() {
           {/* Cabang per kabupaten/kota (kiri) */}
           <div className="rounded-2xl border border-white/10 bg-slate-800/30 p-6 space-y-4">
             <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-amber-500/10 p-2">
-                    <Building2 size={18} className="text-amber-400/80" />
-                  </div>
-                  <h2 className="text-sm font-semibold text-white/95">
-                    Cabang per kabupaten/kota
-                  </h2>
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-amber-500/10 p-2">
+                  <Building2 size={18} className="text-amber-400/80" />
                 </div>
-                <p className="text-[11px] text-white/50">
-                  {expandWilayahForPp
-                    ? "Pilih kabupaten/kota untuk melihat cabang dan ranting di wilayah tersebut. PP/Superadmin dapat memilih wilayah mana saja."
-                    : "Hanya cabang di wilayah Anda (sesuai profil). Data dibatasi di server."}
+                <h2 className="text-sm font-semibold text-white/95">
+                  Cabang per kabupaten/kota
+                </h2>
+              </div>
+              <p className="text-[11px] text-white/50">
+                {expandWilayahForPp
+                  ? "Pilih kabupaten/kota untuk melihat cabang dan ranting di wilayah tersebut. PP/Superadmin dapat memilih wilayah mana saja."
+                  : "Hanya cabang di wilayah Anda (sesuai profil). Data dibatasi di server."}
+              </p>
+              <div className="relative">
+                <input
+                  type="text"
+                  suppressHydrationWarning
+                  value={wilayahSearch}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setWilayahSearch(v);
+                    if (selectedRegencyId && v !== selectedRegencyName) {
+                      setSelectedRegencyId(null);
+                      setSelectedRegencyName(null);
+                      userClearedRegencyRef.current = true;
+                    }
+                  }}
+                  placeholder={
+                    wilayahOptions.length > 0
+                      ? "Pilih kabupaten/kota Anda…"
+                      : "Memuat daftar kabupaten/kota…"
+                  }
+                  className={`w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2.5 text-xs text-white placeholder:text-white/40 focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-all ${selectedRegencyId ? "pr-20" : ""}`}
+                />
+                {selectedRegencyId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      userClearedRegencyRef.current = true;
+                      setSelectedRegencyId(null);
+                      setSelectedRegencyName(null);
+                      setWilayahSearch("");
+                      setSelectedRanting(null);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-amber-200/80 hover:text-amber-100"
+                  >
+                    Hapus filter
+                  </button>
+                )}
+                {filteredWilayahOptions.length > 0 &&
+                  wilayahSearch.trim() &&
+                  !selectedRegencyId && (
+                    <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-sm py-1 text-xs shadow-xl shadow-black/30">
+                      {filteredWilayahOptions.map((w) => (
+                        <li key={w.id}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-white/90 hover:bg-white/5 rounded-lg transition-colors"
+                            onClick={() => {
+                              setSelectedRegencyId(w.id);
+                              setSelectedRegencyName(w.name);
+                              setWilayahSearch(w.name);
+                              setSelectedRanting(null);
+                            }}
+                          >
+                            {w.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+              </div>
+              {selectedRegencyName && (
+                <p className="text-[11px] text-amber-200/80">
+                  Menampilkan ranting di: <strong>{selectedRegencyName}</strong>
                 </p>
-                <div className="relative">
+              )}
+            </div>
+            {rantingLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : filteredRanting.length === 0 ? (
+              <p className="text-xs text-white/50">
+                {selectedRegencyId
+                  ? "Cabang ini belum memiliki ranting."
+                  : "Pilih kabupaten/kota di atas atau lihat semua ranting di wilayah Anda di bawah."}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-white/60 border-b border-white/10">
+                      <th className="pb-2 pr-4">Cabang</th>
+                      <th className="pb-2 pr-4">Status</th>
+                      <th className="pb-2">Instagram</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cabangRows.map((row) => (
+                      <tr
+                        key={row.representative.id}
+                        className={`border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/5 transition-colors ${
+                          selectedRanting &&
+                          String(selectedRanting.regency_id ?? "") ===
+                            String(row.representative.regency_id ?? "")
+                            ? "bg-white/5"
+                            : "bg-transparent"
+                        }`}
+                        onClick={() => setSelectedRanting(row.representative)}
+                      >
+                        <td className="py-2 pr-4 text-white/90">
+                          {row.displayName}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <span
+                            className={
+                              row.isActive
+                                ? "text-amber-300/90"
+                                : "text-white/40 italic"
+                            }
+                          >
+                            {row.isActive ? "Aktif" : "Nonaktif"}
+                          </span>
+                        </td>
+                        <td className="py-2 text-white/60">—</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {selectedRanting && (
+              <div className="mt-4 rounded-xl border border-white/10 bg-slate-800/40 p-4 text-xs text-white/85 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-amber-200/90">
+                        Ranting di cabang ini
+                      </div>
+                      {canEditDeleteRanting && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRantingFormMode("create");
+                            setRantingForm({
+                              nama: "",
+                              aktif: true,
+                              cabang_id: String(
+                                selectedRanting.cabang_id ?? "",
+                              ),
+                              province_id: String(
+                                selectedRanting.province_id ?? "",
+                              ),
+                              regency_id: String(
+                                selectedRanting.regency_id ?? "",
+                              ),
+                              district_id: "",
+                              instagram_url: "",
+                              alamat: "",
+                              ketua_nama: "",
+                              sekretaris_nama: "",
+                              bendahara_nama: "",
+                              pelatih_nama: "",
+                            });
+                            setRantingFormError(null);
+                            setRantingModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 px-2 py-1 text-[10px] text-amber-200/90 hover:bg-amber-500/10"
+                        >
+                          <PlusCircle size={11} />
+                          Tambah ranting
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-white/60">
+                      Cabang:{" "}
+                      <span className="font-medium text-amber-200/90">
+                        {panelRanting.length > 0
+                          ? (panelRanting[0]?.regency_id ?? "—")
+                          : (selectedRegencyName ?? "—")}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRanting(null)}
+                    className="text-[10px] text-white/60 hover:text-white/90"
+                  >
+                    Tutup
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     suppressHydrationWarning
-                    value={wilayahSearch}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setWilayahSearch(v);
-                      if (selectedRegencyId && v !== selectedRegencyName) {
-                        setSelectedRegencyId(null);
-                        setSelectedRegencyName(null);
-                        userClearedRegencyRef.current = true;
-                      }
-                    }}
-                    placeholder={
-                      wilayahOptions.length > 0
-                        ? "Pilih kabupaten/kota Anda…"
-                        : "Memuat daftar kabupaten/kota…"
-                    }
-                    className={`w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2.5 text-xs text-white placeholder:text-white/40 focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-all ${selectedRegencyId ? "pr-20" : ""}`}
+                    value={rantingSearch}
+                    onChange={(e) => setRantingSearch(e.target.value)}
+                    placeholder="Cari ranting di cabang ini…"
+                    className="w-full rounded-md border border-white/10 bg-slate-900/50 px-2 py-1.5 text-[11px] text-white placeholder:text-white/40 focus:border-amber-500/30 focus:outline-none"
                   />
-                  {selectedRegencyId && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        userClearedRegencyRef.current = true;
-                        setSelectedRegencyId(null);
-                        setSelectedRegencyName(null);
-                        setWilayahSearch("");
-                        setSelectedRanting(null);
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-amber-200/80 hover:text-amber-100"
-                    >
-                      Hapus filter
-                    </button>
-                  )}
-                  {filteredWilayahOptions.length > 0 &&
-                    wilayahSearch.trim() &&
-                    !selectedRegencyId && (
-                      <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-sm py-1 text-xs shadow-xl shadow-black/30">
-                        {filteredWilayahOptions.map((w) => (
-                          <li key={w.id}>
-                            <button
-                              type="button"
-                              className="w-full px-3 py-2 text-left text-white/90 hover:bg-white/5 rounded-lg transition-colors"
-                              onClick={() => {
-                                setSelectedRegencyId(w.id);
-                                setSelectedRegencyName(w.name);
-                                setWilayahSearch(w.name);
-                                setSelectedRanting(null);
-                              }}
-                            >
-                              {w.name}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  <div className="text-[11px] text-white/50 whitespace-nowrap">
+                    {panelRanting.length} ranting
+                  </div>
                 </div>
-                {selectedRegencyName && (
-                  <p className="text-[11px] text-amber-200/80">
-                    Menampilkan ranting di:{" "}
-                    <strong>{selectedRegencyName}</strong>
+
+                {panelRanting.length === 0 ? (
+                  <p className="text-[11px] text-white/60">
+                    Cabang ini belum memiliki ranting.
                   </p>
-                )}
-              </div>
-              {rantingLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              ) : filteredRanting.length === 0 ? (
-                <p className="text-xs text-white/50">
-                  {selectedRegencyId
-                    ? "Cabang ini belum memiliki ranting."
-                    : "Pilih kabupaten/kota di atas atau lihat semua ranting di wilayah Anda di bawah."}
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-white/60 border-b border-white/10">
-                        <th className="pb-2 pr-4">Cabang</th>
-                        <th className="pb-2 pr-4">Status</th>
-                        <th className="pb-2">Instagram</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cabangRows.map((row) => (
-                        <tr
-                          key={row.representative.id}
-                          className={`border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/5 transition-colors ${
-                            selectedRanting &&
-                            String(selectedRanting.regency_id ?? "") ===
-                              String(row.representative.regency_id ?? "")
-                              ? "bg-white/5"
-                              : "bg-transparent"
-                          }`}
-                          onClick={() => setSelectedRanting(row.representative)}
-                        >
-                          <td className="py-2 pr-4 text-white/90">
-                            {row.displayName}
-                          </td>
-                          <td className="py-2 pr-4">
-                            <span
-                              className={
-                                row.isActive
-                                  ? "text-amber-300/90"
-                                  : "text-white/40 italic"
-                              }
-                            >
-                              {row.isActive ? "Aktif" : "Nonaktif"}
-                            </span>
-                          </td>
-                          <td className="py-2 text-white/60">—</td>
+                ) : (
+                  <div className="border border-white/10 rounded-md overflow-hidden">
+                    <table className="w-full table-fixed text-[11px]">
+                      <thead className="bg-slate-800/60 text-amber-100/90">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left w-[40%]">
+                            Nama ranting
+                          </th>
+                          <th className="px-2 py-1.5 text-left w-[20%]">
+                            Status
+                          </th>
+                          <th className="px-2 py-1.5 text-right w-[40%]">
+                            Aksi
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {selectedRanting && (
-                <div className="mt-4 rounded-xl border border-white/10 bg-slate-800/40 p-4 text-xs text-white/85 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <div className="font-semibold text-amber-200/90">
-                          Ranting di cabang ini
-                        </div>
-                        {canEditDeleteRanting && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRantingFormMode("create");
-                              setRantingForm({
-                                nama: "",
-                                aktif: true,
-                                cabang_id: String(
-                                  selectedRanting.cabang_id ?? "",
-                                ),
-                                province_id: String(
-                                  selectedRanting.province_id ?? "",
-                                ),
-                                regency_id: String(
-                                  selectedRanting.regency_id ?? "",
-                                ),
-                                district_id: "",
-                                instagram_url: "",
-                                alamat: "",
-                                ketua_nama: "",
-                                sekretaris_nama: "",
-                                bendahara_nama: "",
-                                pelatih_nama: "",
-                              });
-                              setRantingFormError(null);
-                              setRantingModalOpen(true);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 px-2 py-1 text-[10px] text-amber-200/90 hover:bg-amber-500/10"
+                      </thead>
+                      <tbody>
+                        {panelRanting.map((r) => (
+                          <tr
+                            key={r.id}
+                            className="border-t border-white/5 hover:bg-white/5"
                           >
-                            <PlusCircle size={11} />
-                            Tambah ranting
-                          </button>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-white/60">
-                        Cabang:{" "}
-                        <span className="font-medium text-amber-200/90">
-                          {panelRanting.length > 0
-                            ? (panelRanting[0]?.regency_id ?? "—")
-                            : (selectedRegencyName ?? "—")}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRanting(null)}
-                      className="text-[10px] text-white/60 hover:text-white/90"
-                    >
-                      Tutup
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      suppressHydrationWarning
-                      value={rantingSearch}
-                      onChange={(e) => setRantingSearch(e.target.value)}
-                      placeholder="Cari ranting di cabang ini…"
-                      className="w-full rounded-md border border-white/10 bg-slate-900/50 px-2 py-1.5 text-[11px] text-white placeholder:text-white/40 focus:border-amber-500/30 focus:outline-none"
-                    />
-                    <div className="text-[11px] text-white/50 whitespace-nowrap">
-                      {panelRanting.length} ranting
-                    </div>
-                  </div>
-
-                  {panelRanting.length === 0 ? (
-                    <p className="text-[11px] text-white/60">
-                      Cabang ini belum memiliki ranting.
-                    </p>
-                  ) : (
-                    <div className="border border-white/10 rounded-md overflow-hidden">
-                      <table className="w-full table-fixed text-[11px]">
-                        <thead className="bg-slate-800/60 text-amber-100/90">
-                          <tr>
-                            <th className="px-2 py-1.5 text-left w-[40%]">
-                              Nama ranting
-                            </th>
-                            <th className="px-2 py-1.5 text-left w-[20%]">
-                              Status
-                            </th>
-                            <th className="px-2 py-1.5 text-right w-[40%]">
-                              Aksi
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {panelRanting.map((r) => (
-                            <tr
-                              key={r.id}
-                              className="border-t border-white/5 hover:bg-white/5"
-                            >
-                              <td className="px-2 py-1.5 text-white/90">
-                                {r.nama}
-                              </td>
-                              <td className="px-2 py-1.5">
-                                <span
-                                  className={
-                                    r.aktif
-                                      ? "text-amber-300/90"
-                                      : "text-white/45 italic"
-                                  }
-                                >
-                                  {r.aktif ? "Aktif" : "Nonaktif"}
-                                </span>
-                              </td>
-                              <td className="px-2 py-1.5 text-right space-x-1">
-                                <a
-                                  href={`/dashboard/anggota-ranting?ranting_id=${encodeURIComponent(
-                                    r.id,
-                                  )}&ranting_nama=${encodeURIComponent(
-                                    r.nama ?? "",
-                                  )}`}
-                                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-200/90 hover:bg-amber-500/10"
-                                >
-                                  Kelola anggota
-                                </a>
+                            <td className="px-2 py-1.5 text-white/90">
+                              {r.nama}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <span
+                                className={
+                                  r.aktif
+                                    ? "text-amber-300/90"
+                                    : "text-white/45 italic"
+                                }
+                              >
+                                {r.aktif ? "Aktif" : "Nonaktif"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 text-right space-x-1">
+                              <a
+                                href={`/dashboard/anggota-ranting?ranting_id=${encodeURIComponent(
+                                  r.id,
+                                )}&ranting_nama=${encodeURIComponent(
+                                  r.nama ?? "",
+                                )}`}
+                                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-200/90 hover:bg-amber-500/10"
+                              >
+                                Kelola anggota
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedRanting(r);
+                                  setRantingFormMode("edit");
+                                  setRantingForm({
+                                    nama: r.nama ?? "",
+                                    aktif: r.aktif ?? true,
+                                    cabang_id: String(r.cabang_id ?? ""),
+                                    province_id: String(r.province_id ?? ""),
+                                    regency_id: String(r.regency_id ?? ""),
+                                    district_id: String(r.district_id ?? ""),
+                                    instagram_url: r.instagram_url ?? "",
+                                    alamat: "",
+                                    ketua_nama: "",
+                                    sekretaris_nama: "",
+                                    bendahara_nama: "",
+                                    pelatih_nama: "",
+                                  });
+                                  setRantingFormError(null);
+                                  setRantingModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 px-2 py-0.5 text-[10px] text-amber-200/90 hover:bg-amber-500/10"
+                                title="Lihat detail & ubah"
+                              >
+                                <Info size={10} />
+                                Detail & Ubah
+                              </button>
+                              {canEditDeleteRanting && (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setSelectedRanting(r);
-                                    setRantingFormMode("edit");
-                                    setRantingForm({
-                                      nama: r.nama ?? "",
-                                      aktif: r.aktif ?? true,
-                                      cabang_id: String(r.cabang_id ?? ""),
-                                      province_id: String(r.province_id ?? ""),
-                                      regency_id: String(r.regency_id ?? ""),
-                                      district_id: String(r.district_id ?? ""),
-                                      instagram_url: r.instagram_url ?? "",
-                                      alamat: "",
-                                      ketua_nama: "",
-                                      sekretaris_nama: "",
-                                      bendahara_nama: "",
-                                      pelatih_nama: "",
-                                    });
-                                    setRantingFormError(null);
-                                    setRantingModalOpen(true);
-                                  }}
-                                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 px-2 py-0.5 text-[10px] text-amber-200/90 hover:bg-amber-500/10"
-                                  title="Lihat detail & ubah"
-                                >
-                                  <Info size={10} />
-                                  Detail & Ubah
-                                </button>
-                                {canEditDeleteRanting && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      const ok = window.confirm(
-                                        `Hapus ranting \"${r.nama}\"?`,
+                                  onClick={async () => {
+                                    const ok = window.confirm(
+                                      `Hapus ranting \"${r.nama}\"?`,
+                                    );
+                                    if (!ok) return;
+                                    try {
+                                      const res = await fetch(
+                                        `/api/ranting?id=${encodeURIComponent(
+                                          r.id,
+                                        )}`,
+                                        {
+                                          method: "DELETE",
+                                          credentials: "include",
+                                        },
                                       );
-                                      if (!ok) return;
-                                      try {
-                                        const res = await fetch(
-                                          `/api/ranting?id=${encodeURIComponent(
-                                            r.id,
-                                          )}`,
-                                          {
-                                            method: "DELETE",
-                                            credentials: "include",
-                                          },
-                                        );
-                                        if (!res.ok) {
-                                          console.error(
-                                            "[HomeBase] Gagal hapus ranting",
-                                            await res.text(),
-                                          );
-                                          return;
-                                        }
-                                        setRantingList((prev) =>
-                                          prev.filter((x) => x.id !== r.id),
-                                        );
-                                        if (selectedRanting.id === r.id) {
-                                          setSelectedRanting(null);
-                                        }
-                                      } catch (e) {
+                                      if (!res.ok) {
                                         console.error(
-                                          "[HomeBase] Error hapus ranting",
-                                          e,
+                                          "[HomeBase] Gagal hapus ranting",
+                                          await res.text(),
                                         );
+                                        return;
                                       }
-                                    }}
-                                    className="inline-flex items-center gap-1 rounded-full border border-red-500/60 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"
-                                  >
-                                    <Trash2 size={10} />
-                                    Hapus
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                                      setRantingList((prev) =>
+                                        prev.filter((x) => x.id !== r.id),
+                                      );
+                                      if (selectedRanting.id === r.id) {
+                                        setSelectedRanting(null);
+                                      }
+                                    } catch (e) {
+                                      console.error(
+                                        "[HomeBase] Error hapus ranting",
+                                        e,
+                                      );
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full border border-red-500/60 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                                >
+                                  <Trash2 size={10} />
+                                  Hapus
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Ringkasan per wilayah — otomatis sesuai level */}
           <div className="rounded-2xl border border-white/10 bg-slate-800/30 p-6 space-y-4">
@@ -1949,9 +1949,7 @@ export default function HomeBaseModule() {
                     <div className="rounded-lg bg-amber-500/10 p-2">
                       <Award size={18} className="text-amber-400/80" />
                     </div>
-                    <h2 className="text-sm font-semibold text-white/95">
-                      UKT
-                    </h2>
+                    <h2 className="text-sm font-semibold text-white/95">UKT</h2>
                   </div>
                   <p className="text-xs text-white/55">
                     UKT (Ujian Kenaikan Tingkat), Ujian Kyu, Ujian Dan.
