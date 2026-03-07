@@ -21,6 +21,7 @@ type PendaftaranItem = {
   file_url: string | null;
   dikonfirmasi_at: string | null;
   kwitansi_token?: string | null;
+  alasan_tolak_bukti?: string | null;
 };
 type BatalItem = PendaftaranItem & {
   batal_at: string | null;
@@ -70,8 +71,18 @@ function useCanEditRefund(): boolean {
   }, [scope?.is_pp, structuralRoles, profileLevel]);
 }
 
+/** Hanya Cabang atau PP yang boleh verifikasi & konfirmasi lunas; Ketua Ranting tidak. */
+function useCanConfirmLunas(): boolean {
+  const { scope } = useScope();
+  return useMemo(
+    () => !!scope?.is_pp || (scope?.cabang_ids?.length ?? 0) > 0,
+    [scope?.is_pp, scope?.cabang_ids]
+  );
+}
+
 export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSelection = [], onBatalSuccess }: Props) {
   const canEditRefund = useCanEditRefund();
+  const canConfirmLunas = useCanConfirmLunas();
   const [tahunList, setTahunList] = useState<TahunAjaran[]>([]);
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
   const [data, setData] = useState<ResumeData | null>(null);
@@ -86,6 +97,9 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   const [refundUploading, setRefundUploading] = useState(false);
   const refundFileInputRef = useRef<HTMLInputElement | null>(null);
   const [printingKwitansiId, setPrintingKwitansiId] = useState<string | null>(null);
+  const [tolakModal, setTolakModal] = useState<{ id: string; nama: string } | null>(null);
+  const [tolakAlasan, setTolakAlasan] = useState("");
+  const [tolakSubmitting, setTolakSubmitting] = useState(false);
   const [showPesertaBatal, setShowPesertaBatal] = useState(false);
   const [ketuaRanting, setKetuaRanting] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -299,6 +313,37 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
     refetchResume();
   };
 
+  const handleTolakBuktiOpen = (id: string, nama: string) => {
+    setTolakModal({ id, nama });
+    setTolakAlasan("");
+  };
+
+  const handleTolakBuktiSubmit = async () => {
+    if (!tolakModal || !tolakAlasan.trim()) {
+      alert("Alasan penolakan wajib diisi.");
+      return;
+    }
+    setTolakSubmitting(true);
+    try {
+      const res = await fetch(`/api/ukt/pendaftaran/${tolakModal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status_bayar: "ditolak", alasan_tolak_bukti: tolakAlasan.trim() }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert((j.message as string) || "Gagal menolak bukti");
+        return;
+      }
+      setTolakModal(null);
+      setTolakAlasan("");
+      refetchResume();
+    } finally {
+      setTolakSubmitting(false);
+    }
+  };
+
   const handleCetakKwitansi = async (r: PendaftaranItem) => {
     if (r.status_bayar !== "lunas") return;
     setPrintingKwitansiId(r.id);
@@ -334,11 +379,12 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
           ? `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token)}`
           : "";
 
-      const [{ default: jsPDF }, { default: qrcode }] = await Promise.all([
+      const [qrRes, { default: jsPDF }] = await Promise.all([
+        fetch(`/api/qr?url=${encodeURIComponent(printUrl)}`, { credentials: "include" }),
         import("jspdf"),
-        import("qrcode"),
       ]);
-      const qrDataUrl = await qrcode.toDataURL(printUrl, { width: 120, margin: 1 });
+      if (!qrRes.ok) throw new Error("Gagal generate QR");
+      const { dataUrl: qrDataUrl } = (await qrRes.json()) as { dataUrl: string };
       const doc = new jsPDF();
       const formatRp = (n: number) =>
         new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
@@ -436,7 +482,11 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                         </span>
                       ) : r.status_bayar === "bukti_uploaded" ? (
                         <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400/90">
-                          Bukti diupload — siap diverifikasi
+                          Bukti diupload — menunggu verifikasi Cabang
+                        </span>
+                      ) : r.status_bayar === "ditolak" ? (
+                        <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-xs text-red-400/90">
+                          Ditolak oleh Cabang
                         </span>
                       ) : (
                         <span className="text-zinc-500 text-xs">Menunggu bayar</span>
@@ -448,39 +498,44 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                         : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      {r.file_url ? (
-                        <a
-                          href={r.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-amber-400/90 text-xs underline hover:text-amber-300/90"
-                        >
-                          Lihat bukti
-                        </a>
-                      ) : r.status_bayar !== "lunas" ? (
-                        <span className="flex items-center gap-1">
-                          <input
-                            ref={(el) => { fileInputRefs.current[r.id] = el; }}
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handleUploadBukti(r.id, f);
-                              e.target.value = "";
-                            }}
-                          />
-                          <button
-                            type="button"
-                            disabled={uploadingId === r.id}
-                            onClick={() => fileInputRefs.current[r.id]?.click()}
-                            className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-400 hover:bg-white/10 disabled:opacity-50"
-                          >
-                            {uploadingId === r.id ? "Mengunggah…" : "Upload bukti"}
-                          </button>
-                        </span>
-                      ) : (
+                      {r.status_bayar === "lunas" ? (
                         "—"
+                      ) : (
+                        <span className="flex items-center gap-2 flex-wrap">
+                          {r.file_url && (
+                            <a
+                              href={r.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-400/90 text-xs underline hover:text-amber-300/90"
+                            >
+                              Lihat bukti
+                            </a>
+                          )}
+                          {(r.status_bayar === "menunggu_bayar" || r.status_bayar === "ditolak") && (
+                            <>
+                              <input
+                                ref={(el) => { fileInputRefs.current[r.id] = el; }}
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleUploadBukti(r.id, f);
+                                  e.target.value = "";
+                                }}
+                              />
+                              <button
+                                type="button"
+                                disabled={uploadingId === r.id}
+                                onClick={() => fileInputRefs.current[r.id]?.click()}
+                                className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-400 hover:bg-white/10 disabled:opacity-50"
+                              >
+                                {uploadingId === r.id ? "Mengunggah…" : r.status_bayar === "ditolak" ? "Upload bukti ulang" : "Upload bukti"}
+                              </button>
+                            </>
+                          )}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -499,14 +554,36 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                               {printingKwitansiId === r.id ? "Membuat PDF…" : "Cetak kwitansi"}
                             </button>
                           </>
-                        ) : r.status_bayar === "bukti_uploaded" || r.file_url ? (
-                          <button
-                            type="button"
-                            onClick={() => handleKonfirmasiLunas(r.id, r.nama)}
-                            className="rounded-md bg-emerald-600/80 px-2 py-1 text-xs text-white hover:bg-emerald-500/80 w-fit"
-                          >
-                            Verifikasi & Konfirmasi Lunas
-                          </button>
+                        ) : r.status_bayar === "bukti_uploaded" || (r.file_url && r.status_bayar !== "ditolak") ? (
+                          canConfirmLunas ? (
+                            <span className="flex flex-wrap items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleKonfirmasiLunas(r.id, r.nama)}
+                                className="rounded-md bg-emerald-600/80 px-2 py-1 text-xs text-white hover:bg-emerald-500/80 w-fit"
+                              >
+                                Verifikasi Lunas
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTolakBuktiOpen(r.id, r.nama)}
+                                className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-400/90 hover:bg-red-500/10 w-fit"
+                              >
+                                Tolak
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-amber-400/90">
+                              Bukti diupload — menunggu verifikasi Cabang
+                            </span>
+                          )
+                        ) : r.status_bayar === "ditolak" ? (
+                          <span className="block text-xs">
+                            <span className="text-red-400/90 font-medium">Ditolak oleh Cabang</span>
+                            {r.alasan_tolak_bukti && (
+                              <span className="mt-1 block text-zinc-500">Alasan: {r.alasan_tolak_bukti}</span>
+                            )}
+                          </span>
                         ) : (
                           <span className="text-xs text-zinc-500">
                             Upload bukti terlebih dahulu
@@ -713,6 +790,41 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                 className="rounded-lg bg-red-600/90 px-4 py-2 text-sm text-white hover:bg-red-500 disabled:opacity-50"
               >
                 {batalSubmitting ? "Menyimpan…" : "Batalkan ikut UKT"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tolakModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !tolakSubmitting && setTolakModal(null)}>
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-zinc-100">Tolak bukti transfer</h3>
+            <p className="mt-1 text-sm text-zinc-500">Peserta: {tolakModal.nama}</p>
+            <p className="mt-2 text-xs text-zinc-500">Berikan alasan penolakan (wajib), misalnya: bukti TF kurang jelas, nominal tidak sesuai, dll.</p>
+            <textarea
+              value={tolakAlasan}
+              onChange={(e) => setTolakAlasan(e.target.value)}
+              rows={3}
+              placeholder="Contoh: Bukti transfer kurang jelas, nominal tidak sesuai"
+              className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-red-500/50 focus:outline-none focus:ring-1 focus:ring-red-500/30"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setTolakModal(null)}
+                disabled={tolakSubmitting}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleTolakBuktiSubmit}
+                disabled={tolakSubmitting || !tolakAlasan.trim()}
+                className="rounded-lg bg-red-600/90 px-4 py-2 text-sm text-white hover:bg-red-500 disabled:opacity-50"
+              >
+                {tolakSubmitting ? "Menyimpan…" : "Tolak bukti"}
               </button>
             </div>
           </div>

@@ -13,6 +13,7 @@ const supabaseHostname = getSupabaseHostname();
 
 const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
+  serverExternalPackages: ["qrcode"],
   // Di production: jangan kirim source map ke browser agar tab Network (DevTools)
   // tidak menampilkan path/file asli (mis. D:\inkai-app\app\dashboard\) ke client.
   productionBrowserSourceMaps: false,

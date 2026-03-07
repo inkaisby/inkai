@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 const STORAGE_KEY_UKT_PENDING = "ukt_pending_selection";
 
@@ -17,11 +18,17 @@ function getStoredSelection(tahunId: string, rantingId: string): string[] {
   }
 }
 
-function setStoredSelection(tahunId: string, rantingId: string, profileIds: string[]) {
+function setStoredSelection(
+  tahunId: string,
+  rantingId: string,
+  profileIds: string[],
+) {
   if (typeof window === "undefined" || !tahunId || !rantingId) return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY_UKT_PENDING);
-    const obj: Record<string, string[]> = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+    const obj: Record<string, string[]> = raw
+      ? (JSON.parse(raw) as Record<string, string[]>)
+      : {};
     obj[`${tahunId}|${rantingId}`] = profileIds;
     localStorage.setItem(STORAGE_KEY_UKT_PENDING, JSON.stringify(obj));
   } catch {
@@ -32,7 +39,13 @@ import { toast } from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import JarvisLoader from "@/components/JarvisLoader";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type TahunAjaran = {
   id: string;
@@ -58,7 +71,11 @@ function formatTanggal(iso: string): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    return d.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
     return iso;
   }
@@ -79,7 +96,12 @@ type Props = {
   refreshTrigger?: number;
 };
 
-export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, onSelectionChange, refreshTrigger }: Props) {
+export default function PendaftaranUKT({
+  onFilterChange,
+  onRegistrationSuccess,
+  onSelectionChange,
+  refreshTrigger,
+}: Props) {
   const { selectedContext } = useScope();
   const [tahunList, setTahunList] = useState<TahunAjaran[]>([]);
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
@@ -92,13 +114,16 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  // Collapse per grup status: "sudah_daftar" default collapsed, "batal" dan "belum" terbuka
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(["sudah_daftar"]));
 
   useEffect(() => {
     fetch("/api/ukt/tahun-ajaran", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
         setTahunList(Array.isArray(data) ? data : []);
-        if (Array.isArray(data) && data.length > 0 && !tahunId) setTahunId(data[0].id);
+        if (Array.isArray(data) && data.length > 0 && !tahunId)
+          setTahunId(data[0].id);
       })
       .catch(() => setTahunList([]))
       .finally(() => setLoadingTahun(false));
@@ -145,13 +170,14 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
   useEffect(() => {
     if (!tahunId || !rantingId || anggota.length === 0) return;
     const stored = getStoredSelection(tahunId, rantingId);
-    const valid = stored.filter(
-      (id) => anggota.some((a) => a.profile_id === id && !a.sudah_daftar)
+    const valid = stored.filter((id) =>
+      anggota.some((a) => a.profile_id === id && !a.sudah_daftar),
     );
     if (valid.length > 0) {
       setSelected((prev) => {
         const next = new Set(valid);
-        if (prev.size === next.size && valid.every((id) => prev.has(id))) return prev;
+        if (prev.size === next.size && valid.every((id) => prev.has(id)))
+          return prev;
         return next;
       });
     }
@@ -181,12 +207,36 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
     onSelectionChange(list);
   }, [selected, anggota, onSelectionChange]);
 
-  const filtered = anggota.filter(
-    (a) =>
-      !search.trim() ||
-      a.nama.toLowerCase().includes(search.toLowerCase()) ||
-      (a.nomor && a.nomor.includes(search))
+  const filtered = useMemo(
+    () =>
+      anggota.filter(
+        (a) =>
+          !search.trim() ||
+          a.nama.toLowerCase().includes(search.toLowerCase()) ||
+          (a.nomor && a.nomor.includes(search)),
+      ),
+    [anggota, search],
   );
+
+  const groups = useMemo(() => {
+    const sudahDaftar = filtered.filter((a) => a.sudah_daftar);
+    const batal = filtered.filter((a) => !a.sudah_daftar && a.sudah_batal);
+    const belum = filtered.filter((a) => !a.sudah_daftar && !a.sudah_batal);
+    return [
+      { key: "sudah_daftar", label: "Sudah daftar", items: sudahDaftar },
+      { key: "batal", label: "Batal", items: batal },
+      { key: "belum", label: "Belum daftar", items: belum },
+    ] as const;
+  }, [filtered]);
+
+  const toggleCollapse = (key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const toggle = (profileId: string) => {
     const a = anggota.find((x) => x.profile_id === profileId);
@@ -231,7 +281,7 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
       onRegistrationSuccess?.();
       toast.success(
         `${ok} peserta berhasil didaftarkan. Upload bukti & konfirmasi lunas di kolom kanan.`,
-        { duration: 5000 }
+        { duration: 5000 },
       );
       const params = new URLSearchParams({ ranting_id: rantingId });
       if (tahunId) params.set("tahun_ajaran_id", tahunId);
@@ -246,35 +296,47 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-zinc-100">Pendaftaran UKT</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Pilih tahun ajaran dan ranting. Tabel menampilkan <strong>anggota aktif di ranting</strong>; yang belum terdaftar UKT bisa dicentang untuk didaftarkan.
+          Pilih tahun ajaran dan ranting. Tabel menampilkan{" "}
+          <strong>anggota aktif di ranting</strong>; yang belum terdaftar UKT
+          bisa dicentang untuk didaftarkan.
         </p>
         <p className="mt-1 text-xs text-zinc-500">
-          Centang anggota lalu klik &quot;Daftarkan X peserta&quot; untuk menyimpan. Baris dengan status &quot;Sudah daftar&quot; tidak bisa dicentang. Hasil centang tampil di kolom kanan sebagai &quot;Menunggu simpan&quot;.
+          Centang anggota lalu klik &quot;Daftarkan X peserta&quot; untuk
+          menyimpan. Baris dengan status &quot;Sudah daftar&quot; tidak bisa
+          dicentang. Hasil centang tampil di kolom kanan sebagai &quot;Menunggu
+          simpan&quot;.
         </p>
       </div>
 
       <div className="flex flex-wrap gap-6">
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-zinc-400">Tahun Ajaran</label>
+          <label className="text-xs font-medium text-zinc-400">
+            Tahun Ajaran
+          </label>
           {loadingTahun ? (
             <span className="text-sm text-zinc-500">Memuat…</span>
           ) : (
-            <Select value={tahunId || undefined} onValueChange={(v) => setTahunId(v ?? "")}>
+            <Select
+              value={tahunId || undefined}
+              onValueChange={(v) => setTahunId(v ?? "")}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="— Pilih —" />
               </SelectTrigger>
               <SelectContent position="popper">
                 {tahunList.map((t) => {
-                const badge = t.cabang_id ? " (Cabang)" : " (Global)";
-                const detail =
-                  t.tanggal || t.tempat
-                    ? ` — ${t.tanggal ? formatTanggal(t.tanggal) : ""}${t.tanggal && t.tempat ? ", " : ""}${t.tempat ?? ""}`.trim()
-                    : "";
-                const label = `${t.nama}${badge}${detail}`;
-                return (
-                  <SelectItem key={t.id} value={t.id}>{label}</SelectItem>
-                );
-              })}
+                  const badge = t.cabang_id ? " (Cabang)" : " (Global)";
+                  const detail =
+                    t.tanggal || t.tempat
+                      ? ` — ${t.tanggal ? formatTanggal(t.tanggal) : ""}${t.tanggal && t.tempat ? ", " : ""}${t.tempat ?? ""}`.trim()
+                      : "";
+                  const label = `${t.nama}${badge}${detail}`;
+                  return (
+                    <SelectItem key={t.id} value={t.id}>
+                      {label}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           )}
@@ -284,13 +346,18 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
           {loadingRanting ? (
             <span className="text-sm text-zinc-500">Memuat…</span>
           ) : (
-            <Select value={rantingId || undefined} onValueChange={(v) => setRantingId(v ?? "")}>
+            <Select
+              value={rantingId || undefined}
+              onValueChange={(v) => setRantingId(v ?? "")}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="— Pilih —" />
               </SelectTrigger>
               <SelectContent position="popper">
                 {rantingList.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.nama}</SelectItem>
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nama}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -298,25 +365,32 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
         </div>
       </div>
 
-      {tahunId && (() => {
-        const selectedTahun = tahunList.find((t) => t.id === tahunId);
-        const qris = selectedTahun?.qris_content?.trim();
-        if (!qris) return null;
-        return (
-          <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <p className="text-sm font-medium text-zinc-200">Bayar via QRIS — {selectedTahun.nama}</p>
-            <p className="mt-1 text-xs text-zinc-500">Scan QR di bawah untuk transfer/pembayaran UKT.</p>
-            <div className="mt-3 flex items-start gap-4">
-              <div className="rounded-lg border border-white/10 bg-white p-2">
-                <QRCodeSVG value={qris} size={140} level="M" />
+      {tahunId &&
+        (() => {
+          const selectedTahun = tahunList.find((t) => t.id === tahunId);
+          const qris = selectedTahun?.qris_content?.trim();
+          if (!qris) return null;
+          return (
+            <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <p className="text-sm font-medium text-zinc-200">
+                Bayar via QRIS — {selectedTahun.nama}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Scan QR di bawah untuk transfer/pembayaran UKT.
+              </p>
+              <div className="mt-3 flex items-start gap-4">
+                <div className="rounded-lg border border-white/10 bg-white p-2">
+                  <QRCodeSVG value={qris} size={140} level="M" />
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       <div className="mt-6 flex flex-col gap-2">
-        <label className="text-xs font-medium text-zinc-400">Cari anggota (nama / no. anggota)</label>
+        <label className="text-xs font-medium text-zinc-400">
+          Cari anggota (nama / no. anggota)
+        </label>
         <input
           type="text"
           value={search}
@@ -329,7 +403,10 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
       {selected.size > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
           <span className="text-sm text-zinc-300">
-            <span className="font-medium text-amber-400/90">{selected.size}</span> peserta terpilih
+            <span className="font-medium text-amber-400/90">
+              {selected.size}
+            </span>{" "}
+            peserta terpilih
           </span>
           <button
             type="button"
@@ -343,7 +420,9 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
       )}
 
       {loadingAnggota ? (
-        <div className="mt-6"><JarvisLoader label="Memuat anggota aktif…" /></div>
+        <div className="mt-6">
+          <JarvisLoader label="Memuat anggota aktif…" />
+        </div>
       ) : (
         <>
           <div className="mt-6 overflow-x-auto rounded-lg border border-white/10">
@@ -358,39 +437,84 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, 
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((a) => (
-                  <tr key={a.profile_id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td className="px-4 py-3">
-                      {a.sudah_daftar ? (
-                        <span className="text-xs text-zinc-500">Terdaftar</span>
-                      ) : (
-                        <input
-                          type="checkbox"
-                          checked={selected.has(a.profile_id)}
-                          onChange={() => toggle(a.profile_id)}
-                          className="rounded border-white/20"
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-200">{a.nama}</td>
-                    <td className="px-4 py-3 text-zinc-400">{a.nomor}</td>
-                    <td className="px-4 py-3 text-zinc-400">{a.kyu_dan_terakhir}</td>
-                    <td className="px-4 py-3">
-                      {a.sudah_daftar ? (
-                        <span className="text-zinc-500">Sudah daftar</span>
-                      ) : a.sudah_batal ? (
-                        <span className="text-amber-400/90">Batal</span>
-                      ) : (
-                        <span className="text-zinc-500">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {groups.map(({ key, label, items }) => {
+                  if (items.length === 0) return null;
+                  const isOpen = !collapsed.has(key);
+                  return (
+                    <React.Fragment key={key}>
+                      <tr
+                        className="border-b border-white/10 bg-white/[0.04]"
+                      >
+                        <td colSpan={5} className="px-4 py-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleCollapse(key)}
+                            className="flex w-full items-center gap-2 text-left text-sm font-medium text-zinc-300 hover:text-zinc-100"
+                          >
+                            {isOpen ? (
+                              <ChevronDown className="h-4 w-4 shrink-0" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 shrink-0" />
+                            )}
+                            {label}
+                            <span className="text-zinc-500 font-normal">
+                              ({items.length})
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+                      {isOpen &&
+                        items.map((a) => (
+                          <tr
+                            key={a.profile_id}
+                            className="border-b border-white/5 hover:bg-white/[0.02]"
+                          >
+                            <td className="px-4 py-3">
+                              {a.sudah_daftar ? (
+                                <span className="text-xs text-zinc-500">
+                                  Terdaftar
+                                </span>
+                              ) : (
+                                <input
+                                  type="checkbox"
+                                  checked={selected.has(a.profile_id)}
+                                  onChange={() => toggle(a.profile_id)}
+                                  className="rounded border-white/20"
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-200">
+                              {a.nama}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-400">
+                              {a.nomor}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-400">
+                              {a.kyu_dan_terakhir}
+                            </td>
+                            <td className="px-4 py-3">
+                              {a.sudah_daftar ? (
+                                <span className="text-zinc-500">
+                                  Sudah daftar
+                                </span>
+                              ) : a.sudah_batal ? (
+                                <span className="text-amber-400/90">Batal</span>
+                              ) : (
+                                <span className="text-zinc-500">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {filtered.length === 0 && (
-            <p className="mt-4 text-sm text-zinc-500">Tidak ada anggota aktif di ranting ini.</p>
+            <p className="mt-4 text-sm text-zinc-500">
+              Tidak ada anggota aktif di ranting ini.
+            </p>
           )}
         </>
       )}

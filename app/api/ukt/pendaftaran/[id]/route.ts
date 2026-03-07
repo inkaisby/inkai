@@ -27,8 +27,10 @@ export async function PATCH(
   let body: {
     total_bayar?: number | null;
     bukti_transfer_path?: string | null;
-    status_bayar?: "menunggu_bayar" | "bukti_uploaded" | "lunas" | "batal";
+    status_bayar?: "menunggu_bayar" | "bukti_uploaded" | "lunas" | "batal" | "ditolak";
     alasan_batal?: string | null;
+    /** Alasan Cabang menolak bukti (wajib jika status_bayar = ditolak) */
+    alasan_tolak_bukti?: string | null;
     refund_jumlah?: number | null;
     refund_status?: "tidak_ada" | "pending" | "dikembalikan";
     refund_catatan?: string | null;
@@ -62,16 +64,42 @@ export async function PATCH(
   let canAccess =
     scope.is_pp ||
     (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(row.ranting_id as string));
+  let rantingCabangId: string | null = null;
   if (!canAccess && scope.cabang_ids.length > 0) {
     const { data: ranting } = await admin
       .from("ranting")
       .select("cabang_id")
       .eq("id", row.ranting_id)
       .maybeSingle();
-    canAccess = !!ranting?.cabang_id && scope.cabang_ids.includes(ranting.cabang_id as string);
+    rantingCabangId = (ranting as { cabang_id?: string | null })?.cabang_id ?? null;
+    canAccess = !!rantingCabangId && scope.cabang_ids.includes(rantingCabangId);
   }
   if (!canAccess) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
+  // Hanya Cabang atau PP yang boleh konfirmasi lunas atau tolak bukti; Ketua Ranting tidak.
+  const isVerifikasiLunasOrTolak = body.status_bayar === "lunas" || body.status_bayar === "ditolak";
+  if (isVerifikasiLunasOrTolak) {
+    let cabangId = rantingCabangId;
+    if (cabangId === null) {
+      const { data: r } = await admin.from("ranting").select("cabang_id").eq("id", row.ranting_id).maybeSingle();
+      cabangId = (r as { cabang_id?: string | null })?.cabang_id ?? null;
+    }
+    const canConfirmLunas =
+      scope.is_pp || (scope.cabang_ids.length > 0 && !!cabangId && scope.cabang_ids.includes(cabangId));
+    if (!canConfirmLunas) {
+      return NextResponse.json(
+        { message: "Hanya Cabang atau PP yang dapat verifikasi lunas atau tolak bukti" },
+        { status: 403 }
+      );
+    }
+    if (body.status_bayar === "ditolak" && !(body.alasan_tolak_bukti?.trim?.())) {
+      return NextResponse.json(
+        { message: "Alasan penolakan wajib diisi" },
+        { status: 400 }
+      );
+    }
   }
 
   const now = new Date().toISOString();
@@ -86,6 +114,10 @@ export async function PATCH(
     if (body.status_bayar === "lunas") {
       payload.dikonfirmasi_oleh = user.id;
       payload.dikonfirmasi_at = now;
+      (payload as Record<string, unknown>).alasan_tolak_bukti = null;
+    }
+    if (body.status_bayar === "ditolak") {
+      (payload as Record<string, unknown>).alasan_tolak_bukti = body.alasan_tolak_bukti?.trim() || null;
     }
     if (body.status_bayar === "batal") {
       payload.batal_at = now;
@@ -134,7 +166,9 @@ export async function PATCH(
         ? "Konfirmasi pembayaran UKT (lunas)"
         : finalStatus === "batal"
           ? "Peserta batal ikut UKT"
-          : "Perubahan data pendaftaran UKT";
+          : finalStatus === "ditolak"
+            ? "Bukti transfer ditolak oleh Cabang"
+            : "Perubahan data pendaftaran UKT";
   await insertEvent(admin, {
     user_id: user.id,
     type: "ukt_pendaftaran_update",
@@ -150,6 +184,7 @@ export async function PATCH(
         refund_status: body.refund_status ?? null,
         refund_at: body.refund_status === "dikembalikan" ? now : null,
       }),
+      ...(finalStatus === "ditolak" && { alasan_tolak_bukti: body.alasan_tolak_bukti ?? null }),
     },
   });
 

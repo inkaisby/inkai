@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
   const { data: rows, error } = await admin
     .from("ukt_pendaftaran")
-    .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token")
+    .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, alasan_tolak_bukti")
     .eq("tahun_ajaran_id", tahunAjaranId)
     .eq("ranting_id", rantingId)
     .neq("status_bayar", "batal")
@@ -109,6 +109,7 @@ export async function GET(req: NextRequest) {
       nama: profile?.nama ?? "",
       nomor: profile?.nomor ?? "",
       kwitansi_token: (r as any).kwitansi_token ? String((r as any).kwitansi_token) : null,
+      alasan_tolak_bukti: (r as any).alasan_tolak_bukti != null ? String((r as any).alasan_tolak_bukti) : null,
     };
   });
 
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
       ? sum + Number(r.total_bayar)
       : sum;
   }, 0);
-  const belum_bayar = list.filter((r) => r.status_bayar === "menunggu_bayar").length;
+  const belum_bayar = list.filter((r) => r.status_bayar === "menunggu_bayar" || r.status_bayar === "ditolak").length;
   const lunas = list.filter((r) => r.status_bayar === "lunas").length;
 
   let listBatal: BatalRow[] = [];
@@ -166,6 +167,7 @@ export async function GET(req: NextRequest) {
         refund_bukti_path: rbp,
         refund_bukti_file_url: getPublicUrl(rbp) ?? null,
         kwitansi_token: (r.kwitansi_token as string | null) ?? null,
+        alasan_tolak_bukti: null,
       };
     });
   }

@@ -94,11 +94,12 @@ export default function KeuanganModule() {
           ? `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token!)}`
           : "";
 
-      const [{ default: jsPDF }, { default: qrcode }] = await Promise.all([
+      const [qrRes, { default: jsPDF }] = await Promise.all([
+        fetch(`/api/qr?url=${encodeURIComponent(printUrl)}`, { credentials: "include" }),
         import("jspdf"),
-        import("qrcode"),
       ]);
-      const qrDataUrl = await qrcode.toDataURL(printUrl, { width: 120, margin: 1 });
+      if (!qrRes.ok) throw new Error("Gagal generate QR");
+      const { dataUrl: qrDataUrl } = (await qrRes.json()) as { dataUrl: string };
       const doc = new jsPDF();
       const formatDate = (s: string) =>
         s

@@ -73,6 +73,7 @@ export async function POST(
     .update({
       bukti_transfer_path: result.path,
       status_bayar: "bukti_uploaded",
+      alasan_tolak_bukti: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
