@@ -29,15 +29,48 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const { data: tahunList } = await admin
-    .from("ukt_tahun_ajaran")
-    .select("id, nama, tahun, periode")
-    .eq("is_active", true)
-    .order("tahun", { ascending: false })
-    .order("periode", { ascending: false })
-    .limit(1);
+  let tahunList: { id: string; nama: string; tahun: number; periode: string }[] = [];
+  if (scope.is_pp) {
+    const res = await admin
+      .from("ukt_tahun_ajaran")
+      .select("id, nama, tahun, periode")
+      .eq("is_active", true)
+      .order("tahun", { ascending: false })
+      .order("periode", { ascending: false })
+      .limit(5);
+    tahunList = (res.data ?? []) as typeof tahunList;
+  } else {
+    const [globalRes, cabangRes] = await Promise.all([
+      admin
+        .from("ukt_tahun_ajaran")
+        .select("id, nama, tahun, periode")
+        .eq("is_active", true)
+        .is("cabang_id", null)
+        .order("tahun", { ascending: false })
+        .order("periode", { ascending: false })
+        .limit(3),
+      scope.cabang_ids.length > 0
+        ? admin
+            .from("ukt_tahun_ajaran")
+            .select("id, nama, tahun, periode")
+            .eq("is_active", true)
+            .in("cabang_id", scope.cabang_ids)
+            .order("tahun", { ascending: false })
+            .order("periode", { ascending: false })
+            .limit(3)
+        : { data: [] },
+    ]);
+    const byId = new Map((globalRes.data ?? []).map((r: { id: string }) => [r.id, r]));
+    (cabangRes.data ?? []).forEach((r: { id: string }) => byId.set(r.id, r));
+    tahunList = Array.from(byId.values()).sort(
+      (a: { tahun?: number; periode?: string }, b: { tahun?: number; periode?: string }) => {
+        if ((b.tahun ?? 0) !== (a.tahun ?? 0)) return (b.tahun ?? 0) - (a.tahun ?? 0);
+        return (b.periode === "II" ? 1 : 0) - (a.periode === "II" ? 1 : 0);
+      }
+    ) as typeof tahunList;
+  }
 
-  const tahun = Array.isArray(tahunList) && tahunList.length > 0 ? tahunList[0] : null;
+  const tahun = tahunList.length > 0 ? tahunList[0] : null;
   if (!tahun) {
     return NextResponse.json({
       tahun_ajaran: null,

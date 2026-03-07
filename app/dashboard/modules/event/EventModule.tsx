@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ScrollText, ClipboardList, History } from "lucide-react";
-import PendaftaranUKT from "./components/PendaftaranUKT";
+import Link from "next/link";
+import { ScrollText, ClipboardList, History, ArrowLeft } from "lucide-react";
+import PendaftaranUKT, { type AnggotaAktifSelected } from "./components/PendaftaranUKT";
 import ResumeUKT from "./components/ResumeUKT";
 import RiwayatUKT from "./components/RiwayatUKT";
 
@@ -18,6 +19,7 @@ export default function EventModule() {
   const [filterTahunId, setFilterTahunId] = useState("");
   const [filterRantingId, setFilterRantingId] = useState("");
   const [resumeVersion, setResumeVersion] = useState(0);
+  const [pendingSelection, setPendingSelection] = useState<AnggotaAktifSelected[]>([]);
 
   const handleFilterChange = useCallback((tahunId: string, rantingId: string) => {
     setFilterTahunId(tahunId);
@@ -28,9 +30,20 @@ export default function EventModule() {
     setResumeVersion((v) => v + 1);
   }, []);
 
+  const handleSelectionChange = useCallback((members: AnggotaAktifSelected[]) => {
+    setPendingSelection(members);
+  }, []);
+
   return (
     <div className="space-y-8">
       <header className="border-b border-white/10 pb-6">
+        <Link
+          href="/dashboard/home-base"
+          className="mb-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-amber-500/30 hover:bg-white/[0.06] hover:text-amber-200/90"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" />
+          Kembali ke Dashboard
+        </Link>
         <div className="flex items-center gap-3">
           <ScrollText className="h-9 w-9 text-amber-500/80" />
           <div>
@@ -75,6 +88,7 @@ export default function EventModule() {
             <PendaftaranUKT
               onFilterChange={handleFilterChange}
               onRegistrationSuccess={handleRegistrationSuccess}
+              onSelectionChange={handleSelectionChange}
             />
           </div>
           <div className="min-w-0">
@@ -82,6 +96,7 @@ export default function EventModule() {
               tahunId={filterTahunId}
               rantingId={filterRantingId}
               resumeVersion={resumeVersion}
+              pendingSelection={pendingSelection}
             />
           </div>
         </div>

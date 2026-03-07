@@ -1,11 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
+const STORAGE_KEY_UKT_PENDING = "ukt_pending_selection";
+
+function getStoredSelection(tahunId: string, rantingId: string): string[] {
+  if (typeof window === "undefined" || !tahunId || !rantingId) return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_UKT_PENDING);
+    if (!raw) return [];
+    const obj = JSON.parse(raw) as Record<string, string[]>;
+    const key = `${tahunId}|${rantingId}`;
+    return Array.isArray(obj[key]) ? obj[key] : [];
+  } catch {
+    return [];
+  }
+}
+
+function setStoredSelection(tahunId: string, rantingId: string, profileIds: string[]) {
+  if (typeof window === "undefined" || !tahunId || !rantingId) return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_UKT_PENDING);
+    const obj: Record<string, string[]> = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+    obj[`${tahunId}|${rantingId}`] = profileIds;
+    localStorage.setItem(STORAGE_KEY_UKT_PENDING, JSON.stringify(obj));
+  } catch {
+    /* ignore */
+  }
+}
+import { toast } from "react-hot-toast";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import JarvisLoader from "@/components/JarvisLoader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type TahunAjaran = { id: string; nama: string; tahun: number; periode: string };
+type TahunAjaran = {
+  id: string;
+  nama: string;
+  tahun: number;
+  periode: string;
+  cabang_id?: string | null;
+  tanggal?: string | null;
+  tempat?: string | null;
+};
 type RantingOption = { id: string; nama: string };
 type AnggotaAktif = {
   profile_id: string;
@@ -13,14 +49,35 @@ type AnggotaAktif = {
   nomor: string;
   kyu_dan_terakhir: string;
   sudah_daftar: boolean;
+  sudah_batal?: boolean;
+};
+
+function formatTanggal(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
+export type AnggotaAktifSelected = {
+  profile_id: string;
+  nama: string;
+  nomor: string;
+  kyu_dan_terakhir: string;
 };
 
 type Props = {
   onFilterChange?: (tahunId: string, rantingId: string) => void;
   onRegistrationSuccess?: () => void;
+  onSelectionChange?: (members: AnggotaAktifSelected[]) => void;
+  /** Jika berubah, daftar anggota di-refetch (mis. setelah batal ikut). */
+  refreshTrigger?: number;
 };
 
-export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }: Props) {
+export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess, onSelectionChange, refreshTrigger }: Props) {
   const { selectedContext } = useScope();
   const [tahunList, setTahunList] = useState<TahunAjaran[]>([]);
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
@@ -80,7 +137,47 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
       .then((data) => setAnggota(Array.isArray(data) ? data : []))
       .catch(() => setAnggota([]))
       .finally(() => setLoadingAnggota(false));
-  }, [rantingId, tahunId]);
+  }, [rantingId, tahunId, refreshTrigger]);
+
+  // Restore centang dari localStorage setelah anggota load (agar tetap ada setelah refresh)
+  useEffect(() => {
+    if (!tahunId || !rantingId || anggota.length === 0) return;
+    const stored = getStoredSelection(tahunId, rantingId);
+    const valid = stored.filter(
+      (id) => anggota.some((a) => a.profile_id === id && !a.sudah_daftar)
+    );
+    if (valid.length > 0) {
+      setSelected((prev) => {
+        const next = new Set(valid);
+        if (prev.size === next.size && valid.every((id) => prev.has(id))) return prev;
+        return next;
+      });
+    }
+  }, [tahunId, rantingId, anggota]);
+
+  // Simpan centang ke localStorage saat berubah
+  useEffect(() => {
+    if (!tahunId || !rantingId) return;
+    const ids = Array.from(selected);
+    setStoredSelection(tahunId, rantingId, ids);
+  }, [tahunId, rantingId, selected]);
+
+  useEffect(() => {
+    if (!onSelectionChange) return;
+    if (selected.size === 0) {
+      onSelectionChange([]);
+      return;
+    }
+    const list = anggota
+      .filter((a) => selected.has(a.profile_id))
+      .map((a) => ({
+        profile_id: a.profile_id,
+        nama: a.nama,
+        nomor: a.nomor ?? "",
+        kyu_dan_terakhir: a.kyu_dan_terakhir ?? "",
+      }));
+    onSelectionChange(list);
+  }, [selected, anggota, onSelectionChange]);
 
   const filtered = anggota.filter(
     (a) =>
@@ -123,13 +220,17 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
       if (res.ok) ok++;
       else {
         const j = await res.json().catch(() => ({}));
-        alert(j.message || "Gagal mendaftarkan");
+        toast.error((j.message as string) || "Gagal mendaftarkan");
       }
     }
     setSaving(false);
     if (ok > 0) {
       setSelected(new Set());
       onRegistrationSuccess?.();
+      toast.success(
+        `${ok} peserta berhasil didaftarkan. Upload bukti & konfirmasi lunas di kolom kanan.`,
+        { duration: 5000 }
+      );
       const params = new URLSearchParams({ ranting_id: rantingId });
       if (tahunId) params.set("tahun_ajaran_id", tahunId);
       fetch(`/api/ukt/anggota-aktif?${params}`, { credentials: "include" })
@@ -145,6 +246,9 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
         <p className="mt-1 text-sm text-zinc-500">
           Pilih tahun ajaran dan ranting, lalu centang anggota yang akan didaftarkan.
         </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Centang anggota lalu klik tombol &quot;Daftarkan X peserta&quot; di bawah tabel untuk menyimpan. Hasil centang tampil di kolom kanan sebagai &quot;Menunggu simpan&quot;.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-6">
@@ -158,9 +262,17 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
                 <SelectValue placeholder="— Pilih —" />
               </SelectTrigger>
               <SelectContent position="popper">
-                {tahunList.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.nama}</SelectItem>
-                ))}
+                {tahunList.map((t) => {
+                const badge = t.cabang_id ? " (Cabang)" : " (Global)";
+                const detail =
+                  t.tanggal || t.tempat
+                    ? ` — ${t.tanggal ? formatTanggal(t.tanggal) : ""}${t.tanggal && t.tempat ? ", " : ""}${t.tempat ?? ""}`.trim()
+                    : "";
+                const label = `${t.nama}${badge}${detail}`;
+                return (
+                  <SelectItem key={t.id} value={t.id}>{label}</SelectItem>
+                );
+              })}
               </SelectContent>
             </Select>
           )}
@@ -195,6 +307,22 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
         />
       </div>
 
+      {selected.size > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <span className="text-sm text-zinc-300">
+            <span className="font-medium text-amber-400/90">{selected.size}</span> peserta terpilih
+          </span>
+          <button
+            type="button"
+            onClick={handleSimpan}
+            disabled={saving}
+            className="rounded-lg bg-amber-600/90 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+          >
+            {saving ? "Menyimpan…" : `Daftarkan ${selected.size} peserta`}
+          </button>
+        </div>
+      )}
+
       {loadingAnggota ? (
         <div className="mt-6"><JarvisLoader label="Memuat anggota aktif…" /></div>
       ) : (
@@ -228,7 +356,15 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
                     <td className="px-4 py-3 text-zinc-200">{a.nama}</td>
                     <td className="px-4 py-3 text-zinc-400">{a.nomor}</td>
                     <td className="px-4 py-3 text-zinc-400">{a.kyu_dan_terakhir}</td>
-                    <td className="px-4 py-3 text-zinc-500">{a.sudah_daftar ? "Sudah daftar" : "—"}</td>
+                    <td className="px-4 py-3">
+                      {a.sudah_daftar ? (
+                        <span className="text-zinc-500">Sudah daftar</span>
+                      ) : a.sudah_batal ? (
+                        <span className="text-amber-400/90">Batal</span>
+                      ) : (
+                        <span className="text-zinc-500">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -236,19 +372,6 @@ export default function PendaftaranUKT({ onFilterChange, onRegistrationSuccess }
           </div>
           {filtered.length === 0 && (
             <p className="mt-4 text-sm text-zinc-500">Tidak ada anggota aktif di ranting ini.</p>
-          )}
-
-          {selected.size > 0 && (
-            <div className="mt-6 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleSimpan}
-                disabled={saving}
-                className="rounded-lg bg-amber-600/90 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
-              >
-                {saving ? "Menyimpan…" : `Daftarkan ${selected.size} peserta`}
-              </button>
-            </div>
           )}
         </>
       )}

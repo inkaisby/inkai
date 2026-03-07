@@ -39,14 +39,17 @@ export async function GET(req: NextRequest) {
   const ids = list.map((p) => p.id);
 
   const terdaftarSet = new Set<string>();
+  const batalSet = new Set<string>();
   if (tahunAjaranId && ids.length > 0) {
     const { data: pd } = await admin
       .from("ukt_pendaftaran")
-      .select("profile_id")
+      .select("profile_id, status_bayar")
       .eq("tahun_ajaran_id", tahunAjaranId)
-      .in("profile_id", ids)
-      .neq("status_bayar", "batal");
-    (pd ?? []).forEach((r: { profile_id: string }) => terdaftarSet.add(r.profile_id));
+      .in("profile_id", ids);
+    (pd ?? []).forEach((r: { profile_id: string; status_bayar?: string }) => {
+      if (r.status_bayar === "batal") batalSet.add(r.profile_id);
+      else terdaftarSet.add(r.profile_id);
+    });
   }
 
   const kyuMap = new Map<string, number>();
@@ -83,6 +86,8 @@ export async function GET(req: NextRequest) {
         .getPublicUrl(p.avatar_path);
       avatarUrl = data?.publicUrl ?? null;
     }
+    const sudah_daftar = terdaftarSet.has(p.id);
+    const sudah_batal = batalSet.has(p.id);
     return {
       profile_id: p.id,
       user_id: (p as { user_id?: string | null }).user_id ?? null,
@@ -91,7 +96,8 @@ export async function GET(req: NextRequest) {
       nik: p.nik ?? "",
       status: p.status ?? "",
       kyu_dan_terakhir: fmt(p.id),
-      sudah_daftar: terdaftarSet.has(p.id),
+      sudah_daftar,
+      sudah_batal,
       avatar_url: avatarUrl,
     };
   });

@@ -28,6 +28,11 @@ export async function PATCH(
     total_bayar?: number | null;
     bukti_transfer_path?: string | null;
     status_bayar?: "menunggu_bayar" | "bukti_uploaded" | "lunas" | "batal";
+    alasan_batal?: string | null;
+    refund_jumlah?: number | null;
+    refund_status?: "tidak_ada" | "pending" | "dikembalikan";
+    refund_catatan?: string | null;
+    refund_bukti_path?: string | null;
   } = {};
   try {
     body = await req.json();
@@ -39,7 +44,7 @@ export async function PATCH(
 
   const { data: row, error: fetchErr } = await admin
     .from("ukt_pendaftaran")
-    .select("id, ranting_id, status_bayar")
+    .select("id, ranting_id, status_bayar, profile_id, tahun_ajaran_id")
     .eq("id", id)
     .single();
 
@@ -58,8 +63,10 @@ export async function PATCH(
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
+  const now = new Date().toISOString();
+  const currentStatus = (row as { status_bayar?: string }).status_bayar;
   const payload: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   };
   if (body.total_bayar !== undefined) payload.total_bayar = body.total_bayar;
   if (body.bukti_transfer_path !== undefined) payload.bukti_transfer_path = body.bukti_transfer_path;
@@ -67,8 +74,26 @@ export async function PATCH(
     payload.status_bayar = body.status_bayar;
     if (body.status_bayar === "lunas") {
       payload.dikonfirmasi_oleh = user.id;
-      payload.dikonfirmasi_at = new Date().toISOString();
+      payload.dikonfirmasi_at = now;
     }
+    if (body.status_bayar === "batal") {
+      payload.batal_at = now;
+      if (body.alasan_batal !== undefined) payload.alasan_batal = body.alasan_batal?.trim() || null;
+      if (body.refund_jumlah !== undefined) payload.refund_jumlah = body.refund_jumlah;
+      if (body.refund_status !== undefined) payload.refund_status = body.refund_status ?? "tidak_ada";
+      if (body.refund_catatan !== undefined) payload.refund_catatan = body.refund_catatan?.trim() || null;
+      if (body.refund_status === "dikembalikan") payload.refund_at = now;
+    }
+  }
+  // Cabang: update hanya refund untuk record yang sudah batal (tanpa mengirim status_bayar)
+  if (currentStatus === "batal" && (body.refund_status !== undefined || body.refund_jumlah !== undefined || body.refund_catatan !== undefined || body.refund_bukti_path !== undefined)) {
+    if (body.refund_jumlah !== undefined) payload.refund_jumlah = body.refund_jumlah;
+    if (body.refund_status !== undefined) {
+      payload.refund_status = body.refund_status ?? "tidak_ada";
+      if (body.refund_status === "dikembalikan") payload.refund_at = now;
+    }
+    if (body.refund_catatan !== undefined) payload.refund_catatan = body.refund_catatan?.trim() || null;
+    if (body.refund_bukti_path !== undefined) payload.refund_bukti_path = body.refund_bukti_path?.trim() || null;
   }
 
   const { data: updated, error } = await admin
@@ -83,19 +108,31 @@ export async function PATCH(
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  // Event notifikasi: perubahan status / pembayaran
+  const finalStatus = (updated as { status_bayar?: string })?.status_bayar ?? body.status_bayar ?? currentStatus;
+  const onlyRefundUpdate = currentStatus === "batal" && body.status_bayar === undefined && (body.refund_status !== undefined || body.refund_jumlah !== undefined);
+  const title =
+    onlyRefundUpdate
+      ? "Pengembalian dana UKT (peserta batal)"
+      : finalStatus === "lunas"
+        ? "Konfirmasi pembayaran UKT (lunas)"
+        : finalStatus === "batal"
+          ? "Peserta batal ikut UKT"
+          : "Perubahan data pendaftaran UKT";
   await insertEvent(admin, {
     user_id: user.id,
     type: "ukt_pendaftaran_update",
-    title:
-      body.status_bayar === "lunas"
-        ? "Konfirmasi pembayaran UKT (lunas)"
-        : "Perubahan data pendaftaran UKT",
+    title,
     module: "ukt",
     detail: {
       id,
-      status_bayar: body.status_bayar ?? row.status_bayar,
+      status_bayar: finalStatus,
       total_bayar: body.total_bayar ?? null,
+      ...((finalStatus === "batal" || onlyRefundUpdate) && {
+        alasan_batal: body.alasan_batal ?? null,
+        refund_jumlah: body.refund_jumlah ?? null,
+        refund_status: body.refund_status ?? null,
+        refund_at: body.refund_status === "dikembalikan" ? now : null,
+      }),
     },
   });
 

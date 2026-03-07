@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 
 import Sidebar from "./components/dashboard/Sidebar";
@@ -80,16 +80,32 @@ export default function DashboardLayout({
     };
   }, [getValid, setBootstrap, setLoading, rehydrateFromStorage]);
 
+  /* Scroll hanya di area konten; halaman browser (body) tidak ikut scroll. */
+  useLayoutEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   return (
-    <div className="flex h-screen bg-black text-white overflow-hidden">
+    <div className="flex h-[100dvh] max-h-[100dvh] bg-black text-white overflow-hidden">
       {!hideSidebar && <Sidebar />}
 
       <ScopeProvider>
-        <div className="flex flex-col flex-1 min-w-0">
-          <TopbarContainer />
+        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+          <header className="flex-shrink-0">
+            <TopbarContainer />
+          </header>
           <ProfileModal />
           <SettingsModalProvider />
-          <main className="flex-1 overflow-auto p-4 sm:p-6 min-w-0">{children}</main>
+          <main
+            className="dashboard-main-scroll flex-1 min-h-0 overflow-y-scroll overflow-x-hidden p-4 sm:p-6 min-w-0 overscroll-contain"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {children}
+          </main>
         </div>
       </ScopeProvider>
     </div>

@@ -68,6 +68,7 @@ function TopbarContent() {
     const key = segments[1];
     if (!key) return "Home";
     if (key === "home-base") return "Dashboard";
+    if (key === "ujian" || key === "audit-ujian") return "UKT";
     return key.replace(/-/g, " ").toUpperCase();
   }, [pathname]);
 
