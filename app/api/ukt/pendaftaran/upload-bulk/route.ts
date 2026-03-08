@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Pendaftaran tidak ditemukan" }, { status: 404 });
   }
 
-  const rantingIds = [...new Set((rows as { ranting_id: string }[]).map((r) => r.ranting_id))];
+  const rantingIds = Array.from(new Set((rows as { ranting_id: string }[]).map((r) => r.ranting_id)));
   if (rantingIds.length > 1) {
     return NextResponse.json({ message: "Semua peserta harus dari ranting yang sama" }, { status: 400 });
   }
