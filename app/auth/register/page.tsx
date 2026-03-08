@@ -24,7 +24,7 @@ export default function RegisterForm() {
 
   // Render form hanya setelah mount agar tidak hydration mismatch (ekstensi browser bisa ubah DOM sebelum React)
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   // helper error (blink)

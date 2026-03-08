@@ -134,7 +134,7 @@ export default function ProfileModal() {
     rantingLocked || (profile?.rantingLocked === true);
 
   useEffect(() => {
-    setProvincesLoading(true);
+    queueMicrotask(() => setProvincesLoading(true));
     getProvinces()
       .then((res) => setProvinceOptions(toOptions(res)))
       .catch(() => setProvinceOptions([]))

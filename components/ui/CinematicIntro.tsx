@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import SakuraEffect from "../effects/SakuraEffect";
 
 const INTRO_DURATION_MS = 4000;
@@ -23,19 +23,19 @@ export default function CinematicIntro({
       duration: 6 + Math.random() * 4,
       delay: Math.random() * 1.6,
     }));
-    setParticles(arr);
+    queueMicrotask(() => setParticles(arr));
   }, []);
 
-  const handleFinish = () => {
+  const handleFinish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     onFinish();
-  };
+  }, [onFinish]);
 
   useEffect(() => {
     const t = setTimeout(handleFinish, INTRO_DURATION_MS);
     return () => clearTimeout(t);
-  }, [onFinish]);
+  }, [handleFinish]);
 
   return (
     <motion.div

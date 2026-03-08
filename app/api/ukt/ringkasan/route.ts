@@ -1,5 +1,5 @@
 /**
- * GET /api/audit-ujian/ringkasan
+ * GET /api/ukt/ringkasan
  * Ringkasan dari tabel Supabase: ujian, ujian_peserta, ujian_hasil.
  */
 export const runtime = "nodejs";
@@ -77,7 +77,7 @@ export async function GET() {
 
     return NextResponse.json(defaultPayload);
   } catch (e) {
-    console.error("[audit-ujian/ringkasan]", e);
+    console.error("[ukt/ringkasan]", e);
     return emptyPayload();
   }
 }

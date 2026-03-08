@@ -12,6 +12,8 @@ type RantingOption = { id: string; nama: string };
 type PendaftaranItem = {
   id: string;
   profile_id: string;
+  ranting_id?: string;
+  ranting_nama?: string;
   nama: string;
   nomor: string;
   kyu_dan_terakhir: string;
@@ -32,6 +34,7 @@ type BatalItem = PendaftaranItem & {
   refund_catatan: string | null;
   refund_bukti_path: string | null;
   refund_bukti_file_url: string | null;
+  ranting_nama?: string;
 };
 type ResumeData = {
   list: PendaftaranItem[];
@@ -80,11 +83,14 @@ function useCanConfirmLunas(): boolean {
   );
 }
 
+const REPORT_ALL = "all";
+
 export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSelection = [], onBatalSuccess }: Props) {
   const canEditRefund = useCanEditRefund();
   const canConfirmLunas = useCanConfirmLunas();
   const [tahunList, setTahunList] = useState<TahunAjaran[]>([]);
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
+  const [reportRantingId, setReportRantingId] = useState<string>(REPORT_ALL);
   const [data, setData] = useState<ResumeData | null>(null);
   const [loadingResume, setLoadingResume] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -101,7 +107,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   const [tolakAlasan, setTolakAlasan] = useState("");
   const [tolakSubmitting, setTolakSubmitting] = useState(false);
   const [showPesertaBatal, setShowPesertaBatal] = useState(false);
-  const [ketuaRanting, setKetuaRanting] = useState<string | null>(null);
+  const [ketuaRanting] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const refetchResumeRef = useRef<() => void>(() => {});
 
@@ -119,13 +125,16 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
       .catch(() => setRantingList([]));
   }, []);
 
+  const effectiveReportRanting = reportRantingId === REPORT_ALL ? REPORT_ALL : reportRantingId;
+  const canFetchReport = tahunId && (effectiveReportRanting === REPORT_ALL || effectiveReportRanting);
+
   useEffect(() => {
-    if (!tahunId || !rantingId) {
+    if (!canFetchReport) {
       setData(null);
       return;
     }
     setLoadingResume(true);
-    const url = `/api/ukt/pendaftaran?tahun_ajaran_id=${encodeURIComponent(tahunId)}&ranting_id=${encodeURIComponent(rantingId)}&include_batal=true`;
+    const url = `/api/ukt/pendaftaran?tahun_ajaran_id=${encodeURIComponent(tahunId)}&ranting_id=${encodeURIComponent(effectiveReportRanting)}&include_batal=true`;
     fetch(url, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
@@ -134,12 +143,12 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
       })
       .catch(() => setData(null))
       .finally(() => setLoadingResume(false));
-  }, [tahunId, rantingId, resumeVersion]);
+  }, [tahunId, reportRantingId, resumeVersion]);
 
   const refetchResume = () => {
-    if (!tahunId || !rantingId) return;
+    if (!canFetchReport) return;
     setLoadingResume(true);
-    const url = `/api/ukt/pendaftaran?tahun_ajaran_id=${encodeURIComponent(tahunId)}&ranting_id=${encodeURIComponent(rantingId)}&include_batal=true`;
+    const url = `/api/ukt/pendaftaran?tahun_ajaran_id=${encodeURIComponent(tahunId)}&ranting_id=${encodeURIComponent(effectiveReportRanting)}&include_batal=true`;
     fetch(url, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => (d.list && d.summary ? setData(d) : setData(null)))
@@ -147,18 +156,18 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   };
   refetchResumeRef.current = refetchResume;
 
-  // Realtime: ketika ranting/cabang lain mengubah pendaftaran (daftar, batal, refund), data ikut ter-update
+  // Realtime: ketika ranting/cabang lain mengubah pendaftaran (daftar, batal, refund), data ikut ter-update (hanya saat laporan per ranting)
   useEffect(() => {
-    if (!rantingId) return;
+    if (effectiveReportRanting === REPORT_ALL) return;
     const channel = supabase
-      .channel(`ukt_pendaftaran:${rantingId}`)
+      .channel(`ukt_pendaftaran:${effectiveReportRanting}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "ukt_pendaftaran",
-          filter: `ranting_id=eq.${rantingId}`,
+          filter: `ranting_id=eq.${effectiveReportRanting}`,
         },
         () => refetchResumeRef.current()
       )
@@ -166,7 +175,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [rantingId]);
+  }, [effectiveReportRanting]);
 
   const handleUploadBukti = async (id: string, file: File) => {
     setUploadingId(id);
@@ -414,11 +423,18 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
     }
   };
 
-  const rantingNama = rantingList.find((r) => r.id === rantingId)?.nama ?? "—";
+  const reportRantingNama =
+    effectiveReportRanting === REPORT_ALL
+      ? "Semua Ranting"
+      : rantingList.find((r) => r.id === effectiveReportRanting)?.nama ?? "—";
   const tahunNama = tahunList.find((t) => t.id === tahunId)?.nama ?? "—";
+  const isReportAll = effectiveReportRanting === REPORT_ALL;
 
   const savedProfileIds = new Set((data?.list ?? []).map((r) => r.profile_id));
-  const pendingRows = pendingSelection.filter((p) => !savedProfileIds.has(p.profile_id));
+  const pendingRows =
+    effectiveReportRanting === rantingId
+      ? pendingSelection.filter((p) => !savedProfileIds.has(p.profile_id))
+      : [];
   const hasPending = pendingRows.length > 0;
   const totalRows = (data?.list?.length ?? 0) + pendingRows.length;
 
@@ -427,13 +443,44 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-zinc-100">Laporan Pendaftaran UKT</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Ringkasan peserta untuk tahun & ranting yang dipilih di kolom kiri; upload bukti & konfirmasi lunas.
+          Ringkasan peserta untuk tahun ajaran & ranting yang dipilih; upload bukti & konfirmasi lunas.
         </p>
+        {tahunId && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-zinc-500">Tampilkan laporan:</span>
+            <Select
+              value={reportRantingId || undefined}
+              onValueChange={(v) => setReportRantingId(v ?? REPORT_ALL)}
+            >
+              <SelectTrigger className="w-[220px] border-white/10 bg-white/5 text-zinc-200 focus:border-zinc-500 focus:ring-zinc-500/30">
+                <SelectValue placeholder="Semua Ranting" />
+              </SelectTrigger>
+              <SelectContent className="border-white/10 bg-zinc-900">
+                <SelectItem value={REPORT_ALL} className="text-zinc-200 focus:bg-white/10 focus:text-zinc-100 data-[highlighted]:bg-white/10 data-[highlighted]:text-zinc-100">
+                  Semua Ranting
+                </SelectItem>
+                {rantingList.map((r) => (
+                  <SelectItem
+                    key={r.id}
+                    value={r.id}
+                    className="text-zinc-200 focus:bg-white/10 focus:text-zinc-100 data-[highlighted]:bg-white/10 data-[highlighted]:text-zinc-100"
+                  >
+                    {r.nama}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
-      {!tahunId || !rantingId ? (
+      {!tahunId ? (
         <p className="text-sm text-zinc-500">
-          Pilih tahun ajaran dan ranting di kolom Pendaftaran (kiri) untuk menampilkan laporan.
+          Pilih tahun ajaran di kolom Pendaftaran (kiri) untuk menampilkan laporan.
+        </p>
+      ) : !canFetchReport ? (
+        <p className="text-sm text-zinc-500">
+          Pilih &quot;Semua Ranting&quot; atau satu ranting di atas untuk menampilkan laporan.
         </p>
       ) : loadingResume ? (
         <div className="mt-6"><JarvisLoader label="Memuat resume…" /></div>
@@ -441,7 +488,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
         <>
           <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.02] p-4">
             <h3 className="text-sm font-medium text-zinc-200">
-              Ranting: {rantingNama} — Tahun Ajaran: {tahunNama}
+              Ranting: {reportRantingNama} — Tahun Ajaran: {tahunNama}
             </h3>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-zinc-400">
               <span>Total peserta: {data?.summary?.total ?? 0}{hasPending ? ` (+ ${pendingRows.length} akan didaftarkan)` : ""}</span>
@@ -460,6 +507,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.02] text-left text-zinc-400">
+                  {isReportAll && <th className="px-4 py-3">Ranting</th>}
                   <th className="px-4 py-3">Peserta</th>
                   <th className="px-4 py-3">No. Anggota</th>
                   <th className="px-4 py-3">Kyu/Dan</th>
@@ -472,6 +520,9 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
               <tbody>
                 {(data?.list ?? []).map((r) => (
                   <tr key={r.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                    {isReportAll && (
+                      <td className="px-4 py-3 text-zinc-400">{r.ranting_nama ?? r.ranting_id ?? "—"}</td>
+                    )}
                     <td className="px-4 py-3 text-zinc-200">{r.nama}</td>
                     <td className="px-4 py-3 text-zinc-400">{r.nomor}</td>
                     <td className="px-4 py-3 text-zinc-400">{r.kyu_dan_terakhir}</td>
@@ -638,6 +689,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-white/10 bg-white/[0.02] text-left text-zinc-400">
+                        {isReportAll && <th className="px-4 py-3">Ranting</th>}
                         <th className="px-4 py-3">Peserta</th>
                         <th className="px-4 py-3">No. Anggota</th>
                         <th className="px-4 py-3">Batal pada</th>
@@ -651,6 +703,9 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                     <tbody>
                       {data!.list_batal!.map((b) => (
                         <tr key={b.id} className="border-b border-white/5 text-zinc-400">
+                          {isReportAll && (
+                            <td className="px-4 py-3 text-zinc-400">{b.ranting_nama ?? b.ranting_id ?? "—"}</td>
+                          )}
                           <td className="px-4 py-3 text-zinc-200">{b.nama}</td>
                           <td className="px-4 py-3">{b.nomor}</td>
                           <td className="px-4 py-3">
@@ -701,7 +756,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
           )}
         </>
       ) : (
-        <p className="mt-6 text-sm text-zinc-500">Pilih tahun ajaran dan ranting di kolom kiri. Centang anggota lalu klik Daftarkan.</p>
+        <p className="mt-6 text-sm text-zinc-500">Belum ada peserta untuk filter ini. Centang anggota di kolom kiri lalu klik Daftarkan (untuk satu ranting).</p>
       )}
 
       {batalModal && (

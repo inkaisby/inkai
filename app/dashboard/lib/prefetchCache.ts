@@ -30,7 +30,8 @@ export function urlToCacheKey(url: string): string {
 /** Route key → URL API yang akan diprefetch saat hover */
 export const PREFETCH_APIS: Record<string, string[]> = {
   keanggotaan: ["/api/keanggotaan/profile", "/api/keanggotaan/riwayat"],
-  ujian: ["/api/audit-ujian/ringkasan"],
+  ujian: ["/api/ukt/ringkasan"],
+  ukt: ["/api/ukt/ringkasan"],
 };
 
 export function prefetchForRoute(routeKey: string): void {

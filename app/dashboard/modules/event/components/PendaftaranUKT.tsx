@@ -127,10 +127,11 @@ export default function PendaftaranUKT({
       })
       .catch(() => setTahunList([]))
       .finally(() => setLoadingTahun(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: init tahun list once
   }, []);
 
   useEffect(() => {
-    setLoadingRanting(true);
+    queueMicrotask(() => setLoadingRanting(true));
     fetch("/api/ranting", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
@@ -145,6 +146,7 @@ export default function PendaftaranUKT({
       })
       .catch(() => setRantingList([]))
       .finally(() => setLoadingRanting(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ranting list by selectedContext only
   }, [selectedContext]);
 
   useEffect(() => {
@@ -153,10 +155,10 @@ export default function PendaftaranUKT({
 
   useEffect(() => {
     if (!rantingId) {
-      setAnggota([]);
+      queueMicrotask(() => setAnggota([]));
       return;
     }
-    setLoadingAnggota(true);
+    queueMicrotask(() => setLoadingAnggota(true));
     const params = new URLSearchParams({ ranting_id: rantingId });
     if (tahunId) params.set("tahun_ajaran_id", tahunId);
     fetch(`/api/ukt/anggota-aktif?${params}`, { credentials: "include" })
@@ -174,11 +176,13 @@ export default function PendaftaranUKT({
       anggota.some((a) => a.profile_id === id && !a.sudah_daftar),
     );
     if (valid.length > 0) {
-      setSelected((prev) => {
-        const next = new Set(valid);
-        if (prev.size === next.size && valid.every((id) => prev.has(id)))
-          return prev;
-        return next;
+      queueMicrotask(() => {
+        setSelected((prev) => {
+          const next = new Set(valid);
+          if (prev.size === next.size && valid.every((id) => prev.has(id)))
+            return prev;
+          return next;
+        });
       });
     }
   }, [tahunId, rantingId, anggota]);
@@ -252,8 +256,6 @@ export default function PendaftaranUKT({
   const handleSimpan = async () => {
     if (!tahunId || !rantingId || selected.size === 0) return;
     setSaving(true);
-    const tahun = tahunList.find((t) => t.id === tahunId);
-    const kyuDanLabel = tahun?.nama ?? "";
     let ok = 0;
     const selectedIds = Array.from(selected);
     for (const profileId of selectedIds) {

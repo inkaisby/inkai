@@ -14,6 +14,13 @@ const supabaseHostname = getSupabaseHostname();
 const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   serverExternalPackages: ["qrcode"],
+  async redirects() {
+    return [
+      { source: "/dashboard/audit", destination: "/dashboard/ukt", permanent: false },
+      { source: "/dashboard/ujian", destination: "/dashboard/ukt", permanent: false },
+      { source: "/dashboard/audit-ujian", destination: "/dashboard/ukt", permanent: false },
+    ];
+  },
   // Di production: jangan kirim source map ke browser agar tab Network (DevTools)
   // tidak menampilkan path/file asli (mis. D:\inkai-app\app\dashboard\) ke client.
   productionBrowserSourceMaps: false,

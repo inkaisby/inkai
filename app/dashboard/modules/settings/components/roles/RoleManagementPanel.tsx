@@ -119,7 +119,7 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId, 
           label: `${LEVEL_LABELS[L] ?? `Level ${L}`} — ${formatRoleLabel(r.role_name)}`,
         }))
       ),
-    [structuralMaster, sortedLevels]
+    [sortedLevels, rolesByLevel]
   );
 
   /* ================= LOAD DATA ================= */

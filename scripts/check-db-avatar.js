@@ -20,7 +20,7 @@ async function main() {
   console.log("=== Cek DB: profiles.avatar_path ===\n");
 
   // 1. Cek kolom avatar_path ada atau tidak
-  const { data: cols, error: colErr } = await admin
+  const { error: colErr } = await admin
     .from("profiles")
     .select("id")
     .limit(1);
@@ -73,7 +73,6 @@ async function main() {
   console.log("-".repeat(100));
 
   for (const p of profiles || []) {
-    const ap = p.avatar_path ?? "(null)";
     const status = p.avatar_path ? "✓ ada" : "✗ kosong";
     const uid = p.user_id ?? "(null)";
     const idMatch = uid === p.id ? "id=user_id" : "id≠user_id";

@@ -45,7 +45,9 @@ function TopbarContent() {
 
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    queueMicrotask(() => setMounted(true));
+  }, []);
 
   const { userLabel, jabatan } = useMemo(() => {
     if (!user) return { userLabel: null as string | null, jabatan: null as string | null };
@@ -68,7 +70,7 @@ function TopbarContent() {
     const key = segments[1];
     if (!key) return "Home";
     if (key === "home-base") return "Dashboard";
-    if (key === "ujian" || key === "audit-ujian") return "UKT (Ujian Kenaikan Tingkat)";
+    if (key === "ukt" || key === "ujian" || key === "audit-ujian") return "UKT (Ujian Kenaikan Tingkat)";
     return key.replace(/-/g, " ").toUpperCase();
   }, [pathname]);
 

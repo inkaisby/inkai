@@ -28,7 +28,7 @@ export async function insertEvent(
     });
   } catch (e) {
     // Jangan pernah memblokir alur utama hanya karena logging gagal
-    // eslint-disable-next-line no-console
+     
     console.warn("[insertEvent] gagal insert events:", e);
   }
 }

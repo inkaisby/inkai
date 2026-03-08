@@ -45,14 +45,14 @@ export default function RantingModule() {
     const res = await fetch("/api/cabang", { credentials: "include" });
     if (!res.ok) {
       setCabangList([]);
-      // eslint-disable-next-line no-console
+       
       console.warn("[RantingModule] Gagal memuat cabang:", res.status);
       return;
     }
     const data = await res.json();
     const list = Array.isArray(data) ? data : [];
     setCabangList(list);
-    // eslint-disable-next-line no-console
+     
     console.log("[RantingModule] cabang loaded", list);
   }, []);
 

@@ -13,12 +13,6 @@ export const ACTION_MAP: Record<string, Record<string, string>> = {
     update: "USER_EDIT",
     delete: "USER_DELETE",
   },
-  siswa: {
-    read: "SISWA_VIEW",
-    create: "SISWA_CREATE",
-    update: "SISWA_EDIT",
-    delete: "SISWA_DELETE",
-  },
   inventaris: {
     read: "INVENTARIS_VIEW",
     create: "INVENTARIS_CREATE",
@@ -26,6 +20,8 @@ export const ACTION_MAP: Record<string, Record<string, string>> = {
     delete: "INVENTARIS_DELETE",
   },
 };
+
+type PermissionsRow = { actions?: string[] };
 
 /* ===============================
  * GET USER PERMISSIONS
@@ -40,12 +36,13 @@ export async function getUserPermissions(email: string) {
 
   if (error || !data) return {};
 
-  const permissions: Record<string, any> = {};
+  const row = data as PermissionsRow;
+  const permissions: Record<string, Record<string, boolean>> = {};
 
   for (const [scope, map] of Object.entries(ACTION_MAP)) {
     permissions[scope] = {};
     for (const [crud, actionCode] of Object.entries(map)) {
-      permissions[scope][crud] = data.actions?.includes(actionCode) ?? false;
+      permissions[scope][crud] = row.actions?.includes(actionCode) ?? false;
     }
   }
 
@@ -57,7 +54,7 @@ export async function getUserPermissions(email: string) {
  * =============================== */
 export async function saveUserPermissions(
   email: string,
-  permissions: Record<string, any>,
+  permissions: Record<string, Record<string, boolean>>,
 ) {
   const supabaseAdmin = createSupabaseAdminClient();
   const actions = new Set<string>();
@@ -66,7 +63,7 @@ export async function saveUserPermissions(
     const map = ACTION_MAP[scope];
     if (!map) continue;
 
-    for (const [crud, enabled] of Object.entries(perms as any)) {
+    for (const [crud, enabled] of Object.entries(perms)) {
       if (enabled && map[crud]) {
         actions.add(map[crud]);
       }

@@ -49,23 +49,12 @@ export default function MenuList() {
 
       setOpen(false);
       setEditing(undefined);
-    } catch (err: any) {
-      alert(err.message ?? "Terjadi kesalahan");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setProcessing(false);
     }
   }
-  async function handleDelete(id: string) {
-    try {
-      setProcessing(true);
-      await deleteMenu(id);
-    } catch (err: any) {
-      alert(err.message ?? "Gagal hapus");
-    } finally {
-      setProcessing(false);
-    }
-  }
-
   if (loading || isSuperadmin === null) {
     return <JarvisLoader label="Memuat menu…" />;
   }
@@ -166,8 +155,8 @@ export default function MenuList() {
                         onClick={async () => {
                           try {
                             await deleteMenu(m.id);
-                          } catch (err: any) {
-                            alert(err.message ?? "Gagal hapus");
+                          } catch (err: unknown) {
+                            alert(err instanceof Error ? err.message : "Gagal hapus");
                           }
                         }}
                         className="px-2 py-1 text-xs border border-red-500/40 text-red-400 rounded"

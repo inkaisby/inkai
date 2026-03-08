@@ -70,6 +70,7 @@ export default function useRantingOptions(params?: UseRantingOptionsParams) {
       }
     };
     fetchRanting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: fetch once when wilayah ids change; complex deps
   }, [provinceId ?? "", regencyId ?? "", districtId ?? "", contextRantingId ?? ""]);
 
   return { options, loading };

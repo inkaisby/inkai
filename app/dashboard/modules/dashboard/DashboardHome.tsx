@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Trophy,
-  Calendar,
   Instagram,
   ShoppingBag,
   Heart,
@@ -74,7 +73,6 @@ const storyAccents = ["teal", "amber", "slate"] as const;
 /* ================= STATS & MODULES ================= */
 const stats = [
   { label: "Event Aktif", value: "—", href: "/dashboard/event", accent: "amber", icon: Trophy },
-  { label: "Jadwal Terdekat", value: "—", href: "/dashboard/jadwal", accent: "slate", icon: Calendar },
 ];
 
 const accentStyles: Record<string, { card: string; border: string; text: string; icon: string }> = {

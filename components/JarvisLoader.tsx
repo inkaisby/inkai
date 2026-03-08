@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 type JarvisLoaderProps = {
@@ -8,7 +9,8 @@ type JarvisLoaderProps = {
 };
 
 export default function JarvisLoader({
-  mode = "inkai",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future variant
+  mode: _mode = "inkai",
   label,
 }: JarvisLoaderProps) {
   return (
@@ -28,10 +30,12 @@ export default function JarvisLoader({
       />
 
       {/* Logo */}
-      <img
+      <Image
         src="/logo/inkai-logo.png"
         alt="INKAI Logo"
-        className="w-40 h-40 relative z-10"
+        width={160}
+        height={160}
+        className="relative z-10"
       />
 
       {/* Text default */}

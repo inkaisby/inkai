@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  let { data, error } = await query;
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json(
@@ -135,9 +135,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  let result = data ?? [];
+
   // Agar nama ranting user tetap tampil (bukan "Tidak ditemukan") saat ranting tidak ada di filter wilayah
-  if (contextRantingId && data) {
-    const hasInResult = data.some((r) => r.id === contextRantingId);
+  if (contextRantingId) {
+    const hasInResult = result.some((r) => r.id === contextRantingId);
     if (!hasInResult) {
       let isSelfRanting = false;
       const { data: selfRole } = await admin
@@ -164,12 +166,12 @@ export async function GET(req: NextRequest) {
           .select("id, nama, aktif, cabang_id, province_id, regency_id, district_id, instagram_url")
           .eq("id", contextRantingId)
           .maybeSingle();
-        if (one) data = [...data, one];
+        if (one) result = [...result, one];
       }
     }
   }
 
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(result);
 }
 
 /**

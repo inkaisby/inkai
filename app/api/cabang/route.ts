@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   // Debug: jejak siapa yang memanggil dan scope-nya
   // (Akan tampil di server log saat dev)
-  // eslint-disable-next-line no-console
+   
   console.log("[API /cabang] caller", {
     email,
     app_role: profile?.app_role ?? null,

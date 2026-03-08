@@ -51,7 +51,7 @@ export default function RiwayatUKT() {
   }, []);
 
   useEffect(() => {
-    setLoadingRanting(true);
+    queueMicrotask(() => setLoadingRanting(true));
     fetch("/api/ranting", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
@@ -62,7 +62,7 @@ export default function RiwayatUKT() {
   }, []);
 
   useEffect(() => {
-    setLoadingList(true);
+    queueMicrotask(() => setLoadingList(true));
     const params = new URLSearchParams();
     if (tahunId) params.set("tahun_ajaran_id", tahunId);
     if (rantingId) params.set("ranting_id", rantingId);

@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "set NEXT_DISABLE_TURBOPACK=1 && next dev",
+    "clean": "node scripts/clean-next.js",
+    "dev:turbo": "node scripts/clean-next.js && next dev --turbopack",
     "build": "node scripts/check-env.js && next build",
     "start": "next start",
     "lint": "eslint",
+    "qa:smoke": "node scripts/check-env.js && npm run lint && npm run build",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
@@ -24,7 +27,6 @@
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
-    "@tanstack/react-virtual": "^3.13.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
@@ -39,7 +41,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.6.0",
-    "react-window": "^1.8.7",
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0",
     "zustand": "^5.0.9"

@@ -62,7 +62,7 @@ export default function AvatarMenu() {
     if (top?.role_name) return formatRole(top.role_name);
     if (appRole) return formatRole(appRole);
     return null;
-  }, [bootstrap?.user?.app_role, bootstrap?.user?.structural_roles]);
+  }, [bootstrap?.user]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {

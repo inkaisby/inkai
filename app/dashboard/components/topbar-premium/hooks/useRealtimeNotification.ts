@@ -28,7 +28,8 @@ export default function useRealtimeNotification() {
   }, []);
 
   // Load unread count via RPC (bypass permission denied)
-  const loadUnreadCount = async (uid: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for call site
+  const loadUnreadCount = async (_uid: string) => {
     const { data } = await supabase.rpc("get_my_events_count");
     const c = typeof data === "number" ? data : 0;
     setCount(c);

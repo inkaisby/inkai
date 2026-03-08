@@ -12,7 +12,7 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { canAccessMenu } from "./canAccess";
-import type { SessionUserAccess, MenuAccess } from "./canAccess";
+import type { MenuAccess } from "./canAccess";
 import { useBootstrapStore } from "../../store/bootstrapStore";
 import { prefetchForRoute } from "../../lib/prefetchCache";
 
@@ -55,12 +55,10 @@ export default function Sidebar() {
 
   /* ===================== MOUNT ===================== */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
     const stored = localStorage.getItem("sidebar:isOpen");
     if (stored !== null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsOpen(stored === "true");
+      queueMicrotask(() => setIsOpen(stored === "true"));
     }
   }, []);
 
@@ -169,12 +167,18 @@ export default function Sidebar() {
               : m.name;
 
           const href =
-            m.key === "dashboard" ? "/dashboard" : `/dashboard/${m.key}`;
+            m.key === "dashboard"
+              ? "/dashboard"
+              : m.key === "ujian" || m.key === "audit-ujian"
+                ? "/dashboard/ukt"
+                : `/dashboard/${m.key}`;
 
           const active =
             m.key === "dashboard"
               ? pathname === "/dashboard"
-              : pathname.startsWith(`/dashboard/${m.key}`);
+              : m.key === "ujian" || m.key === "audit-ujian"
+                ? pathname.startsWith("/dashboard/ukt")
+                : pathname.startsWith(`/dashboard/${m.key}`);
 
           return (
             <Link

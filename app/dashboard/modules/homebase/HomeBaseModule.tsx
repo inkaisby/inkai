@@ -372,11 +372,13 @@ export default function HomeBaseModule() {
     null,
   );
   /** Selector wilayah bertingkat: Provinsi → Cabang → Ranting (tampilan: Jawa Timur / Surabaya / Gading) */
-  const [wilayahProvinsiId, setWilayahProvinsiId] = useState<string | null>(
+  /* eslint-disable @typescript-eslint/no-unused-vars -- reserved for future wilayah selector UI */
+  const [_wilayahProvinsiId, _setWilayahProvinsiId] = useState<string | null>(
     null,
   );
-  const [wilayahCabangId, setWilayahCabangId] = useState<string | null>(null);
-  const [wilayahRantingId, setWilayahRantingId] = useState<string | null>(null);
+  const [_wilayahCabangId, _setWilayahCabangId] = useState<string | null>(null);
+  const [_wilayahRantingId, _setWilayahRantingId] = useState<string | null>(null);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [selectedRanting, setSelectedRanting] = useState<RantingRow | null>(
     null,
   );
@@ -800,7 +802,8 @@ export default function HomeBaseModule() {
     return () => clearTimeout(t);
   }, [allowedRegencyIds, wilayahOptions, selectedRegencyId]);
 
-  const wilayahLabel = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future display
+  const _wilayahLabel = useMemo(() => {
     if (!scope) return "Wilayah belum ter-set";
     if (scope.is_pp) return "PP — seluruh Indonesia";
     if (scope.cabang_ids.length > 0) return "Cabang";

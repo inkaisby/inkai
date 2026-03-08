@@ -34,8 +34,10 @@ export default function PrintKwitansiPage() {
 
   useEffect(() => {
     if (!token) {
-      setError("Token tidak ada");
-      setLoading(false);
+      queueMicrotask(() => {
+        setError("Token tidak ada");
+        setLoading(false);
+      });
       return;
     }
     fetch(`/api/kwitansi/verify?token=${encodeURIComponent(token)}`, {
@@ -50,9 +52,11 @@ export default function PrintKwitansiPage() {
       .finally(() => setLoading(false));
 
     if (typeof window !== "undefined") {
-      setPrintUrl(
-        `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token)}`,
-      );
+      queueMicrotask(() => {
+        setPrintUrl(
+          `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token)}`,
+        );
+      });
     }
   }, [token]);
 

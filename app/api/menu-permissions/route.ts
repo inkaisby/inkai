@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   /**
    * permissions = {
    *   dashboard: true,
-   *   siswa: false,
+   *   inventaris: false,
    *   ...
    * }
    */

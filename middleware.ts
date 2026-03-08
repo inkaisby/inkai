@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
-  let res = NextResponse.next({ request: req });
+  const res = NextResponse.next({ request: req });
 
   // Security headers (anti XSS, clickjacking, MIME sniffing)
   res.headers.set("X-Frame-Options", "DENY");

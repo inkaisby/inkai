@@ -11,7 +11,7 @@ export default function ResetPasswordPage() {
   const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {

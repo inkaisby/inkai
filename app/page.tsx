@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
@@ -17,13 +18,8 @@ function getReturnTo(): string {
 
 export default function Home() {
   const router = useRouter();
-  const [returnTo, setReturnTo] = useState("/dashboard");
   const [phase, setPhase] = useState<"landing" | "auth" | "boot">("landing");
   const loginButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    setReturnTo(getReturnTo());
-  }, []);
 
   useEffect(() => {
     if (phase === "landing") {
@@ -75,10 +71,12 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <img
+          <Image
             src="/logo/inkai-logo.png"
             alt="INKAI"
-            className="w-40 mx-auto mb-6"
+            width={160}
+            height={160}
+            className="mx-auto mb-6"
           />
           <h1 className="text-5xl font-extrabold text-white">INKAI</h1>
 

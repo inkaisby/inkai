@@ -48,8 +48,8 @@ export function useMenuCRUD() {
           menus: list,
         });
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Gagal memuat");
       setMenus([]);
     }
   }, [setBootstrap]);

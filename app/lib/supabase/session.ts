@@ -22,14 +22,14 @@ export async function createSupabaseSessionClient() {
       },
       // In API routes we usually don't need to mutate cookies here.
       // Keeping these safe avoids runtime errors if Supabase tries to set/remove cookies.
-      set(name: string, value: string, options: any) {
+      set(name: string, value: string, options?: { path?: string; maxAge?: number }) {
         try {
           cookieStore.set({ name, value, ...options });
         } catch {
           // no-op
         }
       },
-      remove(name: string, options: any) {
+      remove(name: string, options?: { path?: string }) {
         try {
           cookieStore.set({ name, value: "", ...options });
         } catch {

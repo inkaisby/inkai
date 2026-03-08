@@ -69,15 +69,17 @@ export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
 
   useEffect(() => {
     if (!user?.user_id) {
-      setStructural([]);
-      setFunctional([]);
-      setActivity([]);
-      setLoading(false);
+      queueMicrotask(() => {
+        setStructural([]);
+        setFunctional([]);
+        setActivity([]);
+        setLoading(false);
+      });
       return;
     }
 
     let mounted = true;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
 
     (async () => {
       const [structRes, funcRes, logRes] = await Promise.all([
@@ -109,7 +111,7 @@ export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
   // Resolve nama domisili (regency) dari regency_id
   useEffect(() => {
     if (!user?.regency_id) {
-      setRegencyName(null);
+      queueMicrotask(() => setRegencyName(null));
       return;
     }
     let cancelled = false;
@@ -133,11 +135,11 @@ export default function UserResumePanel({ user, refreshTrigger = 0 }: Props) {
   // Info perangkat sesi yang sedang dipakai (IP, user-agent)
   useEffect(() => {
     if (!user?.user_id) {
-      setClientInfo(null);
+      queueMicrotask(() => setClientInfo(null));
       return;
     }
     let mounted = true;
-    setClientInfoLoading(true);
+    queueMicrotask(() => setClientInfoLoading(true));
     fetch("/api/me/client-info", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: ClientInfo | null) => {

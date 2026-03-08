@@ -44,6 +44,7 @@ export default function SettingsView({
   loading,
   isSuperAdmin,
   sessionEmail,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for parent API
   selectedEmail,
   onSelectEmail,
   permissions,

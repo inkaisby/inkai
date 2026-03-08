@@ -26,6 +26,22 @@ type PendaftaranRow = {
   nama: string;
   nomor: string;
   kwitansi_token: string | null;
+  alasan_tolak_bukti: string | null;
+};
+
+/** Bentuk baris dari DB (select ukt_pendaftaran) */
+type RawUktPendaftaranRow = {
+  id?: unknown;
+  profile_id?: string;
+  ranting_id?: string;
+  kyu_dan_terakhir?: string;
+  status_bayar?: string;
+  total_bayar?: unknown;
+  bukti_transfer_path?: string | null;
+  dikonfirmasi_at?: unknown;
+  created_at?: unknown;
+  kwitansi_token?: unknown;
+  alasan_tolak_bukti?: unknown;
 };
 
 type BatalRow = PendaftaranRow & {
@@ -47,39 +63,91 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const tahunAjaranId = searchParams.get("tahun_ajaran_id")?.trim();
-  const rantingId = searchParams.get("ranting_id")?.trim();
+  const rantingIdParam = searchParams.get("ranting_id")?.trim();
   const includeBatal = searchParams.get("include_batal") === "true";
+  const allRanting = rantingIdParam === "all";
 
-  if (!tahunAjaranId || !rantingId) {
+  if (!tahunAjaranId) {
     return NextResponse.json(
-      { message: "tahun_ajaran_id dan ranting_id wajib" },
+      { message: "tahun_ajaran_id wajib" },
+      { status: 400 }
+    );
+  }
+  if (!allRanting && !rantingIdParam) {
+    return NextResponse.json(
+      { message: "ranting_id wajib (atau gunakan ranting_id=all untuk semua ranting)" },
       { status: 400 }
     );
   }
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
-  const canAccess =
-    scope.is_pp || (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(rantingId));
-  if (!canAccess) {
-    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  if (!allRanting) {
+    const canAccess =
+      scope.is_pp || (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(rantingIdParam));
+    if (!canAccess) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
   }
 
-  const { data: rows, error } = await admin
+  let query = admin
     .from("ukt_pendaftaran")
     .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, alasan_tolak_bukti")
     .eq("tahun_ajaran_id", tahunAjaranId)
-    .eq("ranting_id", rantingId)
     .neq("status_bayar", "batal")
     .order("created_at", { ascending: false });
+
+  if (!allRanting) {
+    query = query.eq("ranting_id", rantingIdParam);
+  } else if (scope.ranting_ids.length > 0) {
+    query = query.in("ranting_id", scope.ranting_ids);
+  }
+  const { data: rows, error } = await query;
 
   if (error) {
     console.error("[ukt/pendaftaran GET]", error);
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  const rawList = (rows ?? []) as Array<{ profile_id: string }>;
-  const profileIds = Array.from(new Set(rawList.map((r) => r.profile_id)));
+  const rawList = (rows ?? []) as RawUktPendaftaranRow[];
+
+  let batalRows: RawUktPendaftaranRow[] = [];
+  if (includeBatal) {
+    let batalQuery = admin
+      .from("ukt_pendaftaran")
+      .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, batal_at, alasan_batal, refund_jumlah, refund_status, refund_at, refund_catatan, refund_bukti_path")
+      .eq("tahun_ajaran_id", tahunAjaranId)
+      .eq("status_bayar", "batal")
+      .order("batal_at", { ascending: false });
+    if (!allRanting) {
+      batalQuery = batalQuery.eq("ranting_id", rantingIdParam);
+    } else if (scope.ranting_ids.length > 0) {
+      batalQuery = batalQuery.in("ranting_id", scope.ranting_ids);
+    }
+    const { data: batalData } = await batalQuery;
+    batalRows = (batalData ?? []) as RawUktPendaftaranRow[];
+  }
+
+  let rantingMap = new Map<string, string>();
+  if (allRanting && (rawList.length > 0 || batalRows.length > 0)) {
+    const rantingIds = Array.from(
+      new Set([
+        ...rawList.map((r) => r.ranting_id).filter(Boolean),
+        ...batalRows.map((r) => r.ranting_id).filter(Boolean),
+      ])
+    ) as string[];
+    if (rantingIds.length > 0) {
+      const { data: rantingRows } = await admin
+        .from("ranting")
+        .select("id, nama")
+        .in("id", rantingIds);
+      (rantingRows ?? []).forEach((row: { id: string; nama?: string }) => {
+        rantingMap.set(row.id, row.nama ?? row.id);
+      });
+    }
+  }
+
+  const profileIds = Array.from(new Set(rawList.map((r) => r.profile_id).filter(Boolean) as string[]));
   const profileMap = new Map<string, { nama?: string; nomor?: string }>();
   if (profileIds.length > 0) {
     const { data: profiles } = await admin
@@ -91,26 +159,29 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const list: PendaftaranRow[] = (rawList as any[]).map((r) => {
+  const list: (PendaftaranRow & { ranting_nama?: string })[] = rawList.map((r) => {
     const profile = profileMap.get(String(r.profile_id));
-    const buktiPath = (r as any).bukti_transfer_path ?? null;
-    return {
+    const buktiPath = r.bukti_transfer_path ?? null;
+    const base = {
       id: String(r.id),
       profile_id: String(r.profile_id),
       ranting_id: String(r.ranting_id),
-      kyu_dan_terakhir: (r as any).kyu_dan_terakhir ?? "",
-      status_bayar: (r as any).status_bayar ?? "menunggu_bayar",
-      total_bayar:
-        (r as any).total_bayar != null ? Number((r as any).total_bayar) : null,
+      kyu_dan_terakhir: r.kyu_dan_terakhir ?? "",
+      status_bayar: r.status_bayar ?? "menunggu_bayar",
+      total_bayar: r.total_bayar != null ? Number(r.total_bayar) : null,
       bukti_transfer_path: buktiPath,
       file_url: getPublicUrl(buktiPath) ?? null,
-      dikonfirmasi_at: (r as any).dikonfirmasi_at ?? null,
-      created_at: String((r as any).created_at ?? ""),
+      dikonfirmasi_at: r.dikonfirmasi_at != null ? String(r.dikonfirmasi_at) : null,
+      created_at: String(r.created_at ?? ""),
       nama: profile?.nama ?? "",
       nomor: profile?.nomor ?? "",
-      kwitansi_token: (r as any).kwitansi_token ? String((r as any).kwitansi_token) : null,
-      alasan_tolak_bukti: (r as any).alasan_tolak_bukti != null ? String((r as any).alasan_tolak_bukti) : null,
+      kwitansi_token: r.kwitansi_token != null ? String(r.kwitansi_token) : null,
+      alasan_tolak_bukti: r.alasan_tolak_bukti != null ? String(r.alasan_tolak_bukti) : null,
     };
+    if (allRanting) {
+      return { ...base, ranting_nama: rantingMap.get(String(r.ranting_id)) ?? r.ranting_id };
+    }
+    return base;
   });
 
   const total_bayar = list.reduce((sum, r) => {
@@ -121,16 +192,9 @@ export async function GET(req: NextRequest) {
   const belum_bayar = list.filter((r) => r.status_bayar === "menunggu_bayar" || r.status_bayar === "ditolak").length;
   const lunas = list.filter((r) => r.status_bayar === "lunas").length;
 
-  let listBatal: BatalRow[] = [];
-  if (includeBatal) {
-    const { data: batalRows } = await admin
-      .from("ukt_pendaftaran")
-      .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, batal_at, alasan_batal, refund_jumlah, refund_status, refund_at, refund_catatan, refund_bukti_path")
-      .eq("tahun_ajaran_id", tahunAjaranId)
-      .eq("ranting_id", rantingId)
-      .eq("status_bayar", "batal")
-      .order("batal_at", { ascending: false });
-    const batalProfileIds = Array.from(new Set((batalRows ?? []).map((r: { profile_id: string }) => r.profile_id)));
+  let listBatal: (BatalRow & { ranting_nama?: string })[] = [];
+  if (includeBatal && batalRows.length > 0) {
+    const batalProfileIds = Array.from(new Set(batalRows.map((r) => r.profile_id).filter(Boolean) as string[]));
     const batalProfileMap = new Map<string, { nama?: string; nomor?: string }>();
     if (batalProfileIds.length > 0) {
       const { data: batalProfiles } = await admin
@@ -141,11 +205,11 @@ export async function GET(req: NextRequest) {
         batalProfileMap.set(p.id, { nama: p.nama ?? undefined, nomor: p.nomor ?? undefined });
       });
     }
-    listBatal = (batalRows ?? []).map((r: Record<string, unknown>) => {
+    listBatal = batalRows.map((r: Record<string, unknown>) => {
       const profile = batalProfileMap.get(String(r.profile_id));
       const buktiPath = r.bukti_transfer_path as string | null ?? null;
       const rbp = (r.refund_bukti_path as string | null) ?? null;
-      return {
+      const row: BatalRow & { ranting_nama?: string } = {
         id: String(r.id),
         profile_id: String(r.profile_id),
         ranting_id: String(r.ranting_id),
@@ -169,6 +233,10 @@ export async function GET(req: NextRequest) {
         kwitansi_token: (r.kwitansi_token as string | null) ?? null,
         alasan_tolak_bukti: null,
       };
+      if (allRanting) {
+        row.ranting_nama = rantingMap.get(String(r.ranting_id)) ?? String(r.ranting_id);
+      }
+      return row;
     });
   }
 
@@ -285,7 +353,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: updateErr.message }, { status: 500 });
     }
 
-    await insertEvent(admin as any, {
+    await insertEvent(admin, {
       user_id: user.id,
       type: "ukt_pendaftaran_create",
       title: "Daftar ulang peserta UKT (sebelumnya batal)",
@@ -294,7 +362,7 @@ export async function POST(req: NextRequest) {
         tahun_ajaran_id: tahunAjaranId,
         ranting_id: rantingId,
         profile_id: profileId,
-        id: (updated as any).id,
+        id: (updated as { id: string }).id,
       },
     });
 
@@ -324,7 +392,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  await insertEvent(admin as any, {
+  await insertEvent(admin, {
     user_id: user.id,
     type: "ukt_pendaftaran_create",
     title: "Mendaftarkan peserta UKT",
@@ -333,7 +401,7 @@ export async function POST(req: NextRequest) {
       tahun_ajaran_id: tahunAjaranId,
       ranting_id: rantingId,
       profile_id: profileId,
-      id: (data as any).id,
+      id: (data as { id: string }).id,
     },
   });
 

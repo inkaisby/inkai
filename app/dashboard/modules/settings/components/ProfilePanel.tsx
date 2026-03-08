@@ -149,7 +149,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
    * INIT FORM FROM SQL (1:1)
    * =============================== */
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- sync form from selected user */
+     
     if (!user) {
       setForm(null);
       setDirty(false);
@@ -183,7 +183,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
 
     setDirty(false);
     setVillageNameById(null);
-    /* eslint-enable react-hooks/set-state-in-effect */
+     
   }, [user]);
 
   // Resolve nama kelurahan/kecamatan by ID agar tampil nama (sesuai DB), bukan angka
