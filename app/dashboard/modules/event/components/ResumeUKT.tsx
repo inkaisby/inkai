@@ -107,6 +107,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   const [tolakAlasan, setTolakAlasan] = useState("");
   const [tolakSubmitting, setTolakSubmitting] = useState(false);
   const [showPesertaBatal, setShowPesertaBatal] = useState(false);
+  const [searchLaporan, setSearchLaporan] = useState("");
   const [ketuaRanting] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const refetchResumeRef = useRef<() => void>(() => {});
@@ -436,7 +437,30 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
       ? pendingSelection.filter((p) => !savedProfileIds.has(p.profile_id))
       : [];
   const hasPending = pendingRows.length > 0;
-  const totalRows = (data?.list?.length ?? 0) + pendingRows.length;
+
+  const searchLower = searchLaporan.trim().toLowerCase();
+  const filteredList = useMemo(() => {
+    if (!searchLower) return data?.list ?? [];
+    const list = data?.list ?? [];
+    return list.filter(
+      (r) =>
+        (r.nama ?? "").toLowerCase().includes(searchLower) ||
+        (r.nomor ?? "").toLowerCase().includes(searchLower) ||
+        (r.kyu_dan_terakhir ?? "").toLowerCase().includes(searchLower) ||
+        ((r as PendaftaranItem & { ranting_nama?: string }).ranting_nama ?? "").toLowerCase().includes(searchLower)
+    );
+  }, [data?.list, searchLower]);
+  const filteredPendingRows = useMemo(() => {
+    if (!searchLower) return pendingRows;
+    return pendingRows.filter(
+      (p) =>
+        (p.nama ?? "").toLowerCase().includes(searchLower) ||
+        (p.nomor ?? "").toLowerCase().includes(searchLower) ||
+        (p.kyu_dan_terakhir ?? "").toLowerCase().includes(searchLower)
+    );
+  }, [pendingRows, searchLower]);
+
+  const totalRows = filteredList.length + filteredPendingRows.length;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
@@ -503,6 +527,25 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
             </div>
           </div>
 
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <label htmlFor="search-laporan" className="text-xs text-zinc-500 sr-only">
+              Cari peserta
+            </label>
+            <input
+              id="search-laporan"
+              type="search"
+              placeholder="Cari nama, no. anggota, kyu/dan, ranting…"
+              value={searchLaporan}
+              onChange={(e) => setSearchLaporan(e.target.value)}
+              className="w-full min-w-[200px] max-w-sm rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-amber-500/40 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
+            />
+            {searchLaporan.trim() && (
+              <span className="text-xs text-zinc-500">
+                {filteredList.length + filteredPendingRows.length} dari {(data?.list?.length ?? 0) + pendingRows.length} peserta
+              </span>
+            )}
+          </div>
+
           <div className="mt-6 overflow-x-auto rounded-lg border border-white/10">
             <table className="w-full text-sm">
               <thead>
@@ -518,7 +561,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                 </tr>
               </thead>
               <tbody>
-                {(data?.list ?? []).map((r) => (
+                {filteredList.map((r) => (
                   <tr key={r.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                     {isReportAll && (
                       <td className="px-4 py-3 text-zinc-400">{r.ranting_nama ?? r.ranting_id ?? "—"}</td>
@@ -651,7 +694,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                     </td>
                   </tr>
                 ))}
-                {pendingRows.map((p) => (
+                {filteredPendingRows.map((p) => (
                   <tr key={`pending-${p.profile_id}`} className="border-b border-white/5 bg-amber-500/5 hover:bg-amber-500/10">
                     <td className="px-4 py-3 text-zinc-200">{p.nama}</td>
                     <td className="px-4 py-3 text-zinc-400">{p.nomor}</td>
@@ -672,7 +715,11 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
             </table>
           </div>
           {totalRows === 0 && (
-            <p className="mt-4 text-sm text-zinc-500">Belum ada peserta. Centang anggota di kolom kiri lalu klik Daftarkan.</p>
+            <p className="mt-4 text-sm text-zinc-500">
+              {searchLaporan.trim()
+                ? "Tidak ada peserta yang cocok dengan pencarian."
+                : "Belum ada peserta. Centang anggota di kolom kiri lalu klik Daftarkan."}
+            </p>
           )}
 
           {(data?.list_batal?.length ?? 0) > 0 && (

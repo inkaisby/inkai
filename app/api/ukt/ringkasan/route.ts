@@ -1,16 +1,19 @@
 /**
  * GET /api/ukt/ringkasan
- * Ringkasan dari tabel Supabase: ujian, ujian_peserta, ujian_hasil.
+ * Ringkasan: ujian, ujian_hasil, plus dari ukt_pendaftaran (ranting ikut & total peserta non-batal).
  */
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { getUserScope } from "@/app/lib/scope/getUserScope";
 
 const emptyPayload = () =>
   NextResponse.json({
     totalUjian: 0,
+    totalRantingIkutUjian: 0,
+    listRantingIkutUjian: [],
     totalPeserta: 0,
     pesertaLulus: 0,
     ujianTerbaru: [],
@@ -25,9 +28,12 @@ export async function GET() {
     }
 
     const admin = createSupabaseAdminClient();
+    const scope = await getUserScope(admin, user.id);
 
     const defaultPayload = {
       totalUjian: 0,
+      totalRantingIkutUjian: 0,
+      listRantingIkutUjian: [] as { id: string; nama: string }[],
       totalPeserta: 0,
       pesertaLulus: 0,
       ujianTerbaru: [] as { id: string; judul: string; kategori: string; tingkat: string; tanggal: string; status: string; created_at: string }[],
@@ -35,8 +41,33 @@ export async function GET() {
     };
 
     const ujianCountRes = await admin.from("ujian").select("*", { count: "exact", head: true });
-    const pesertaCountRes = await admin.from("ujian_peserta").select("*", { count: "exact", head: true });
     const lulusRes = await admin.from("ujian_hasil").select("id", { count: "exact", head: true }).eq("lulus", true);
+
+    // Total Ranting yang ikut ujian & Total Peserta (dari ukt_pendaftaran, tidak termasuk batal)
+    let uktPendaftaranQuery = admin
+      .from("ukt_pendaftaran")
+      .select("ranting_id")
+      .neq("status_bayar", "batal");
+    if (!scope.is_pp && scope.ranting_ids.length > 0) {
+      uktPendaftaranQuery = uktPendaftaranQuery.in("ranting_id", scope.ranting_ids);
+    }
+    const { data: uktList } = await uktPendaftaranQuery;
+    const rows = (uktList ?? []) as { ranting_id: string }[];
+    const totalPesertaUkt = rows.length;
+    const rantingIds = Array.from(new Set(rows.map((r) => r.ranting_id).filter(Boolean)));
+    const totalRantingIkutUjian = rantingIds.length;
+
+    if (rantingIds.length > 0) {
+      const { data: rantingRows } = await admin
+        .from("ranting")
+        .select("id, nama")
+        .in("id", rantingIds);
+      defaultPayload.listRantingIkutUjian = (rantingRows ?? []).map((row: { id: string; nama?: string }) => ({
+        id: row.id,
+        nama: row.nama ?? row.id,
+      }));
+    }
+
     const ujianListRes = await admin
       .from("ujian")
       .select("id, judul, kategori, tingkat, tanggal, status, created_at")
@@ -49,7 +80,8 @@ export async function GET() {
       .limit(10);
 
     defaultPayload.totalUjian = ujianCountRes.error ? 0 : (ujianCountRes.count ?? 0);
-    defaultPayload.totalPeserta = pesertaCountRes.error ? 0 : (pesertaCountRes.count ?? 0);
+    defaultPayload.totalRantingIkutUjian = totalRantingIkutUjian;
+    defaultPayload.totalPeserta = totalPesertaUkt;
     defaultPayload.pesertaLulus = lulusRes.error ? 0 : (lulusRes.count ?? 0);
 
     if (!ujianListRes.error && ujianListRes.data) {
