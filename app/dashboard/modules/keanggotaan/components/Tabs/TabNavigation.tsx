@@ -6,6 +6,7 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: "kyu", label: "KYU" },
   { key: "dan", label: "DAN" },
   { key: "pelatihan", label: "Pelatihan" },
+  { key: "prestasi", label: "Prestasi" },
   { key: "pindah", label: "Pindah Ranting" },
 ];
 

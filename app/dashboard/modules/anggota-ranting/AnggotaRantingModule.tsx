@@ -83,6 +83,22 @@ export default function AnggotaRantingModule() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [searchRanting, setSearchRanting] = useState("");
 
+  type PrestasiRow = {
+    id: string;
+    kategori: string;
+    namaKejuaraan: string;
+    tahun: string;
+    tingkat: string;
+    kelasPertandingan: string;
+    fileUrl?: string;
+    verifiedAt?: string;
+    verifiedBy?: string;
+  };
+  const [memberPrestasi, setMemberPrestasi] = useState<PrestasiRow[]>([]);
+  const [memberPrestasiLoading, setMemberPrestasiLoading] = useState(false);
+  const [verifyingPrestasiId, setVerifyingPrestasiId] = useState<string | null>(null);
+  const [pendingPrestasiCount, setPendingPrestasiCount] = useState<number>(0);
+
   const loadData = useCallback(async () => {
     if (!rantingId) return;
     setLoading(true);
@@ -119,6 +135,30 @@ export default function AnggotaRantingModule() {
     loadData();
     loadNonAktif();
   }, [loadData, loadNonAktif]);
+
+  useEffect(() => {
+    if (!rantingId) {
+      setPendingPrestasiCount(0);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/keanggotaan/prestasi/pending?ranting_id=${encodeURIComponent(rantingId)}`,
+          { credentials: "include" }
+        );
+        if (cancelled || !res.ok) return;
+        const json = (await res.json()) as { count?: number };
+        if (!cancelled) setPendingPrestasiCount(typeof json.count === "number" ? json.count : 0);
+      } catch {
+        if (!cancelled) setPendingPrestasiCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rantingId]);
 
   const setAktif = useCallback(
     async (row: AnggotaRow) => {
@@ -167,6 +207,7 @@ export default function AnggotaRantingModule() {
   const openEditForm = useCallback(
     async (row: AnggotaRow) => {
       setEditingMember(row);
+      setMemberPrestasi([]);
       setEditForm({
         nama: row.nama ?? "",
         nik: row.nik ?? "",
@@ -177,17 +218,24 @@ export default function AnggotaRantingModule() {
       });
       setShowEditForm(true);
       setEditFormLoading(true);
+      setMemberPrestasiLoading(true);
       try {
-        const res = await fetch(
-          `/api/anggota-ranting/member?profile_id=${encodeURIComponent(row.profile_id)}&ranting_id=${encodeURIComponent(rantingId)}`,
-          { credentials: "include" }
-        );
-        if (!res.ok) {
+        const [memberRes, riwayatRes] = await Promise.all([
+          fetch(
+            `/api/anggota-ranting/member?profile_id=${encodeURIComponent(row.profile_id)}&ranting_id=${encodeURIComponent(rantingId)}`,
+            { credentials: "include" }
+          ),
+          fetch(
+            `/api/keanggotaan/riwayat?profile_id=${encodeURIComponent(row.profile_id)}`,
+            { credentials: "include" }
+          ),
+        ]);
+        if (!memberRes.ok) {
           toast.error("Gagal memuat data anggota.", { duration: TOAST_DURATION_MS });
           setShowEditForm(false);
           return;
         }
-        const d = (await res.json()) as {
+        const d = (await memberRes.json()) as {
           nama?: string;
           nik?: string;
           nomor?: string;
@@ -205,14 +253,79 @@ export default function AnggotaRantingModule() {
           kyu_level: typeof d.kyu_level === "number" ? d.kyu_level : 0,
           dan: typeof d.dan === "number" ? d.dan : 0,
         }));
+
+        if (riwayatRes.ok) {
+          const riwayat = (await riwayatRes.json()) as { prestasi?: PrestasiRow[] };
+          setMemberPrestasi(Array.isArray(riwayat.prestasi) ? riwayat.prestasi : []);
+        }
       } catch {
+        setMemberPrestasi([]);
         toast.error("Gagal memuat data anggota.", { duration: TOAST_DURATION_MS });
         setShowEditForm(false);
       } finally {
         setEditFormLoading(false);
+        setMemberPrestasiLoading(false);
       }
     },
     [rantingId]
+  );
+
+  const loadMemberPrestasi = useCallback(async () => {
+    if (!editingMember?.profile_id) return;
+    setMemberPrestasiLoading(true);
+    try {
+      const res = await fetch(
+        `/api/keanggotaan/riwayat?profile_id=${encodeURIComponent(editingMember.profile_id)}`,
+        { credentials: "include" }
+      );
+      if (res.ok) {
+        const json = (await res.json()) as { prestasi?: PrestasiRow[] };
+        setMemberPrestasi(Array.isArray(json.prestasi) ? json.prestasi : []);
+      }
+    } finally {
+      setMemberPrestasiLoading(false);
+    }
+  }, [editingMember?.profile_id]);
+
+  const loadPendingPrestasiCount = useCallback(async () => {
+    if (!rantingId) return;
+    try {
+      const res = await fetch(
+        `/api/keanggotaan/prestasi/pending?ranting_id=${encodeURIComponent(rantingId)}`,
+        { credentials: "include" }
+      );
+      if (res.ok) {
+        const json = (await res.json()) as { count?: number };
+        setPendingPrestasiCount(typeof json.count === "number" ? json.count : 0);
+      }
+    } catch {
+      setPendingPrestasiCount(0);
+    }
+  }, [rantingId]);
+
+  const handleVerifyPrestasi = useCallback(
+    async (prestasiId: string) => {
+      setVerifyingPrestasiId(prestasiId);
+      try {
+        const res = await fetch(
+          `/api/keanggotaan/riwayat/prestasi/${prestasiId}/verify`,
+          { method: "POST", credentials: "include" }
+        );
+        const json = (await res.json().catch(() => ({}))) as { message?: string };
+        if (!res.ok) {
+          toast.error(json.message || "Gagal memverifikasi prestasi.", { duration: TOAST_DURATION_MS });
+          return;
+        }
+        toast.success("Prestasi telah diverifikasi.", { duration: TOAST_DURATION_MS });
+        await loadMemberPrestasi();
+        await loadPendingPrestasiCount();
+      } catch {
+        toast.error("Gagal memverifikasi prestasi.", { duration: TOAST_DURATION_MS });
+      } finally {
+        setVerifyingPrestasiId(null);
+      }
+    },
+    [loadMemberPrestasi, loadPendingPrestasiCount]
   );
 
   const handleEditSubmit = useCallback(
@@ -883,6 +996,15 @@ export default function AnggotaRantingModule() {
         </section>
 
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+          {pendingPrestasiCount > 0 && (
+            <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200/90 flex items-center gap-2">
+              <FileCheck className="h-4 w-4 shrink-0 text-amber-400" />
+              <span>
+                <span className="font-semibold">{pendingPrestasiCount}</span> prestasi menunggu verifikasi.
+                Buka <strong>Edit</strong> pada baris anggota untuk verifikasi.
+              </span>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-white/60">
               Total anggota aktif:{" "}
@@ -1446,6 +1568,48 @@ export default function AnggotaRantingModule() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Prestasi anggota — Ketua Ranting bisa verifikasi */}
+                  <div className="border-t border-white/10 pt-3 mt-3">
+                    <h3 className="text-[11px] font-medium text-white/70 mb-2">Prestasi (riwayat pertandingan)</h3>
+                    {memberPrestasiLoading ? (
+                      <p className="text-[11px] text-white/50">Memuat…</p>
+                    ) : memberPrestasi.length === 0 ? (
+                      <p className="text-[11px] text-white/50">Belum ada prestasi.</p>
+                    ) : (
+                      <ul className="space-y-2 max-h-40 overflow-y-auto">
+                        {memberPrestasi.map((p) => (
+                          <li
+                            key={p.id}
+                            className="flex items-center justify-between gap-2 rounded-md bg-white/5 px-2 py-1.5 text-[11px]"
+                          >
+                            <span className="min-w-0 truncate text-white/80">
+                              {p.namaKejuaraan}
+                              {p.tahun ? ` (${p.tahun})` : ""}
+                              {p.tingkat ? ` · ${p.tingkat}` : ""}
+                            </span>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              {p.verifiedAt ? (
+                                <span className="text-emerald-400" title="Terverifikasi">
+                                  ✓ Terverifikasi
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={verifyingPrestasiId === p.id}
+                                  onClick={() => handleVerifyPrestasi(p.id)}
+                                  className="rounded border border-cyan-400/50 bg-cyan-500/20 px-1.5 py-0.5 text-[10px] font-medium text-cyan-200 hover:bg-cyan-500/30 disabled:opacity-50"
+                                >
+                                  {verifyingPrestasiId === p.id ? "…" : "Verifikasi"}
+                                </button>
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"

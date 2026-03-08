@@ -28,12 +28,26 @@ export type PelatihanRow = {
   fileUrl?: string;
 };
 
+/** Satu baris prestasi (riwayat pertandingan) dari DB */
+export type PrestasiRow = {
+  id: string;
+  kategori: string;
+  namaKejuaraan: string;
+  tahun: string;
+  tingkat: string;
+  kelasPertandingan: string;
+  fileUrl?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+};
+
 export function useMyKeanggotaan() {
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Anggota | null>(null);
   const [kyu, setKyu] = useState<KyuItem[]>([]);
   const [dan, setDan] = useState<DanRow[]>([]);
   const [pelatihan, setPelatihan] = useState<PelatihanRow[]>([]);
+  const [prestasi, setPrestasi] = useState<PrestasiRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadRiwayat = useCallback(async () => {
@@ -44,6 +58,7 @@ export function useMyKeanggotaan() {
         setKyu(Array.isArray(json.kyu) ? json.kyu : []);
         setDan(Array.isArray(json.dan) ? json.dan : []);
         setPelatihan(Array.isArray(json.pelatihan) ? json.pelatihan : []);
+        setPrestasi(Array.isArray(json.prestasi) ? json.prestasi : []);
       }
     } catch {
       // ignore
@@ -68,13 +83,14 @@ export function useMyKeanggotaan() {
       setUser(user);
 
       const cachedProfile = getPrefetch<Anggota>("keanggotaan-profile");
-      const cachedRiwayat = getPrefetch<{ kyu?: KyuItem[]; dan?: DanRow[]; pelatihan?: PelatihanRow[] }>("keanggotaan-riwayat");
+      const cachedRiwayat = getPrefetch<{ kyu?: KyuItem[]; dan?: DanRow[]; pelatihan?: PelatihanRow[]; prestasi?: PrestasiRow[] }>("keanggotaan-riwayat");
       if (cachedProfile) {
         setData(cachedProfile);
         if (cachedRiwayat) {
           setKyu(Array.isArray(cachedRiwayat.kyu) ? cachedRiwayat.kyu : []);
           setDan(Array.isArray(cachedRiwayat.dan) ? cachedRiwayat.dan : []);
           setPelatihan(Array.isArray(cachedRiwayat.pelatihan) ? cachedRiwayat.pelatihan : []);
+          setPrestasi(Array.isArray(cachedRiwayat.prestasi) ? cachedRiwayat.prestasi : []);
         }
         setLoading(false);
       }
@@ -95,5 +111,5 @@ export function useMyKeanggotaan() {
     load();
   }, [loadRiwayat]);
 
-  return { user, data, loading, kyu, dan, pelatihan, refetchRiwayat: loadRiwayat };
+  return { user, data, loading, kyu, dan, pelatihan, prestasi, refetchRiwayat: loadRiwayat };
 }

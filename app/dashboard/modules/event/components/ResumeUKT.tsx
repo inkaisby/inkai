@@ -112,6 +112,10 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const refetchResumeRef = useRef<() => void>(() => {});
 
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [uploadingBulk, setUploadingBulk] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     fetch("/api/ukt/tahun-ajaran", { credentials: "include" })
       .then((r) => r.json())
@@ -196,6 +200,39 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
       refetchResume();
     } finally {
       setUploadingId(null);
+    }
+  };
+
+  const canSelectForBulk = (r: PendaftaranItem) =>
+    r.status_bayar === "menunggu_bayar" || r.status_bayar === "ditolak";
+  const selectableList = useMemo(
+    () => (data?.list ?? []).filter(canSelectForBulk),
+    [data?.list]
+  );
+
+  const handleBulkUpload = async (file: File) => {
+    const ids = Array.from(selectedForBulk);
+    if (ids.length === 0) return;
+    setUploadingBulk(true);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("ids", ids.join(","));
+    try {
+      const res = await fetch("/api/ukt/pendaftaran/upload-bulk", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(j.message || "Gagal upload bukti sekaligus");
+        return;
+      }
+      setSelectedForBulk(new Set());
+      refetchResume();
+      alert(`Bukti berhasil diunggah untuk ${ids.length} peserta. Menunggu verifikasi Cabang.`);
+    } finally {
+      setUploadingBulk(false);
     }
   };
 
@@ -544,12 +581,53 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                 {filteredList.length + filteredPendingRows.length} dari {(data?.list?.length ?? 0) + pendingRows.length} peserta
               </span>
             )}
+            {selectableList.length > 0 && (
+              <>
+                <input
+                  ref={bulkFileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleBulkUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+                {selectedForBulk.size > 0 ? (
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={uploadingBulk}
+                      onClick={() => bulkFileInputRef.current?.click()}
+                      className="rounded-lg border border-amber-500/50 bg-amber-500/20 px-3 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-500/30 disabled:opacity-50"
+                    >
+                      {uploadingBulk ? "Mengunggah…" : `Upload bukti untuk ${selectedForBulk.size} yang dipilih`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForBulk(new Set())}
+                      className="text-xs text-zinc-500 hover:text-zinc-300"
+                    >
+                      Batal pilih
+                    </button>
+                  </span>
+                ) : (
+                  <span className="text-xs text-zinc-500">
+                    Centang peserta lalu gunakan &quot;Upload bukti untuk X yang dipilih&quot; untuk bayar sekaligus.
+                  </span>
+                )}
+              </>
+            )}
           </div>
 
           <div className="mt-6 overflow-x-auto rounded-lg border border-white/10">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.02] text-left text-zinc-400">
+                  {selectableList.length > 0 && (
+                    <th className="px-4 py-3 w-10">Pilih</th>
+                  )}
                   {isReportAll && <th className="px-4 py-3">Ranting</th>}
                   <th className="px-4 py-3">Peserta</th>
                   <th className="px-4 py-3">No. Anggota</th>
@@ -563,6 +641,28 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
               <tbody>
                 {filteredList.map((r) => (
                   <tr key={r.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                    {selectableList.length > 0 && (
+                      <td className="px-4 py-3">
+                        {canSelectForBulk(r) ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedForBulk.has(r.id)}
+                            onChange={(e) => {
+                              setSelectedForBulk((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(r.id);
+                                else next.delete(r.id);
+                                return next;
+                              });
+                            }}
+                            className="rounded border-white/20 bg-white/5 text-amber-500 focus:ring-amber-500/40"
+                            aria-label={`Pilih ${r.nama} untuk upload bukti sekaligus`}
+                          />
+                        ) : (
+                          <span className="text-zinc-600">—</span>
+                        )}
+                      </td>
+                    )}
                     {isReportAll && (
                       <td className="px-4 py-3 text-zinc-400">{r.ranting_nama ?? r.ranting_id ?? "—"}</td>
                     )}
@@ -696,6 +796,8 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
                 ))}
                 {filteredPendingRows.map((p) => (
                   <tr key={`pending-${p.profile_id}`} className="border-b border-white/5 bg-amber-500/5 hover:bg-amber-500/10">
+                    {selectableList.length > 0 && <td className="px-4 py-3">—</td>}
+                    {isReportAll && <td className="px-4 py-3 text-zinc-500">—</td>}
                     <td className="px-4 py-3 text-zinc-200">{p.nama}</td>
                     <td className="px-4 py-3 text-zinc-400">{p.nomor}</td>
                     <td className="px-4 py-3 text-zinc-400">{p.kyu_dan_terakhir}</td>

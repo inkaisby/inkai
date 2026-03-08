@@ -1,14 +1,14 @@
 /**
  * GET /api/keanggotaan/riwayat
- * Mengambil riwayat KYU, DAN, Pelatihan untuk user yang login.
- * Memakai admin client agar konsisten dengan endpoint lain.
- * Mengembalikan fileUrl untuk setiap item yang punya file_path.
+ * Mengambil riwayat KYU, DAN, Pelatihan, Prestasi untuk user yang login.
+ * Query opsional: profile_id — bila ada dan user punya akses ranting (Ketua Ranting/dll.), kembalikan riwayat anggota tersebut.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { checkApiRateLimit } from "@/app/lib/security/apiSecurity";
 import { getPublicUrl } from "@/app/lib/storage/ijazah";
+import { getUserScope } from "@/app/lib/scope/getUserScope";
 
 export async function GET(req: NextRequest) {
   const rateLimitRes = checkApiRateLimit(req, "keanggotaan-riwayat", { max: 60, windowMs: 60_000 });
@@ -20,23 +20,46 @@ export async function GET(req: NextRequest) {
   }
 
   const admin = createSupabaseAdminClient();
+  const queryProfileId = req.nextUrl.searchParams.get("profile_id")?.trim() || null;
 
-  const { data: profile, error: profileError } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  let profileId: string;
 
-  if (profileError || !profile?.id) {
-    return NextResponse.json(
-      { message: "Profile tidak ditemukan" },
-      { status: 404 },
-    );
+  if (queryProfileId) {
+    const { data: targetProfile } = await admin
+      .from("profiles")
+      .select("id, ranting_id")
+      .eq("id", queryProfileId)
+      .maybeSingle();
+    if (!targetProfile?.id) {
+      return NextResponse.json({ message: "Profil tidak ditemukan" }, { status: 404 });
+    }
+    const rantingId = targetProfile.ranting_id ? String(targetProfile.ranting_id).trim() : null;
+    if (!rantingId) {
+      return NextResponse.json({ message: "Profil anggota belum memiliki ranting" }, { status: 400 });
+    }
+    const scope = await getUserScope(admin, user.id);
+    const canAccess = scope.is_pp || (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(rantingId));
+    if (!canAccess) {
+      return NextResponse.json({ message: "Tidak punya akses ke ranting anggota ini" }, { status: 403 });
+    }
+    profileId = String(targetProfile.id);
+  } else {
+    const { data: profile, error: profileError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (profileError || !profile?.id) {
+      return NextResponse.json(
+        { message: "Profile tidak ditemukan" },
+        { status: 404 },
+      );
+    }
+    profileId = String(profile.id);
   }
 
-  const profileId = String(profile.id);
-
-  const [kyuRes, danRes, pelatihanRes, uktHasilRes] = await Promise.all([
+  const [kyuRes, danRes, pelatihanRes, prestasiRes, uktHasilRes] = await Promise.all([
     admin
       .from("kyu")
       .select("id, level, no_ijazah, tanggal_ijazah, file_path")
@@ -52,6 +75,11 @@ export async function GET(req: NextRequest) {
       .select("id, nama, tanggal, kategori, file_path")
       .eq("profile_id", profileId)
       .order("tanggal", { ascending: false }),
+    admin
+      .from("prestasi")
+      .select("id, kategori, nama_kejuaraan, tahun, tingkat, kelas_pertandingan, file_path, verified_at, verified_by")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false }),
     admin
       .from("ukt_pendaftaran")
       .select("id, tingkat_lulus, created_at")
@@ -112,5 +140,29 @@ export async function GET(req: NextRequest) {
     }),
   );
 
-  return NextResponse.json({ kyu, dan, pelatihan });
+  const prestasi = (prestasiRes.data ?? []).map(
+    (r: {
+      id: string;
+      kategori?: string;
+      nama_kejuaraan?: string;
+      tahun?: string;
+      tingkat?: string;
+      kelas_pertandingan?: string;
+      file_path?: string | null;
+      verified_at?: string | null;
+      verified_by?: string | null;
+    }) => ({
+      id: String(r.id),
+      kategori: String(r.kategori ?? "OPEN"),
+      namaKejuaraan: String(r.nama_kejuaraan ?? ""),
+      tahun: String(r.tahun ?? ""),
+      tingkat: String(r.tingkat ?? ""),
+      kelasPertandingan: String(r.kelas_pertandingan ?? ""),
+      fileUrl: getPublicUrl(r.file_path ?? null) ?? undefined,
+      verifiedAt: r.verified_at ?? undefined,
+      verifiedBy: r.verified_by ?? undefined,
+    }),
+  );
+
+  return NextResponse.json({ kyu, dan, pelatihan, prestasi });
 }

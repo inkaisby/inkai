@@ -12,6 +12,7 @@ import TabNavigation from "./components/Tabs/TabNavigation";
 import TabKyu from "./components/Tabs/TabKyu";
 import TabDan from "./components/Tabs/TabDan";
 import TabPelatihan from "./components/Tabs/TabPelatihan";
+import TabPrestasi from "./components/Tabs/TabPrestasi";
 import TabPindahRanting from "./components/Tabs/TabPindahRanting";
 import DigitalCardPreview from "./components/DigitalCardPreview";
 
@@ -33,10 +34,10 @@ type AnggotaKeanggotaan = Anggota & {
 /* ===============================
    CONSTANTS
 ================================ */
-const VALID_TABS: TabKey[] = ["kyu", "dan", "pelatihan", "pindah"];
+const VALID_TABS: TabKey[] = ["kyu", "dan", "pelatihan", "prestasi", "pindah"];
 
 export default function KeanggotaanModule() {
-  const { data, loading, kyu, dan, pelatihan, refetchRiwayat } = useMyKeanggotaan();
+  const { data, loading, kyu, dan, pelatihan, prestasi, refetchRiwayat } = useMyKeanggotaan();
   const { tab, setTab } = useKeanggotaanTabs();
 
   const searchParams = useSearchParams();
@@ -128,6 +129,14 @@ export default function KeanggotaanModule() {
               <TabPelatihan
                 key={`pelatihan-${data?.id ?? ""}`}
                 initialData={pelatihan ?? []}
+                onRefetch={refetchRiwayat}
+              />
+            </div>
+            <div className={tab === "prestasi" ? "" : "hidden"} role="tabpanel" aria-hidden={tab !== "prestasi"}>
+              <TabPrestasi
+                key={`prestasi-${data?.id ?? ""}`}
+                initialData={prestasi ?? []}
+                anggota={anggota}
                 onRefetch={refetchRiwayat}
               />
             </div>

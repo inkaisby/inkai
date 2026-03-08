@@ -427,28 +427,6 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
         </div>
       </section>
 
-      {/* DATA KELUARGA */}
-      <section className="border border-zinc-700 rounded-lg p-4 space-y-3 bg-zinc-900/40">
-        <h3 className="font-medium text-zinc-200">Data Keluarga</h3>
-        <div className="grid grid-cols-3 gap-3 text-sm">
-          <Input
-            label="Nama Ayah"
-            value={form.nama_ayah}
-            onChange={(v) => update("nama_ayah", v)}
-          />
-          <Input
-            label="Nama Ibu"
-            value={form.nama_ibu}
-            onChange={(v) => update("nama_ibu", v)}
-          />
-          <Input
-            label="Pekerjaan Ortu"
-            value={form.pekerjaan_ortu}
-            onChange={(v) => update("pekerjaan_ortu", v)}
-          />
-        </div>
-      </section>
-
       {/* ALAMAT & WILAYAH (step 2 + 3 ProfileModal) */}
       <section className="border border-zinc-700 rounded-lg p-4 space-y-3 bg-zinc-900/40">
         <h3 className="font-medium text-zinc-200">Alamat & Wilayah</h3>

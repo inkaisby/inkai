@@ -156,31 +156,6 @@ export default function ProfileFormLeft({
         error={errors.tanggalLahir}
         dataField="tanggalLahir"
       />
-
-      {/* ================= ORANG TUA ================= */}
-      <BlockInput
-        label="Nama Ayah"
-        value={profile.namaAyah}
-        onChange={(v) => update("namaAyah", v)}
-        error={errors.namaAyah}
-        dataField="namaAyah"
-      />
-
-      <BlockInput
-        label="Nama Ibu"
-        value={profile.namaIbu}
-        onChange={(v) => update("namaIbu", v)}
-        error={errors.namaIbu}
-        dataField="namaIbu"
-      />
-
-      <BlockInput
-        label="Pekerjaan Orang Tua"
-        value={profile.pekerjaanOrtu}
-        onChange={(v) => update("pekerjaanOrtu", v)}
-        error={errors.pekerjaanOrtu}
-        dataField="pekerjaanOrtu"
-      />
     </div>
   );
 }
