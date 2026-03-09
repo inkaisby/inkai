@@ -18,9 +18,11 @@ export async function GET() {
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+  const { data: profile } = await admin.from("profiles").select("app_role").eq("user_id", user.id).maybeSingle();
+  const isSuperAdmin = (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
 
   let data: unknown[] = [];
-  if (scope.is_pp) {
+  if (scope.is_pp || isSuperAdmin) {
     const res = await admin
       .from("ukt_tahun_ajaran")
       .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
@@ -32,6 +34,20 @@ export async function GET() {
     }
     data = res.data ?? [];
   } else {
+    // Cabang induk dari ranting user (agar Ketua Ranting bisa menerima tahun ajaran UKT Cabang)
+    let cabangIdsFromRanting: string[] = [];
+    if (scope.ranting_ids.length > 0) {
+      const { data: rantingRows } = await admin
+        .from("ranting")
+        .select("cabang_id")
+        .in("id", scope.ranting_ids)
+        .not("cabang_id", "is", null);
+      cabangIdsFromRanting = Array.from(
+        new Set((rantingRows ?? []).map((r: { cabang_id: string | null }) => r.cabang_id as string))
+      );
+    }
+    const allCabangIds = Array.from(new Set([...scope.cabang_ids, ...cabangIdsFromRanting]));
+
     const [globalRes, cabangRes] = await Promise.all([
       admin
         .from("ukt_tahun_ajaran")
@@ -39,11 +55,11 @@ export async function GET() {
         .is("cabang_id", null)
         .order("tahun", { ascending: false })
         .order("periode", { ascending: false }),
-      scope.cabang_ids.length > 0
+      allCabangIds.length > 0
         ? admin
             .from("ukt_tahun_ajaran")
             .select("id, nama, tahun, periode, is_active, created_at, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
-            .in("cabang_id", scope.cabang_ids)
+            .in("cabang_id", allCabangIds)
             .order("tahun", { ascending: false })
             .order("periode", { ascending: false })
         : { data: [] as unknown[], error: null },
@@ -92,6 +108,8 @@ export async function POST(req: NextRequest) {
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+  const { data: profile } = await admin.from("profiles").select("app_role").eq("user_id", user.id).maybeSingle();
+  const isSuperAdmin = (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
 
   const nama = typeof body.nama === "string" ? body.nama.trim() : "";
   const tahun = typeof body.tahun === "number" ? body.tahun : Number(body.tahun);
@@ -108,14 +126,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!scope.is_pp && scope.cabang_ids.length === 0) {
+  if (!scope.is_pp && scope.cabang_ids.length === 0 && !isSuperAdmin) {
     return NextResponse.json(
       { message: "Hanya PP/Superadmin atau Ketua Cabang yang dapat membuat UKT" },
       { status: 403 }
     );
   }
 
-  if (scope.cabang_ids.length > 0 && !scope.is_pp) {
+  if (scope.cabang_ids.length > 0 && !scope.is_pp && !isSuperAdmin) {
     if (!cabangId || !scope.cabang_ids.includes(cabangId)) {
       return NextResponse.json(
         { message: "Cabang hanya dapat membuat UKT untuk cabang sendiri" },

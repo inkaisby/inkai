@@ -82,9 +82,19 @@ export async function GET(req: NextRequest) {
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+  const { data: profile } = await admin.from("profiles").select("app_role, structural_level").eq("user_id", user.id).maybeSingle();
+  const isSuperAdmin = (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
+  const { data: structural } = await admin.rpc("get_user_structural_roles", { p_user_id: user.id });
+  const levels = (structural ?? []).filter((r: { active?: boolean }) => r.active !== false).map((r: { structural_level?: number }) => Number(r.structural_level) || 0);
+  const profileLevel = Number((profile as { structural_level?: unknown } | null)?.structural_level) || 0;
+  const maxStructuralLevel = Math.max(0, ...levels, profileLevel);
+  const canSeeAllRanting = isSuperAdmin || scope.is_pp || maxStructuralLevel >= 3;
+
   if (!allRanting) {
     const canAccess =
-      scope.is_pp || (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(rantingIdParam));
+      isSuperAdmin ||
+      scope.is_pp ||
+      (scope.ranting_ids.length > 0 && scope.ranting_ids.includes(rantingIdParam));
     if (!canAccess) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
@@ -99,7 +109,7 @@ export async function GET(req: NextRequest) {
 
   if (!allRanting) {
     query = query.eq("ranting_id", rantingIdParam);
-  } else if (scope.ranting_ids.length > 0) {
+  } else if (!canSeeAllRanting && scope.ranting_ids.length > 0) {
     query = query.in("ranting_id", scope.ranting_ids);
   }
   const { data: rows, error } = await query;
@@ -121,14 +131,14 @@ export async function GET(req: NextRequest) {
       .order("batal_at", { ascending: false });
     if (!allRanting) {
       batalQuery = batalQuery.eq("ranting_id", rantingIdParam);
-    } else if (scope.ranting_ids.length > 0) {
+    } else if (!canSeeAllRanting && scope.ranting_ids.length > 0) {
       batalQuery = batalQuery.in("ranting_id", scope.ranting_ids);
     }
     const { data: batalData } = await batalQuery;
     batalRows = (batalData ?? []) as RawUktPendaftaranRow[];
   }
 
-  let rantingMap = new Map<string, string>();
+  const rantingMap = new Map<string, string>();
   if (allRanting && (rawList.length > 0 || batalRows.length > 0)) {
     const rantingIds = Array.from(
       new Set([

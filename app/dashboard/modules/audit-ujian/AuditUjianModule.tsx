@@ -2,7 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Award, BarChart3, ChevronDown, ChevronUp, ClipboardList, FileCheck, Settings2, TrendingUp, UserPlus, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Award,
+  BarChart3,
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  FileCheck,
+  QrCode,
+  Settings2,
+  TrendingUp,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -18,16 +31,27 @@ import {
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
 import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
-import PendaftaranUKT, { type AnggotaAktifSelected } from "../event/components/PendaftaranUKT";
-import ResumeUKT from "../event/components/ResumeUKT";
-import KelolaUKTCabang from "../event/components/KelolaUKTCabang";
+import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
+import PendaftaranUKT from "./components/PendaftaranUKT";
+import KelolaUKTCabang from "./components/KelolaUKTCabang";
 
-const ROOT_EMAIL = process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL?.toLowerCase() ?? null;
+const ROOT_EMAIL =
+  process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL?.toLowerCase() ?? null;
 
-function getMaxLevel(user: { structural_roles?: { structural_level: number; active?: boolean }[]; profile_structural_level?: number | null } | null): number {
+function getMaxLevel(
+  user: {
+    structural_roles?: { structural_level: number; active?: boolean }[];
+    profile_structural_level?: number | null;
+  } | null,
+): number {
   if (!user) return 0;
-  const fromRoles = (user.structural_roles ?? []).filter((r) => r.active !== false).map((r) => r.structural_level ?? 0);
-  const fromProfile = user.profile_structural_level != null ? [user.profile_structural_level] : [];
+  const fromRoles = (user.structural_roles ?? [])
+    .filter((r) => r.active !== false)
+    .map((r) => r.structural_level ?? 0);
+  const fromProfile =
+    user.profile_structural_level != null
+      ? [user.profile_structural_level]
+      : [];
   const all = [...fromRoles, ...fromProfile];
   return all.length ? Math.max(...all) : 0;
 }
@@ -67,13 +91,40 @@ type ViewAudit = "ringkasan" | "pendaftaran";
 
 /** Warna aksen widget dashboard UKT */
 const UKT_KPI_ACCENTS = {
-  ujian: { card: "border border-amber-500/20 bg-amber-950/30", value: "text-amber-200", icon: "text-amber-400", label: "text-amber-300/80" },
-  peserta: { card: "border border-teal-500/20 bg-teal-950/30", value: "text-teal-200", icon: "text-teal-400", label: "text-teal-300/80" },
-  lulus: { card: "border border-emerald-500/20 bg-emerald-950/30", value: "text-emerald-200", icon: "text-emerald-400", label: "text-emerald-300/80" },
-  rate: { card: "border border-violet-500/20 bg-violet-950/30", value: "text-violet-200", icon: "text-violet-400", label: "text-violet-300/80" },
+  ujian: {
+    card: "border border-amber-500/20 bg-amber-950/30",
+    value: "text-amber-200",
+    icon: "text-amber-400",
+    label: "text-amber-300/80",
+  },
+  peserta: {
+    card: "border border-teal-500/20 bg-teal-950/30",
+    value: "text-teal-200",
+    icon: "text-teal-400",
+    label: "text-teal-300/80",
+  },
+  lulus: {
+    card: "border border-emerald-500/20 bg-emerald-950/30",
+    value: "text-emerald-200",
+    icon: "text-emerald-400",
+    label: "text-emerald-300/80",
+  },
+  rate: {
+    card: "border border-violet-500/20 bg-violet-950/30",
+    value: "text-violet-200",
+    icon: "text-violet-400",
+    label: "text-violet-300/80",
+  },
 } as const;
 
-const CHART_COLORS = ["#34d399", "#f59e0b", "#6366f1", "#ec4899", "#14b8a6", "#a855f7"];
+const CHART_COLORS = [
+  "#34d399",
+  "#f59e0b",
+  "#6366f1",
+  "#ec4899",
+  "#14b8a6",
+  "#a855f7",
+];
 const PIE_COLORS = ["#34d399", "#f87171"]; // lulus, tidak lulus
 
 export default function AuditUjianModule() {
@@ -81,7 +132,8 @@ export default function AuditUjianModule() {
   const user = useBootstrapStore((s) => s.data?.user ?? null);
   const canAccessUKT = useMemo(() => {
     if (!user) return false;
-    if (ROOT_EMAIL && (user.email?.toLowerCase() ?? "") === ROOT_EMAIL) return true;
+    if (ROOT_EMAIL && (user.email?.toLowerCase() ?? "") === ROOT_EMAIL)
+      return true;
     if ((user.app_role ?? "").toUpperCase() === "SUPERADMIN") return true;
     const maxLevel = getMaxLevel(user);
     return maxLevel >= 2 && maxLevel <= 5;
@@ -90,24 +142,22 @@ export default function AuditUjianModule() {
   const [data, setData] = useState<Ringkasan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<ViewAudit>("ringkasan");
+  const [view, setView] = useState<ViewAudit>("pendaftaran");
   const [filterTahunId, setFilterTahunId] = useState("");
   const [filterRantingId, setFilterRantingId] = useState("");
-  const [resumeVersion, setResumeVersion] = useState(0);
-  const [pendingSelection, setPendingSelection] = useState<AnggotaAktifSelected[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [kelolaUktExpanded, setKelolaUktExpanded] = useState(false);
 
-  const handleFilterChange = useCallback((tahunId: string, rantingId: string) => {
-    setFilterTahunId(tahunId);
-    setFilterRantingId(rantingId);
-  }, []);
+  const handleFilterChange = useCallback(
+    (tahunId: string, rantingId: string) => {
+      setFilterTahunId(tahunId);
+      setFilterRantingId(rantingId);
+    },
+    [],
+  );
 
   const handleRegistrationSuccess = useCallback(() => {
-    setResumeVersion((v) => v + 1);
-  }, []);
-
-  const handleSelectionChange = useCallback((members: AnggotaAktifSelected[]) => {
-    setPendingSelection(members);
+    setRefreshTrigger((r) => r + 1);
   }, []);
 
   useEffect(() => {
@@ -141,6 +191,33 @@ export default function AuditUjianModule() {
     };
   }, []);
 
+  // Realtime: ketika pendaftaran UKT berubah (daftar, batal, verifikasi, dll.) dari tab/window lain, ringkasan dan tabel pendaftaran ikut ter-update
+  useEffect(() => {
+    const channel = supabase
+      .channel("ukt_pendaftaran_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ukt_pendaftaran",
+        },
+        () => {
+          fetch("/api/ukt/ringkasan", { credentials: "include" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((json) => {
+              if (json != null) setData(json);
+            })
+            .catch(() => {});
+          setRefreshTrigger((r) => r + 1);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   /** Data grafik & turunan (harus di atas early return agar jumlah hook tetap) */
   const chartLulusData = useMemo(() => {
     if (!data) return [];
@@ -162,7 +239,9 @@ export default function AuditUjianModule() {
     return Object.entries(byStatus).map(([name, jumlah]) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1),
       jumlah,
-      fill: CHART_COLORS[Object.keys(byStatus).indexOf(name) % CHART_COLORS.length],
+      fill: CHART_COLORS[
+        Object.keys(byStatus).indexOf(name) % CHART_COLORS.length
+      ],
     }));
   }, [data]);
 
@@ -175,7 +254,8 @@ export default function AuditUjianModule() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 p-6">
         <p className="text-center text-zinc-400">
-          Akses dibatasi. Menu UKT (Ujian Kenaikan Tingkat) hanya untuk level struktural 2–5 (Ranting, Cabang, Pengprov, PP).
+          Akses dibatasi. Menu UKT (Ujian Kenaikan Tingkat) hanya untuk level
+          struktural 2–5 (Ranting, Cabang, Pengprov, PP).
         </p>
         <Link
           href="/dashboard/home-base"
@@ -201,9 +281,12 @@ export default function AuditUjianModule() {
           <div className="flex items-center gap-3">
             <BarChart3 className="h-9 w-9 text-amber-500/80" />
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">UKT (Ujian Kenaikan Tingkat)</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+                UKT (Ujian Kenaikan Tingkat)
+              </h1>
               <p className="mt-0.5 text-sm text-zinc-500">
-                Ringkasan UKT, peserta, dan hasil dari tabel ujian, ujian_peserta, ujian_hasil.
+                Ringkasan UKT, peserta, dan hasil dari tabel ujian,
+                ujian_peserta, ujian_hasil.
               </p>
             </div>
           </div>
@@ -233,9 +316,12 @@ export default function AuditUjianModule() {
         <div className="flex items-center gap-3">
           <BarChart3 className="h-9 w-9 text-amber-500/80" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">UKT (Ujian Kenaikan Tingkat)</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+              UKT (Ujian Kenaikan Tingkat)
+            </h1>
             <p className="mt-0.5 text-sm text-zinc-500">
-              Ringkasan UKT, peserta, dan hasil dari tabel ujian, ujian_peserta, ujian_hasil.
+              Ringkasan UKT, peserta, dan hasil dari tabel ujian, ujian_peserta,
+              ujian_hasil.
             </p>
           </div>
         </div>
@@ -256,56 +342,88 @@ export default function AuditUjianModule() {
           ))
         ) : r ? (
           <>
-            <div className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.ujian.card}`}>
+            <div
+              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.ujian.card}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.ujian.label}`}>
+                  <p
+                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.ujian.label}`}
+                  >
                     Total Ranting yang ikut ujian
                   </p>
-                  <p className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.ujian.value}`}>
+                  <p
+                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.ujian.value}`}
+                  >
                     {fmt(r.totalRantingIkutUjian ?? 0)}
                   </p>
                 </div>
-                <Award className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.ujian.icon}`} />
+                <Award
+                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.ujian.icon}`}
+                />
               </div>
             </div>
-            <div className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.peserta.card}`}>
+            <div
+              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.peserta.card}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.peserta.label}`}>
+                  <p
+                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.peserta.label}`}
+                  >
                     Total Peserta
                   </p>
-                  <p className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.peserta.value}`}>
+                  <p
+                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.peserta.value}`}
+                  >
                     {fmt(r.totalPeserta)}
                   </p>
                 </div>
-                <Users className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.peserta.icon}`} />
+                <Users
+                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.peserta.icon}`}
+                />
               </div>
             </div>
-            <div className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.lulus.card}`}>
+            <div
+              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.lulus.card}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.lulus.label}`}>
+                  <p
+                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.lulus.label}`}
+                  >
                     Peserta Lulus
                   </p>
-                  <p className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.lulus.value}`}>
+                  <p
+                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.lulus.value}`}
+                  >
                     {fmt(r.pesertaLulus)}
                   </p>
                 </div>
-                <TrendingUp className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.lulus.icon}`} />
+                <TrendingUp
+                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.lulus.icon}`}
+                />
               </div>
             </div>
-            <div className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.rate.card}`}>
+            <div
+              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.rate.card}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.rate.label}`}>
+                  <p
+                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.rate.label}`}
+                  >
                     Tingkat Kelulusan
                   </p>
-                  <p className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.rate.value}`}>
+                  <p
+                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.rate.value}`}
+                  >
                     {tingkatKelulusan != null ? `${tingkatKelulusan}%` : "—"}
                   </p>
                 </div>
-                <BarChart3 className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.rate.icon}`} />
+                <BarChart3
+                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.rate.icon}`}
+                />
               </div>
             </div>
           </>
@@ -356,6 +474,13 @@ export default function AuditUjianModule() {
           <BarChart3 className="h-4 w-4 shrink-0" />
           Ringkasan
         </button>
+        <Link
+          href="/dashboard/ukt/scan"
+          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15"
+        >
+          <QrCode className="h-4 w-4 shrink-0" />
+          Scan QR Kwitansi
+        </Link>
       </nav>
 
       {loading ? (
@@ -375,14 +500,20 @@ export default function AuditUjianModule() {
                 <div className="flex items-center gap-2">
                   <Settings2 className="h-5 w-5 text-violet-400/80 shrink-0" />
                   <div>
-                    <h2 className="text-base font-semibold text-zinc-100">Kelola UKT</h2>
+                    <h2 className="text-base font-semibold text-zinc-100">
+                      Kelola UKT
+                    </h2>
                     <p className="text-sm text-zinc-500">
                       Atur tahun ajaran, biaya per kyu, dan tutup tahun.
                     </p>
                   </div>
                 </div>
                 <span className="text-zinc-400 shrink-0">
-                  {kelolaUktExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  {kelolaUktExpanded ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
                 </span>
               </button>
               {kelolaUktExpanded && (
@@ -392,25 +523,13 @@ export default function AuditUjianModule() {
               )}
             </section>
           )}
-          {/* Pendaftaran peserta + Resume */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="min-w-0">
-              <PendaftaranUKT
-                onFilterChange={handleFilterChange}
-                onRegistrationSuccess={handleRegistrationSuccess}
-                onSelectionChange={handleSelectionChange}
-                refreshTrigger={resumeVersion}
-              />
-            </div>
-            <div className="min-w-0">
-              <ResumeUKT
-                tahunId={filterTahunId}
-                rantingId={filterRantingId}
-                resumeVersion={resumeVersion}
-                pendingSelection={pendingSelection}
-                onBatalSuccess={handleRegistrationSuccess}
-              />
-            </div>
+          {/* Pendaftaran peserta UKT (panel kanan Laporan dihapus) */}
+          <div className="min-w-0 w-full">
+            <PendaftaranUKT
+              onFilterChange={handleFilterChange}
+              onRegistrationSuccess={handleRegistrationSuccess}
+              refreshTrigger={refreshTrigger}
+            />
           </div>
         </div>
       ) : view === "ringkasan" && r ? (
@@ -418,8 +537,12 @@ export default function AuditUjianModule() {
           {/* Grafik: Pie Lulus + Bar Status */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-semibold text-zinc-200">Hasil Peserta</h3>
-              <p className="mb-4 text-xs text-zinc-500">Lulus vs tidak lulus (ujian_hasil)</p>
+              <h3 className="mb-1 text-sm font-semibold text-zinc-200">
+                Hasil Peserta
+              </h3>
+              <p className="mb-4 text-xs text-zinc-500">
+                Lulus vs tidak lulus (ujian_hasil)
+              </p>
               {chartLulusData.length === 0 ? (
                 <div className="flex h-[240px] items-center justify-center text-sm text-zinc-500">
                   Belum ada data hasil
@@ -439,11 +562,20 @@ export default function AuditUjianModule() {
                       label={({ name, value }) => `${name}: ${value}`}
                     >
                       {chartLulusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} stroke="rgba(0,0,0,0.2)" strokeWidth={1} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.fill}
+                          stroke="rgba(0,0,0,0.2)"
+                          strokeWidth={1}
+                        />
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ backgroundColor: "rgb(24 24 27)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }}
+                      contentStyle={{
+                        backgroundColor: "rgb(24 24 27)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "8px",
+                      }}
                       formatter={(value: number) => [value, ""]}
                       labelFormatter={(name) => name}
                     />
@@ -453,19 +585,39 @@ export default function AuditUjianModule() {
               )}
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-semibold text-zinc-200">Ujian per Status</h3>
-              <p className="mb-4 text-xs text-zinc-500">10 ujian terbaru dikelompokkan status</p>
+              <h3 className="mb-1 text-sm font-semibold text-zinc-200">
+                Ujian per Status
+              </h3>
+              <p className="mb-4 text-xs text-zinc-500">
+                10 ujian terbaru dikelompokkan status
+              </p>
               {chartStatusData.length === 0 ? (
                 <div className="flex h-[240px] items-center justify-center text-sm text-zinc-500">
                   Belum ada data ujian
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={chartStatusData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                    <XAxis type="number" tick={{ fill: "#a1a1aa", fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" width={70} tick={{ fill: "#a1a1aa", fontSize: 11 }} />
+                  <BarChart
+                    data={chartStatusData}
+                    layout="vertical"
+                    margin={{ left: 20, right: 20 }}
+                  >
+                    <XAxis
+                      type="number"
+                      tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={70}
+                      tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                    />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "rgb(24 24 27)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }}
+                      contentStyle={{
+                        backgroundColor: "rgb(24 24 27)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "8px",
+                      }}
                       formatter={(value: number) => [value, "Ujian"]}
                     />
                     <Bar dataKey="jumlah" radius={[0, 4, 4, 0]} maxBarSize={28}>
@@ -486,7 +638,9 @@ export default function AuditUjianModule() {
                 <ClipboardList className="h-5 w-5 text-amber-500/80" />
                 Ujian terbaru
               </h2>
-              <p className="mb-4 text-xs text-zinc-500">Riwayat ujian (tabel ujian)</p>
+              <p className="mb-4 text-xs text-zinc-500">
+                Riwayat ujian (tabel ujian)
+              </p>
               {r.ujianTerbaru.length === 0 ? (
                 <p className="rounded-lg border border-white/5 bg-white/[0.02] p-4 text-center text-sm text-zinc-500">
                   Belum ada data ujian
@@ -505,17 +659,29 @@ export default function AuditUjianModule() {
                     </thead>
                     <tbody>
                       {r.ujianTerbaru.map((row) => (
-                        <tr key={row.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                          <td className="px-4 py-3 text-zinc-200">{row.judul}</td>
-                          <td className="px-4 py-3 text-zinc-400">{row.kategori}</td>
-                          <td className="px-4 py-3 text-zinc-400">{row.tingkat || "—"}</td>
+                        <tr
+                          key={row.id}
+                          className="border-b border-white/5 hover:bg-white/[0.02]"
+                        >
+                          <td className="px-4 py-3 text-zinc-200">
+                            {row.judul}
+                          </td>
+                          <td className="px-4 py-3 text-zinc-400">
+                            {row.kategori}
+                          </td>
+                          <td className="px-4 py-3 text-zinc-400">
+                            {row.tingkat || "—"}
+                          </td>
                           <td className="px-4 py-3 text-zinc-400">
                             {row.tanggal
-                              ? new Date(row.tanggal).toLocaleDateString("id-ID", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                })
+                              ? new Date(row.tanggal).toLocaleDateString(
+                                  "id-ID",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )
                               : "—"}
                           </td>
                           <td className="px-4 py-3">
@@ -543,7 +709,9 @@ export default function AuditUjianModule() {
                 <FileCheck className="h-5 w-5 text-amber-500/80" />
                 Hasil terbaru
               </h2>
-              <p className="mb-4 text-xs text-zinc-500">Riwayat hasil (tabel ujian_hasil)</p>
+              <p className="mb-4 text-xs text-zinc-500">
+                Riwayat hasil (tabel ujian_hasil)
+              </p>
               {r.hasilTerbaru.length === 0 ? (
                 <p className="rounded-lg border border-white/5 bg-white/[0.02] p-4 text-center text-sm text-zinc-500">
                   Belum ada hasil ujian
@@ -561,11 +729,16 @@ export default function AuditUjianModule() {
                     </thead>
                     <tbody>
                       {r.hasilTerbaru.map((row) => (
-                        <tr key={row.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                        <tr
+                          key={row.id}
+                          className="border-b border-white/5 hover:bg-white/[0.02]"
+                        >
                           <td className="px-4 py-3 font-medium text-zinc-200">
                             {row.nilai} / {row.nilai_maks}
                           </td>
-                          <td className="px-4 py-3 text-zinc-400">{row.target_tingkat || "—"}</td>
+                          <td className="px-4 py-3 text-zinc-400">
+                            {row.target_tingkat || "—"}
+                          </td>
                           <td className="px-4 py-3">
                             <span
                               className={
@@ -579,13 +752,16 @@ export default function AuditUjianModule() {
                           </td>
                           <td className="px-4 py-3 text-zinc-500 text-xs">
                             {row.created_at
-                              ? new Date(row.created_at).toLocaleDateString("id-ID", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
+                              ? new Date(row.created_at).toLocaleDateString(
+                                  "id-ID",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )
                               : "—"}
                           </td>
                         </tr>
@@ -598,7 +774,6 @@ export default function AuditUjianModule() {
           </div>
         </div>
       ) : null}
-
     </div>
   );
 }

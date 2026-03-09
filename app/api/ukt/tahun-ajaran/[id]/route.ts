@@ -1,5 +1,6 @@
 /**
- * PATCH: Tutup/buka tahun ajaran UKT (set ditutup_at). Cabang/PP saja; cabang hanya untuk UKT cabang sendiri.
+ * PATCH: Edit tahun ajaran UKT (nama, tahun, periode, tanggal, tempat, biaya_per_kyu, ditutup_at, qris_content).
+ * Cabang/PP saja; cabang hanya untuk UKT cabang sendiri.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
@@ -23,7 +24,17 @@ export async function PATCH(
     return NextResponse.json({ message: "id wajib" }, { status: 400 });
   }
 
-  let body: { ditutup_at?: string | null; qris_content?: string | null } = {};
+  let body: {
+    nama?: string;
+    tahun?: number;
+    periode?: string;
+    cabang_id?: string | null;
+    tanggal?: string | null;
+    tempat?: string | null;
+    biaya_per_kyu?: Record<string, number> | null;
+    ditutup_at?: string | null;
+    qris_content?: string | null;
+  } = {};
   try {
     body = await req.json();
   } catch {
@@ -32,6 +43,8 @@ export async function PATCH(
 
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+  const { data: profile } = await admin.from("profiles").select("app_role").eq("user_id", user.id).maybeSingle();
+  const isSuperAdmin = (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
 
   const { data: row, error: fetchErr } = await admin
     .from("ukt_tahun_ajaran")
@@ -44,28 +57,65 @@ export async function PATCH(
   }
 
   const tahunCabangId = (row as { cabang_id?: string | null }).cabang_id ?? null;
-  const canEdit = scope.is_pp || (scope.cabang_ids.length > 0 && (tahunCabangId == null || scope.cabang_ids.includes(tahunCabangId)));
+  const canEdit =
+    isSuperAdmin ||
+    scope.is_pp ||
+    (scope.cabang_ids.length > 0 && (tahunCabangId == null || scope.cabang_ids.includes(tahunCabangId)));
   if (!canEdit) {
     return NextResponse.json({ message: "Hanya PP atau cabang pemilik UKT yang dapat mengubah tahun ajaran" }, { status: 403 });
   }
 
-  const now = new Date().toISOString();
   const payload: Record<string, unknown> = {};
+
+  if (body.nama !== undefined) {
+    const v = typeof body.nama === "string" ? body.nama.trim() : "";
+    if (!v) {
+      return NextResponse.json({ message: "nama wajib diisi" }, { status: 400 });
+    }
+    payload.nama = v;
+  }
+  if (body.tahun !== undefined) {
+    const v = typeof body.tahun === "number" ? body.tahun : Number(body.tahun);
+    if (!Number.isInteger(v)) {
+      return NextResponse.json({ message: "tahun harus berupa angka" }, { status: 400 });
+    }
+    payload.tahun = v;
+  }
+  if (body.periode === "I" || body.periode === "II") {
+    payload.periode = body.periode;
+  }
+  if (body.cabang_id !== undefined) {
+    payload.cabang_id = body.cabang_id == null || body.cabang_id === "" ? null : String(body.cabang_id).trim();
+  }
+  if (body.tanggal !== undefined) {
+    payload.tanggal = body.tanggal == null || body.tanggal === "" ? null : String(body.tanggal).trim();
+  }
+  if (body.tempat !== undefined) {
+    payload.tempat = body.tempat == null || body.tempat === "" ? null : String(body.tempat).trim();
+  }
+  if (body.biaya_per_kyu !== undefined) {
+    payload.biaya_per_kyu =
+      body.biaya_per_kyu != null && typeof body.biaya_per_kyu === "object" && Object.keys(body.biaya_per_kyu).length > 0
+        ? body.biaya_per_kyu
+        : null;
+  }
   if (body.ditutup_at !== undefined) {
+    const now = new Date().toISOString();
     payload.ditutup_at = body.ditutup_at === null || body.ditutup_at === "" ? null : (body.ditutup_at ?? now);
   }
   if (body.qris_content !== undefined) {
     payload.qris_content = body.qris_content == null || body.qris_content === "" ? null : String(body.qris_content).trim();
   }
+
   if (Object.keys(payload).length === 0) {
-    return NextResponse.json({ message: "Berikan ditutup_at dan/atau qris_content" }, { status: 400 });
+    return NextResponse.json({ message: "Tidak ada field yang diubah" }, { status: 400 });
   }
 
   const { data: updated, error } = await admin
     .from("ukt_tahun_ajaran")
     .update(payload)
     .eq("id", id)
-    .select("id, nama, ditutup_at, qris_content")
+    .select("id, nama, tahun, periode, cabang_id, tanggal, tempat, ditutup_at, biaya_per_kyu, qris_content")
     .single();
 
   if (error) {

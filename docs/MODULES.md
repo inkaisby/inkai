@@ -12,7 +12,7 @@ Daftar modul dashboard dan statusnya untuk acuan bersih-bersih / refactor.
 | `/dashboard/home-base` | `app/dashboard/home-base/page.tsx` | `modules/homebase/HomeBaseModule.tsx` | Home Base: peta, ranting, event, link modul |
 | `/dashboard/keanggotaan` | `app/dashboard/keanggotaan/page.tsx` | `modules/keanggotaan/KeanggotaanModule.tsx` | Keanggotaan, KYU/DAN, pelatihan, pindah ranting |
 | `/dashboard/anggota-ranting` | `app/dashboard/anggota-ranting/page.tsx` | `modules/anggota-ranting/AnggotaRantingModule.tsx` | Anggota per ranting, import |
-| `/dashboard/event` | `app/dashboard/event/page.tsx` | `modules/event/EventModule.tsx` | Tab: UKT (Pendaftaran, Resume, Riwayat, Kelola) |
+| `/dashboard/event` | `app/dashboard/event/page.tsx` | `modules/pertandingan/PertandinganModule.tsx` | Pertandingan (menu Event). UKT di `/dashboard/ukt`. |
 | `/dashboard/ukt` | `app/dashboard/ukt/page.tsx` | `modules/audit-ujian/AuditUjianModule.tsx` | UKT (Ujian Kenaikan Tingkat). `/dashboard/audit`, `/dashboard/ujian`, `/dashboard/audit-ujian` di-redirect ke sini. |
 | `/dashboard/ranting` | `app/dashboard/ranting/page.tsx` | `modules/ranting/RantingModule.tsx` | CRUD ranting |
 | `/dashboard/keuangan` | `app/dashboard/keuangan/page.tsx` | `modules/keuangan/KeuanganModule.tsx` | Keuangan, pembayaran, kwitansi |

@@ -18,6 +18,9 @@ export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("ranting_ids")?.trim() ?? "";
   const admin = createSupabaseAdminClient();
   const scope = await getUserScope(admin, user.id);
+  const { data: profile } = await admin.from("profiles").select("app_role").eq("user_id", user.id).maybeSingle();
+  const isSuperAdmin = (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
+  const canSeeAll = scope.is_pp || isSuperAdmin;
 
   let rantingIds: string[] = [];
   if (raw) {
@@ -25,12 +28,12 @@ export async function GET(req: NextRequest) {
     if (rantingIds.length === 0) {
       return NextResponse.json({ items: [], total_aktif: 0, total_nonaktif: 0 });
     }
-    if (!scope.is_pp && scope.ranting_ids.length > 0) {
+    if (!canSeeAll && scope.ranting_ids.length > 0) {
       const allowed = new Set(scope.ranting_ids);
       rantingIds = rantingIds.filter((id) => allowed.has(id));
     }
   } else {
-    if (scope.is_pp) {
+    if (canSeeAll) {
       const { data: all } = await admin.from("ranting").select("id").order("nama");
       rantingIds = (all ?? []).map((r: { id: string }) => r.id);
     } else {

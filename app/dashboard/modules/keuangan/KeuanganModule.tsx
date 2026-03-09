@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FileText, Printer } from "lucide-react";
+import { formatCurrency, renderKwitansiPdf, getKwitansiFilename } from "@/components/kwitansi";
 
 type PaymentRow = {
   id: string;
@@ -16,13 +17,6 @@ type PaymentRow = {
 };
 
 type TahunOption = { id: string; nama: string };
-
-const formatCurrency = (v: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(v);
 
 export default function KeuanganModule() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -81,9 +75,12 @@ export default function KeuanganModule() {
         return;
       }
       const data = await verifyRes.json() as {
+        id: string;
+        token: string;
         no_kwitansi: string;
         nama: string;
         nomor: string;
+        jenis: string;
         event: string;
         ranting: string;
         nominal: number;
@@ -91,7 +88,7 @@ export default function KeuanganModule() {
       };
       const printUrl =
         typeof window !== "undefined"
-          ? `${window.location.origin}/dashboard/print/kwitansi?token=${encodeURIComponent(token!)}`
+          ? `${window.location.origin}/kwitansi?token=${encodeURIComponent(token!)}`
           : "";
 
       const [qrRes, { default: jsPDF }] = await Promise.all([
@@ -101,30 +98,20 @@ export default function KeuanganModule() {
       if (!qrRes.ok) throw new Error("Gagal generate QR");
       const { dataUrl: qrDataUrl } = (await qrRes.json()) as { dataUrl: string };
       const doc = new jsPDF();
-      const formatDate = (s: string) =>
-        s
-          ? new Date(s).toLocaleDateString("id-ID", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })
-          : "";
-
-      doc.setFontSize(14);
-      doc.text("KWITANSI PEMBAYARAN", 20, 20);
-      doc.setFontSize(10);
-      doc.text(`No. ${data.no_kwitansi ?? ""}`, 20, 28);
-      doc.text(`Tanggal: ${formatDate(data.tanggal ?? "")}`, 20, 34);
-      doc.text(`Nama: ${data.nama ?? ""}`, 20, 42);
-      doc.text(`No. Anggota: ${data.nomor ?? ""}`, 20, 48);
-      doc.text(`Event: ${data.event ?? ""}`, 20, 54);
-      doc.text(`Ranting: ${data.ranting ?? ""}`, 20, 60);
-      doc.text(`Terbilang: ${formatCurrency(Number(data.nominal ?? 0))}`, 20, 68);
-      doc.addImage(qrDataUrl, "PNG", 20, 78, 30, 30);
-      doc.setFontSize(8);
-      doc.text("Scan QR untuk cetak ulang", 52, 98);
-
-      doc.save(`kwitansi-${(data.no_kwitansi ?? "ukt").replace(/\s/g, "-")}.pdf`);
+      const kwitansiData = {
+        id: data.id,
+        token: data.token,
+        no_kwitansi: data.no_kwitansi,
+        nama: data.nama,
+        nomor: data.nomor,
+        jenis: data.jenis ?? "Ujian Kenaikan Tingkat (UKT)",
+        event: data.event,
+        ranting: data.ranting,
+        nominal: data.nominal,
+        tanggal: data.tanggal,
+      };
+      renderKwitansiPdf(doc, kwitansiData, qrDataUrl);
+      doc.save(getKwitansiFilename(kwitansiData));
     } catch (e) {
       console.error(e);
       alert("Gagal membuat PDF kwitansi");

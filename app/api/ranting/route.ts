@@ -5,6 +5,7 @@ import { getUserScope } from "@/app/lib/scope/getUserScope";
 import { getFeatureConfig } from "@/app/lib/featureConfig";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const ROOT_EMAIL =
   (process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL as string | undefined)?.toLowerCase() ??
@@ -33,14 +34,22 @@ export async function GET(req: NextRequest) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("app_role")
+    .select("app_role, structural_level")
     .eq("user_id", user.id)
     .maybeSingle();
   const email = (user.email ?? "").toLowerCase();
   const isRoot = ROOT_EMAIL && email && email === ROOT_EMAIL;
   const isSuperAdmin =
     isRoot || (profile?.app_role as string | null)?.toUpperCase() === "SUPERADMIN";
-  const canSeeAllRanting = scope.is_pp || isSuperAdmin;
+  const { data: structural } = await admin.rpc("get_user_structural_roles", {
+    p_user_id: user.id,
+  });
+  const levels = (structural ?? [])
+    .filter((r: { active?: boolean }) => r.active !== false)
+    .map((r: { structural_level?: number }) => Number(r.structural_level) || 0);
+  const profileLevel = Number((profile as { structural_level?: unknown } | null)?.structural_level) || 0;
+  const maxStructuralLevel = Math.max(0, ...levels, profileLevel);
+  const canSeeAllRanting = scope.is_pp || isSuperAdmin || maxStructuralLevel >= 3;
 
   let query = admin
     .from("ranting")

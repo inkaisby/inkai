@@ -40,6 +40,7 @@ export default function AnggotaRantingModule() {
   const rantingNamaParam = searchParams.get("ranting_nama") ?? "";
 
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [data, setData] = useState<AnggotaRow[]>([]);
   const [search, setSearch] = useState("");
   const [showSingleForm, setShowSingleForm] = useState(false);
@@ -66,6 +67,15 @@ export default function AnggotaRantingModule() {
   const [editFormLoading, setEditFormLoading] = useState(false);
   const [singleNameConfirmed, setSingleNameConfirmed] = useState(false);
   const [editNameConfirmed, setEditNameConfirmed] = useState(false);
+
+  type DuplicateCheckResult = {
+    nik_dup?: { id: string; nama: string };
+    nomor_dup?: { id: string; nama: string };
+    nama_similar?: { id: string; nama: string }[];
+  };
+  const [duplicateCheckSingle, setDuplicateCheckSingle] = useState<DuplicateCheckResult | null>(null);
+  const [duplicateCheckEdit, setDuplicateCheckEdit] = useState<DuplicateCheckResult | null>(null);
+  const [duplicateCheckLoading, setDuplicateCheckLoading] = useState(false);
 
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
   const [rantingListLoading, setRantingListLoading] = useState(true);
@@ -102,14 +112,21 @@ export default function AnggotaRantingModule() {
   const loadData = useCallback(async () => {
     if (!rantingId) return;
     setLoading(true);
+    setLoadError(null);
     const params = new URLSearchParams({ ranting_id: rantingId });
     try {
       const res = await fetch(`/api/ukt/anggota-aktif?${params.toString()}`, {
         credentials: "include",
       });
-      const d = await res.json();
-      setData(Array.isArray(d) ? d : []);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLoadError(typeof d?.message === "string" ? d.message : "Gagal memuat data anggota");
+        setData([]);
+      } else {
+        setData(Array.isArray(d) ? d : []);
+      }
     } catch {
+      setLoadError("Gagal memuat data anggota");
       setData([]);
     } finally {
       setLoading(false);
@@ -122,8 +139,8 @@ export default function AnggotaRantingModule() {
     try {
       const params = new URLSearchParams({ ranting_id: rantingId, status: "NONAKTIF" });
       const res = await fetch(`/api/ukt/anggota-aktif?${params.toString()}`, { credentials: "include" });
-      const d = await res.json();
-      setDataNonAktif(Array.isArray(d) ? d : []);
+      const d = await res.json().catch(() => ({}));
+      setDataNonAktif(res.ok && Array.isArray(d) ? d : []);
     } catch {
       setDataNonAktif([]);
     } finally {
@@ -439,9 +456,8 @@ export default function AnggotaRantingModule() {
     [rantingId, singleForm.nik, singleForm.nomor, singleForm.nama, singleForm.kyu_level, singleForm.dan, loadData, loadNonAktif]
   );
 
-  // Tanpa ranting_id: muat daftar ranting (scope user). Satu ranting → redirect; banyak → pilih.
+  // Muat daftar ranting (scope user). Tanpa ranting_id + satu ranting → redirect; level 3+ punya banyak ranting → bisa ganti di dropdown.
   useEffect(() => {
-    if (rantingId) return;
     let mounted = true;
     setRantingListLoading(true);
     fetch("/api/ranting", { credentials: "include" })
@@ -453,7 +469,7 @@ export default function AnggotaRantingModule() {
           nama: String(r.nama ?? "—"),
         }));
         setRantingList(opts);
-        if (opts.length === 1) {
+        if (!rantingId && opts.length === 1) {
           router.replace(
             `/dashboard/anggota-ranting?ranting_id=${encodeURIComponent(opts[0].id)}&ranting_nama=${encodeURIComponent(opts[0].nama)}`
           );
@@ -537,46 +553,124 @@ export default function AnggotaRantingModule() {
     return { nikMap, nomorMap, nameMap, normalizeName };
   }, [data, dataNonAktif]);
 
+  /* Cek duplikat di semua wilayah (API) */
+  useEffect(() => {
+    if (!showSingleForm) return;
+    const nik = singleForm.nik.trim();
+    const nomor = singleForm.nomor.trim();
+    const nama = singleForm.nama.trim();
+    if (!nik && !nomor && !nama) {
+      setDuplicateCheckSingle(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setDuplicateCheckLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (nik) params.set("nik", nik);
+        if (nomor) params.set("nomor", nomor);
+        if (nama) params.set("nama", nama);
+        const res = await fetch(`/api/anggota-ranting/check-duplicate?${params}`, { credentials: "include" });
+        if (res.ok) {
+          const d = (await res.json()) as DuplicateCheckResult;
+          setDuplicateCheckSingle(d);
+        } else {
+          setDuplicateCheckSingle(null);
+        }
+      } catch {
+        setDuplicateCheckSingle(null);
+      } finally {
+        setDuplicateCheckLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [showSingleForm, singleForm.nik, singleForm.nomor, singleForm.nama]);
+
+  useEffect(() => {
+    if (!showEditForm || !editingMember) return;
+    const nik = editForm.nik.trim();
+    const nomor = editForm.nomor.trim();
+    const nama = editForm.nama.trim();
+    if (!nik && !nomor && !nama) {
+      setDuplicateCheckEdit(null);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setDuplicateCheckLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (nik) params.set("nik", nik);
+        if (nomor) params.set("nomor", nomor);
+        if (nama) params.set("nama", nama);
+        params.set("exclude_profile_id", editingMember.profile_id);
+        const res = await fetch(`/api/anggota-ranting/check-duplicate?${params}`, { credentials: "include" });
+        if (res.ok) {
+          const d = (await res.json()) as DuplicateCheckResult;
+          setDuplicateCheckEdit(d);
+        } else {
+          setDuplicateCheckEdit(null);
+        }
+      } catch {
+        setDuplicateCheckEdit(null);
+      } finally {
+        setDuplicateCheckLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [showEditForm, editingMember?.profile_id, editForm.nik, editForm.nomor, editForm.nama]);
+
+  const toDupRow = (x: { id: string; nama: string }): AnggotaRow => ({ profile_id: x.id, nama: x.nama, nomor: "", status: "", kyu_dan_terakhir: "" });
+
   const singleNikDup = useMemo(() => {
     const nik = singleForm.nik.trim();
     if (!nik) return null;
-    return duplicateLookup.nikMap.get(nik) ?? null;
-  }, [singleForm.nik, duplicateLookup]);
+    const local = duplicateLookup.nikMap.get(nik);
+    if (local) return local;
+    const global = duplicateCheckSingle?.nik_dup;
+    return global ? toDupRow(global) : null;
+  }, [singleForm.nik, duplicateLookup, duplicateCheckSingle]);
   const singleNomorDup = useMemo(() => {
     const nomor = singleForm.nomor.trim();
     if (!nomor) return null;
-    return duplicateLookup.nomorMap.get(nomor) ?? null;
-  }, [singleForm.nomor, duplicateLookup]);
+    const local = duplicateLookup.nomorMap.get(nomor);
+    if (local) return local;
+    const global = duplicateCheckSingle?.nomor_dup;
+    return global ? toDupRow(global) : null;
+  }, [singleForm.nomor, duplicateLookup, duplicateCheckSingle]);
   const singleNamaDup = useMemo(() => {
     const key = duplicateLookup.normalizeName(singleForm.nama ?? "");
     if (!key) return null;
-    const list = duplicateLookup.nameMap.get(key) ?? [];
-    return list.length > 0 ? list[0] : null;
-  }, [singleForm.nama, duplicateLookup]);
+    const localList = duplicateLookup.nameMap.get(key) ?? [];
+    if (localList.length > 0) return localList[0];
+    const global = duplicateCheckSingle?.nama_similar?.[0];
+    return global ? toDupRow(global) : null;
+  }, [singleForm.nama, duplicateLookup, duplicateCheckSingle]);
 
   const editNikDup = useMemo(() => {
     const nik = editForm.nik.trim();
     if (!nik) return null;
-    const found = duplicateLookup.nikMap.get(nik) ?? null;
-    if (!found) return null;
-    if (editingMember?.profile_id && found.profile_id === editingMember.profile_id) return null;
-    return found;
-  }, [editForm.nik, duplicateLookup, editingMember?.profile_id]);
+    const local = duplicateLookup.nikMap.get(nik);
+    if (local && (!editingMember?.profile_id || local.profile_id !== editingMember.profile_id)) return local;
+    const global = duplicateCheckEdit?.nik_dup;
+    return global ? toDupRow(global) : null;
+  }, [editForm.nik, duplicateLookup, duplicateCheckEdit, editingMember?.profile_id]);
   const editNomorDup = useMemo(() => {
     const nomor = editForm.nomor.trim();
     if (!nomor) return null;
-    const found = duplicateLookup.nomorMap.get(nomor) ?? null;
-    if (!found) return null;
-    if (editingMember?.profile_id && found.profile_id === editingMember.profile_id) return null;
-    return found;
-  }, [editForm.nomor, duplicateLookup, editingMember?.profile_id]);
+    const local = duplicateLookup.nomorMap.get(nomor);
+    if (local && (!editingMember?.profile_id || local.profile_id !== editingMember.profile_id)) return local;
+    const global = duplicateCheckEdit?.nomor_dup;
+    return global ? toDupRow(global) : null;
+  }, [editForm.nomor, duplicateLookup, duplicateCheckEdit, editingMember?.profile_id]);
   const editNamaDup = useMemo(() => {
     const key = duplicateLookup.normalizeName(editForm.nama ?? "");
     if (!key) return null;
-    const list = duplicateLookup.nameMap.get(key) ?? [];
-    const found = list.find((a) => a.profile_id !== editingMember?.profile_id) ?? null;
-    return found;
-  }, [editForm.nama, duplicateLookup, editingMember?.profile_id]);
+    const localList = duplicateLookup.nameMap.get(key) ?? [];
+    const local = localList.find((a) => a.profile_id !== editingMember?.profile_id) ?? null;
+    if (local) return local;
+    const global = duplicateCheckEdit?.nama_similar?.[0];
+    return global ? toDupRow(global) : null;
+  }, [editForm.nama, duplicateLookup, duplicateCheckEdit, editingMember?.profile_id]);
 
   useEffect(() => {
     setSingleNameConfirmed(false);
@@ -839,19 +933,44 @@ export default function AnggotaRantingModule() {
     <div className="px-6 py-8" suppressHydrationWarning>
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex items-center justify-between gap-3" suppressHydrationWarning>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-400/40">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-400/40 shrink-0">
               <Users className="h-5 w-5 text-emerald-300" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-white/95">
                 Anggota Ranting
               </h1>
-              <p className="text-xs text-white/60">
-                Daftar anggota aktif di ranting{" "}
-                <span className="font-semibold text-emerald-200">
-                  {rantingNamaParam || "terpilih"}
-                </span>
+              <p className="text-xs text-white/60 flex items-center gap-2 flex-wrap">
+                Daftar anggota aktif di ranting
+                {rantingId && rantingList.length > 1 ? (
+                  <Select
+                    value={rantingId}
+                    onValueChange={(value) => {
+                      const r = rantingList.find((x) => x.id === value);
+                      if (r) {
+                        router.replace(
+                          `/dashboard/anggota-ranting?ranting_id=${encodeURIComponent(r.id)}&ranting_nama=${encodeURIComponent(r.nama)}`
+                        );
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-[200px] h-8 text-xs bg-white/5 border-white/20 text-emerald-200 font-semibold focus:ring-emerald-400/30" suppressHydrationWarning>
+                      <SelectValue placeholder="Pilih ranting" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rantingList.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="font-semibold text-emerald-200">
+                    {rantingNamaParam || "terpilih"}
+                  </span>
+                )}
                 .
               </p>
             </div>
@@ -869,6 +988,7 @@ export default function AnggotaRantingModule() {
               type="button"
               onClick={() => {
                 loadData();
+                loadNonAktif();
               }}
               className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
               suppressHydrationWarning
@@ -877,6 +997,13 @@ export default function AnggotaRantingModule() {
             </button>
           </div>
         </header>
+
+        {loadError && (
+          <div className="mt-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-center justify-between gap-2">
+            <span>{loadError === "Forbidden" ? "Tidak punya akses ke ranting ini. Hanya Ketua Ranting / atasan ranting yang dapat melihat data." : loadError}</span>
+            <button type="button" onClick={() => setLoadError(null)} className="text-red-300 hover:text-white shrink-0" aria-label="Tutup">×</button>
+          </div>
+        )}
 
         {/* Dashboard ringkasan & grafik — full color */}
         <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent p-5 shadow-lg" suppressHydrationWarning>
