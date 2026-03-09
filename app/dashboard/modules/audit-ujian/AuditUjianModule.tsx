@@ -8,32 +8,21 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  ClipboardList,
-  FileCheck,
+  FileText,
   QrCode,
   Settings2,
   TrendingUp,
   UserPlus,
   Users,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
 import { getPrefetch } from "@/app/dashboard/lib/prefetchCache";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import PendaftaranUKT from "./components/PendaftaranUKT";
 import KelolaUKTCabang from "./components/KelolaUKTCabang";
+import KwitansiRantingModal from "./components/KwitansiRantingModal";
+import RingkasanLaporan from "./components/RingkasanLaporan";
 
 const ROOT_EMAIL =
   process.env.NEXT_PUBLIC_INKAI_ROOT_EMAIL?.toLowerCase() ?? null;
@@ -117,16 +106,6 @@ const UKT_KPI_ACCENTS = {
   },
 } as const;
 
-const CHART_COLORS = [
-  "#34d399",
-  "#f59e0b",
-  "#6366f1",
-  "#ec4899",
-  "#14b8a6",
-  "#a855f7",
-];
-const PIE_COLORS = ["#34d399", "#f87171"]; // lulus, tidak lulus
-
 export default function AuditUjianModule() {
   const { scope } = useScope();
   const user = useBootstrapStore((s) => s.data?.user ?? null);
@@ -147,6 +126,7 @@ export default function AuditUjianModule() {
   const [filterRantingId, setFilterRantingId] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [kelolaUktExpanded, setKelolaUktExpanded] = useState(false);
+  const [kwitansiRantingOpen, setKwitansiRantingOpen] = useState(false);
 
   const handleFilterChange = useCallback(
     (tahunId: string, rantingId: string) => {
@@ -218,33 +198,6 @@ export default function AuditUjianModule() {
     };
   }, []);
 
-  /** Data grafik & turunan (harus di atas early return agar jumlah hook tetap) */
-  const chartLulusData = useMemo(() => {
-    if (!data) return [];
-    const lulus = data.pesertaLulus;
-    const tidakLulus = Math.max(0, data.totalPeserta - lulus);
-    return [
-      { name: "Lulus", value: lulus, fill: PIE_COLORS[0] },
-      { name: "Tidak lulus", value: tidakLulus, fill: PIE_COLORS[1] },
-    ].filter((d) => d.value > 0);
-  }, [data]);
-
-  const chartStatusData = useMemo(() => {
-    if (!data) return [];
-    const byStatus: Record<string, number> = {};
-    for (const u of data.ujianTerbaru) {
-      const s = u.status || "lainnya";
-      byStatus[s] = (byStatus[s] ?? 0) + 1;
-    }
-    return Object.entries(byStatus).map(([name, jumlah]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      jumlah,
-      fill: CHART_COLORS[
-        Object.keys(byStatus).indexOf(name) % CHART_COLORS.length
-      ],
-    }));
-  }, [data]);
-
   const tingkatKelulusan = useMemo(() => {
     if (!data || data.totalPeserta <= 0) return null;
     return Math.round((data.pesertaLulus / data.totalPeserta) * 100);
@@ -305,6 +258,8 @@ export default function AuditUjianModule() {
 
   return (
     <div className="space-y-8">
+      {/* Sticky: header, KPI, nav — tetap terlihat saat scroll */}
+      <div className="sticky top-0 z-10 bg-black/95 backdrop-blur-sm border-b border-white/5 pb-6 space-y-6">
       <header className="border-b border-white/10 pb-6">
         <Link
           href="/dashboard/home-base"
@@ -481,8 +436,27 @@ export default function AuditUjianModule() {
           <QrCode className="h-4 w-4 shrink-0" />
           Scan QR Kwitansi
         </Link>
+        <button
+          type="button"
+          onClick={() => setKwitansiRantingOpen(true)}
+          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15"
+        >
+          <FileText className="h-4 w-4 shrink-0" />
+          Kwitansi per Ranting
+        </button>
       </nav>
+      <p className="text-xs text-zinc-500">
+        Scan QR untuk verifikasi kwitansi per orang; Kwitansi per Ranting untuk
+        laporan agregat (A, B, C).
+      </p>
+      </div>
 
+      <KwitansiRantingModal
+        open={kwitansiRantingOpen}
+        onClose={() => setKwitansiRantingOpen(false)}
+      />
+
+      <div className="pt-6">
       {loading ? (
         <div className="rounded-xl border border-white/10 bg-white/[0.03] py-12 text-center text-sm text-zinc-500">
           Memuat ringkasan…
@@ -532,248 +506,10 @@ export default function AuditUjianModule() {
             />
           </div>
         </div>
-      ) : view === "ringkasan" && r ? (
-        <div className="space-y-8">
-          {/* Grafik: Pie Lulus + Bar Status */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-semibold text-zinc-200">
-                Hasil Peserta
-              </h3>
-              <p className="mb-4 text-xs text-zinc-500">
-                Lulus vs tidak lulus (ujian_hasil)
-              </p>
-              {chartLulusData.length === 0 ? (
-                <div className="flex h-[240px] items-center justify-center text-sm text-zinc-500">
-                  Belum ada data hasil
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie
-                      data={chartLulusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      dataKey="value"
-                      nameKey="name"
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {chartLulusData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.fill}
-                          stroke="rgba(0,0,0,0.2)"
-                          strokeWidth={1}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "rgb(24 24 27)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [value, ""]}
-                      labelFormatter={(name) => name}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-              <h3 className="mb-1 text-sm font-semibold text-zinc-200">
-                Ujian per Status
-              </h3>
-              <p className="mb-4 text-xs text-zinc-500">
-                10 ujian terbaru dikelompokkan status
-              </p>
-              {chartStatusData.length === 0 ? (
-                <div className="flex h-[240px] items-center justify-center text-sm text-zinc-500">
-                  Belum ada data ujian
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart
-                    data={chartStatusData}
-                    layout="vertical"
-                    margin={{ left: 20, right: 20 }}
-                  >
-                    <XAxis
-                      type="number"
-                      tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={70}
-                      tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "rgb(24 24 27)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [value, "Ujian"]}
-                    />
-                    <Bar dataKey="jumlah" radius={[0, 4, 4, 0]} maxBarSize={28}>
-                      {chartStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-
-          {/* Tabel: Ujian terbaru & Hasil terbaru */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-              <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-zinc-100">
-                <ClipboardList className="h-5 w-5 text-amber-500/80" />
-                Ujian terbaru
-              </h2>
-              <p className="mb-4 text-xs text-zinc-500">
-                Riwayat ujian (tabel ujian)
-              </p>
-              {r.ujianTerbaru.length === 0 ? (
-                <p className="rounded-lg border border-white/5 bg-white/[0.02] p-4 text-center text-sm text-zinc-500">
-                  Belum ada data ujian
-                </p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-white/10">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/[0.02] text-left text-zinc-400">
-                        <th className="px-4 py-3">Judul</th>
-                        <th className="px-4 py-3">Kategori</th>
-                        <th className="px-4 py-3">Tingkat</th>
-                        <th className="px-4 py-3">Tanggal</th>
-                        <th className="px-4 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {r.ujianTerbaru.map((row) => (
-                        <tr
-                          key={row.id}
-                          className="border-b border-white/5 hover:bg-white/[0.02]"
-                        >
-                          <td className="px-4 py-3 text-zinc-200">
-                            {row.judul}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-400">
-                            {row.kategori}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-400">
-                            {row.tingkat || "—"}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-400">
-                            {row.tanggal
-                              ? new Date(row.tanggal).toLocaleDateString(
-                                  "id-ID",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={
-                                row.status === "selesai"
-                                  ? "rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400"
-                                  : row.status === "dibuka"
-                                    ? "rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400"
-                                    : "text-zinc-500 text-xs"
-                              }
-                            >
-                              {row.status || "—"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-            <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-              <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-zinc-100">
-                <FileCheck className="h-5 w-5 text-amber-500/80" />
-                Hasil terbaru
-              </h2>
-              <p className="mb-4 text-xs text-zinc-500">
-                Riwayat hasil (tabel ujian_hasil)
-              </p>
-              {r.hasilTerbaru.length === 0 ? (
-                <p className="rounded-lg border border-white/5 bg-white/[0.02] p-4 text-center text-sm text-zinc-500">
-                  Belum ada hasil ujian
-                </p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-white/10">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/[0.02] text-left text-zinc-400">
-                        <th className="px-4 py-3">Nilai</th>
-                        <th className="px-4 py-3">Target tingkat</th>
-                        <th className="px-4 py-3">Lulus</th>
-                        <th className="px-4 py-3">Tanggal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {r.hasilTerbaru.map((row) => (
-                        <tr
-                          key={row.id}
-                          className="border-b border-white/5 hover:bg-white/[0.02]"
-                        >
-                          <td className="px-4 py-3 font-medium text-zinc-200">
-                            {row.nilai} / {row.nilai_maks}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-400">
-                            {row.target_tingkat || "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={
-                                row.lulus
-                                  ? "rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400"
-                                  : "rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400"
-                              }
-                            >
-                              {row.lulus ? "Lulus" : "Tidak lulus"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-zinc-500 text-xs">
-                            {row.created_at
-                              ? new Date(row.created_at).toLocaleDateString(
-                                  "id-ID",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
-                              : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      ) : view === "ringkasan" ? (
+        <RingkasanLaporan />
       ) : null}
+      </div>
     </div>
   );
 }

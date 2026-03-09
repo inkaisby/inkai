@@ -46,9 +46,10 @@ export default function ScanKwitansiPage() {
   }, []);
 
   const openByToken = useCallback(
-    (token: string) => {
-      if (typeof window !== "undefined")
-        openKwitansiUrl(`${window.location.origin}/kwitansi?token=${encodeURIComponent(token)}`);
+    (token: string, type?: "perorang" | "ranting") => {
+      if (typeof window === "undefined") return;
+      const path = type === "ranting" ? "/kwitansi-ranting" : "/kwitansi";
+      openKwitansiUrl(`${window.location.origin}${path}?token=${encodeURIComponent(token)}`);
     },
     [openKwitansiUrl]
   );
@@ -162,7 +163,8 @@ export default function ScanKwitansiPage() {
         return;
       }
       const token = j.token;
-      if (token) openByToken(token);
+      const type = j.type as "perorang" | "ranting" | undefined;
+      if (token) openByToken(token, type);
       else setError("Kwitansi tidak ditemukan.");
     } finally {
       setLoadingNo(false);
@@ -256,7 +258,7 @@ export default function ScanKwitansiPage() {
               setNoKwitansi(e.target.value);
               setError(null);
             }}
-            placeholder="UKT-A23F0323"
+            placeholder="UKT-A23F0323 atau UKT-R-3FD42F39"
             className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-teal-500/50 focus:outline-none focus:ring-1 focus:ring-teal-500/30"
           />
           <input

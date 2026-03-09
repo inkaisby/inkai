@@ -1,5 +1,15 @@
 export { KwitansiTemplate } from "./KwitansiTemplate";
-export { formatCurrency, formatDateShort, formatDateLong } from "./utils";
+export { KwitansiRantingTemplate } from "./KwitansiRantingTemplate";
+export {
+  formatCurrency,
+  formatDateShort,
+  formatDateLong,
+  fetchInkaiLogoDataUrl,
+} from "./utils";
 export { renderKwitansiPdf, getKwitansiFilename } from "./generatePdf";
-export type { KwitansiData } from "./types";
+export {
+  renderKwitansiRantingPdf,
+  getKwitansiRantingFilename,
+} from "./generatePdfRanting";
+export type { KwitansiData, KwitansiRantingData } from "./types";
 export type { JsPDFInstance } from "./generatePdf";

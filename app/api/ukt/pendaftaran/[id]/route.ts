@@ -39,6 +39,8 @@ export async function PATCH(
     /** Hasil ujian: diisi Cabang setelah ujian selesai; terintegrasi ke Keanggotaan tab Kyu */
     lulus?: boolean;
     tingkat_lulus?: number | string | null;
+    /** Sync Kyu dari Keanggotaan: jika kosong, bisa diisi manual */
+    kyu_dan_terakhir?: string | null;
   } = {};
   try {
     body = await req.json();
@@ -154,6 +156,10 @@ export async function PATCH(
     }
     if (body.refund_catatan !== undefined) payload.refund_catatan = body.refund_catatan?.trim() || null;
     if (body.refund_bukti_path !== undefined) payload.refund_bukti_path = body.refund_bukti_path?.trim() || null;
+  }
+  if (body.kyu_dan_terakhir !== undefined) {
+    const s = body.kyu_dan_terakhir?.trim() ?? "";
+    payload.kyu_dan_terakhir = s || null;
   }
   if (body.lulus !== undefined) payload.lulus = !!body.lulus;
   if (body.tingkat_lulus !== undefined) {

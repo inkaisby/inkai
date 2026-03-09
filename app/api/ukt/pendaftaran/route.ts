@@ -27,6 +27,8 @@ type PendaftaranRow = {
   nomor: string;
   kwitansi_token: string | null;
   alasan_tolak_bukti: string | null;
+  lulus?: boolean;
+  tingkat_lulus?: number | null;
 };
 
 /** Bentuk baris dari DB (select ukt_pendaftaran) */
@@ -42,6 +44,8 @@ type RawUktPendaftaranRow = {
   created_at?: unknown;
   kwitansi_token?: unknown;
   alasan_tolak_bukti?: unknown;
+  lulus?: boolean;
+  tingkat_lulus?: number | null;
 };
 
 type BatalRow = PendaftaranRow & {
@@ -102,7 +106,7 @@ export async function GET(req: NextRequest) {
 
   let query = admin
     .from("ukt_pendaftaran")
-    .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, alasan_tolak_bukti")
+    .select("id, profile_id, ranting_id, kyu_dan_terakhir, status_bayar, total_bayar, bukti_transfer_path, dikonfirmasi_at, created_at, kwitansi_token, alasan_tolak_bukti, lulus, tingkat_lulus")
     .eq("tahun_ajaran_id", tahunAjaranId)
     .neq("status_bayar", "batal")
     .order("created_at", { ascending: false });
@@ -187,6 +191,8 @@ export async function GET(req: NextRequest) {
       nomor: profile?.nomor ?? "",
       kwitansi_token: r.kwitansi_token != null ? String(r.kwitansi_token) : null,
       alasan_tolak_bukti: r.alasan_tolak_bukti != null ? String(r.alasan_tolak_bukti) : null,
+      lulus: r.lulus === true,
+      tingkat_lulus: r.tingkat_lulus != null ? Number(r.tingkat_lulus) : null,
     };
     if (allRanting) {
       return { ...base, ranting_nama: rantingMap.get(String(r.ranting_id)) ?? r.ranting_id };

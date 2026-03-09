@@ -90,6 +90,9 @@ type PendaftaranRow = {
   /** Untuk baris batal: refund_status dari API */
   refund_status?: string;
   refund_jumlah?: number | null;
+  /** Lulus ujian (untuk laporan PP) */
+  lulus?: boolean;
+  tingkat_lulus?: number | null;
 };
 
 /** Default biaya per Kyu/Dan (Rp) jika tahun ajaran belum diset cabang — agar kolom Total tetap menampilkan nominal. */
@@ -234,14 +237,17 @@ export default function PendaftaranUKT({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
-  // Collapse per grup: "Sudah daftar" terbuka, "Belum daftar" dan "Batal" tertutup secara default
+  // Collapse per grup: "Sudah daftar" dan "Belum daftar" terbuka, "Batal" tertutup secara default
   const [collapsed, setCollapsed] = useState<Set<string>>(
-    () => new Set(["belum", "batal"]),
+    () => new Set(["batal"]),
   );
   // Aksi level 3+: tolak bukti, batal ikut, cetak kwitansi
   const [tolakModal, setTolakModal] = useState<{ id: string; nama: string } | null>(null);
   const [tolakAlasan, setTolakAlasan] = useState("");
   const [tolakSubmitting, setTolakSubmitting] = useState(false);
+  const [lulusModal, setLulusModal] = useState<{ id: string; nama: string } | null>(null);
+  const [lulusTingkat, setLulusTingkat] = useState("1");
+  const [lulusSubmitting, setLulusSubmitting] = useState(false);
   const [batalModal, setBatalModal] = useState<{ id: string; nama: string } | null>(null);
   const [batalSubmitting, setBatalSubmitting] = useState(false);
   const [batalForm, setBatalForm] = useState({
@@ -251,6 +257,7 @@ export default function PendaftaranUKT({
     refund_catatan: "",
   });
   const [printingKwitansiId, setPrintingKwitansiId] = useState<string | null>(null);
+  const [syncingKyuId, setSyncingKyuId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -304,7 +311,7 @@ export default function PendaftaranUKT({
     queueMicrotask(() => setLoadingAnggota(true));
     const params = new URLSearchParams({ ranting_id: rantingId });
     if (tahunId) params.set("tahun_ajaran_id", tahunId);
-    fetch(`/api/ukt/anggota-aktif?${params}`, { credentials: "include" })
+    fetch(`/api/ukt/anggota-aktif?${params}`, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setAnggota(Array.isArray(data) ? data : []))
       .catch(() => setAnggota([]))
@@ -317,7 +324,7 @@ export default function PendaftaranUKT({
     try {
       const d = await fetch(url, { credentials: "include", cache: "no-store" }).then((r) => r.json());
         const main = (d?.list && Array.isArray(d.list))
-          ? d.list.map((r: { id: string; profile_id: string; status_bayar?: string; total_bayar?: number | null; file_url?: string | null; kwitansi_token?: string | null; alasan_tolak_bukti?: string | null; kyu_dan_terakhir?: string | null }) => ({
+          ? d.list.map((r: { id: string; profile_id: string; status_bayar?: string; total_bayar?: number | null; file_url?: string | null; kwitansi_token?: string | null; alasan_tolak_bukti?: string | null; kyu_dan_terakhir?: string | null; lulus?: boolean; tingkat_lulus?: number | null }) => ({
               id: String(r.id),
               profile_id: String(r.profile_id),
               status_bayar: r.status_bayar ?? "menunggu_bayar",
@@ -326,6 +333,8 @@ export default function PendaftaranUKT({
               kwitansi_token: r.kwitansi_token ?? null,
               alasan_tolak_bukti: r.alasan_tolak_bukti ?? null,
               kyu_dan_terakhir: r.kyu_dan_terakhir != null ? String(r.kyu_dan_terakhir) : undefined,
+              lulus: r.lulus === true,
+              tingkat_lulus: r.tingkat_lulus != null ? Number(r.tingkat_lulus) : null,
             }))
           : [];
         const batal = (d?.list_batal && Array.isArray(d.list_batal))
@@ -359,7 +368,7 @@ export default function PendaftaranUKT({
       .then((r) => r.json())
       .then((d) => {
         const main = (d?.list && Array.isArray(d.list))
-          ? d.list.map((r: { id: string; profile_id: string; status_bayar?: string; total_bayar?: number | null; file_url?: string | null; kwitansi_token?: string | null; alasan_tolak_bukti?: string | null }) => ({
+          ? d.list.map((r: { id: string; profile_id: string; status_bayar?: string; total_bayar?: number | null; file_url?: string | null; kwitansi_token?: string | null; alasan_tolak_bukti?: string | null; kyu_dan_terakhir?: string | null; lulus?: boolean; tingkat_lulus?: number | null }) => ({
               id: String(r.id),
               profile_id: String(r.profile_id),
               status_bayar: r.status_bayar ?? "menunggu_bayar",
@@ -367,10 +376,13 @@ export default function PendaftaranUKT({
               file_url: r.file_url ?? null,
               kwitansi_token: r.kwitansi_token ?? null,
               alasan_tolak_bukti: r.alasan_tolak_bukti ?? null,
+              kyu_dan_terakhir: r.kyu_dan_terakhir != null ? String(r.kyu_dan_terakhir) : undefined,
+              lulus: r.lulus === true,
+              tingkat_lulus: r.tingkat_lulus != null ? Number(r.tingkat_lulus) : null,
             }))
           : [];
         const batal = (d?.list_batal && Array.isArray(d.list_batal))
-          ? d.list_batal.map((r: { id: string; profile_id: string; total_bayar?: number | null; file_url?: string | null; kwitansi_token?: string | null; alasan_tolak_bukti?: string | null; refund_status?: string; refund_jumlah?: number | null }) => ({
+          ? d.list_batal.map((r: { id: string; profile_id: string; total_bayar?: number | null; file_url?: string | null; kwitansi_token?: string | null; alasan_tolak_bukti?: string | null; refund_status?: string; refund_jumlah?: number | null; kyu_dan_terakhir?: string | null }) => ({
               id: String(r.id),
               profile_id: String(r.profile_id),
               status_bayar: "batal",
@@ -380,6 +392,7 @@ export default function PendaftaranUKT({
               alasan_tolak_bukti: r.alasan_tolak_bukti ?? null,
               refund_status: r.refund_status ?? "tidak_ada",
               refund_jumlah: r.refund_jumlah != null ? Number(r.refund_jumlah) : null,
+              kyu_dan_terakhir: r.kyu_dan_terakhir != null ? String(r.kyu_dan_terakhir) : undefined,
             }))
           : [];
         setPendaftaranList([...main, ...batal]);
@@ -516,7 +529,7 @@ export default function PendaftaranUKT({
       toast.success(`${ok} peserta didaftarkan.`);
       const params = new URLSearchParams({ ranting_id: rantingId });
       if (tahunId) params.set("tahun_ajaran_id", tahunId);
-      fetch(`/api/ukt/anggota-aktif?${params}`, { credentials: "include" })
+      fetch(`/api/ukt/anggota-aktif?${params}`, { credentials: "include", cache: "no-store" })
         .then((r) => r.json())
         .then((data) => setAnggota(Array.isArray(data) ? data : []));
     }
@@ -703,6 +716,59 @@ export default function PendaftaranUKT({
     }
   }, [batalModal, batalForm, canEditRefund, refetchPendaftaran, onRegistrationSuccess]);
 
+  const handlePerbaruiKyu = useCallback(
+    async (pend: PendaftaranRow) => {
+      setSyncingKyuId(pend.id);
+      try {
+        const res = await fetch(`/api/ukt/pendaftaran/${pend.id}/sync-kyu`, {
+          method: "POST",
+          credentials: "include",
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error((j.message as string) || "Gagal memperbarui Kyu");
+          return;
+        }
+        refetchPendaftaran();
+        onRegistrationSuccess?.();
+        toast.success("Kyu berhasil diperbarui dari Keanggotaan.");
+      } finally {
+        setSyncingKyuId(null);
+      }
+    },
+    [refetchPendaftaran, onRegistrationSuccess]
+  );
+
+  const handleTandaiLulusOpen = useCallback((pend: PendaftaranRow, nama: string) => {
+    setLulusModal({ id: pend.id, nama });
+    setLulusTingkat(pend.tingkat_lulus != null ? String(pend.tingkat_lulus) : "1");
+  }, []);
+
+  const handleTandaiLulusSubmit = useCallback(async () => {
+    if (!lulusModal) return;
+    const tingkat = Math.min(10, Math.max(1, parseInt(lulusTingkat, 10) || 1));
+    setLulusSubmitting(true);
+    try {
+      const res = await fetch(`/api/ukt/pendaftaran/${lulusModal.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lulus: true, tingkat_lulus: tingkat }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error((j.message as string) || "Gagal menandai lulus");
+        return;
+      }
+      setLulusModal(null);
+      refetchPendaftaran();
+      onRegistrationSuccess?.();
+      toast.success("Peserta ditandai lulus. Muncul di Laporan Ringkasan.");
+    } finally {
+      setLulusSubmitting(false);
+    }
+  }, [lulusModal, lulusTingkat, refetchPendaftaran, onRegistrationSuccess]);
+
   return (
     <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-sm sm:p-6">
       <input
@@ -714,19 +780,6 @@ export default function PendaftaranUKT({
       />
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-zinc-100">Pendaftaran UKT</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Pilih tahun ajaran dan ranting. Tabel menampilkan{" "}
-          <strong>anggota aktif di ranting</strong>; yang belum terdaftar UKT
-          bisa dicentang untuk didaftarkan.
-        </p>
-        <p className="mt-1 text-xs text-zinc-500">
-          Centang anggota lalu klik &quot;Daftarkan X peserta&quot; untuk
-          menyimpan. Baris dengan status &quot;Sudah daftar&quot; tidak bisa
-          dicentang.
-        </p>
-        <p className="mt-1 text-xs text-zinc-400/80">
-          Ranting: daftar &amp; cetak kwitansi jika Lunas. Cabang: verifikasi &amp; refund.
-        </p>
       </div>
 
       <div className="flex flex-wrap gap-4 sm:gap-6">
@@ -981,7 +1034,11 @@ export default function PendaftaranUKT({
                               {a.nomor}
                             </td>
                             <td className="whitespace-nowrap px-2 py-2 text-zinc-400 sm:px-4 sm:py-3">
-                              {a.kyu_dan_terakhir}
+                              {(() => {
+                                const pend = a.sudah_daftar ? pendaftaranByProfileId.get(a.profile_id) : null;
+                                const kyuDan = (pend?.kyu_dan_terakhir?.trim() || a.kyu_dan_terakhir?.trim() || "").trim();
+                                return kyuDan || "—";
+                              })()}
                             </td>
                             {(() => {
                               const pend = a.sudah_daftar ? pendaftaranByProfileId.get(a.profile_id) : null;
@@ -1070,6 +1127,20 @@ export default function PendaftaranUKT({
                                             <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400/90">
                                               ✓ Lunas (sudah diverifikasi)
                                             </span>
+                                            {pend.lulus ? (
+                                              <span className="text-xs text-emerald-400/90">
+                                                Lulus — Kyu {pend.tingkat_lulus ?? "—"}
+                                              </span>
+                                            ) : canFinance ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleTandaiLulusOpen(pend, a.nama)}
+                                                className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20 w-fit"
+                                                title="Tandai lulus ujian (muncul di Laporan Ringkasan)"
+                                              >
+                                                Tandai Lulus
+                                              </button>
+                                            ) : null}
                                             {canFinance ? (
                                               <button
                                                 type="button"
@@ -1133,6 +1204,17 @@ export default function PendaftaranUKT({
                                             </button>
                                           </>
                                         )}
+                                        {!(pend.kyu_dan_terakhir?.trim()) && (
+                                          <button
+                                            type="button"
+                                            disabled={syncingKyuId === pend.id}
+                                            onClick={() => handlePerbaruiKyu(pend)}
+                                            className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/20 disabled:opacity-50 w-fit"
+                                            title="Sync Kyu dari Keanggotaan ke pendaftaran UKT"
+                                          >
+                                            {syncingKyuId === pend.id ? "Memperbarui…" : "Perbarui Kyu"}
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => handleBatalkanOpen(pend.id, a.nama)}
@@ -1146,6 +1228,20 @@ export default function PendaftaranUKT({
                                         <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400/90">
                                           ✓ Lunas (sudah diverifikasi)
                                         </span>
+                                        {pend.lulus ? (
+                                          <span className="text-xs text-emerald-400/90">
+                                            Lulus — Kyu {pend.tingkat_lulus ?? "—"}
+                                          </span>
+                                        ) : canFinance ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTandaiLulusOpen(pend, a.nama)}
+                                            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20 w-fit"
+                                            title="Tandai lulus ujian (muncul di Laporan Ringkasan)"
+                                          >
+                                            Tandai Lulus
+                                          </button>
+                                        ) : null}
                                         {canFinance ? (
                                           <button
                                             type="button"
@@ -1157,6 +1253,17 @@ export default function PendaftaranUKT({
                                           </button>
                                         ) : (
                                           <span className="text-xs text-zinc-500">Aksi cetak: Bendahara</span>
+                                        )}
+                                        {!(pend.kyu_dan_terakhir?.trim()) && (
+                                          <button
+                                            type="button"
+                                            disabled={syncingKyuId === pend.id}
+                                            onClick={() => handlePerbaruiKyu(pend)}
+                                            className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/20 disabled:opacity-50 w-fit"
+                                            title="Sync Kyu dari Keanggotaan"
+                                          >
+                                            {syncingKyuId === pend.id ? "Memperbarui…" : "Perbarui Kyu"}
+                                          </button>
                                         )}
                                       </div>
                                     ) : sb === "batal" ? (
@@ -1200,6 +1307,17 @@ export default function PendaftaranUKT({
                                             </button>
                                           </>
                                         )}
+                                        {!(pend.kyu_dan_terakhir?.trim()) && (
+                                          <button
+                                            type="button"
+                                            disabled={syncingKyuId === pend.id}
+                                            onClick={() => handlePerbaruiKyu(pend)}
+                                            className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/20 disabled:opacity-50 w-fit"
+                                            title="Sync Kyu dari Keanggotaan"
+                                          >
+                                            {syncingKyuId === pend.id ? "Memperbarui…" : "Perbarui Kyu"}
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => handleBatalkanOpen(pend.id, a.nama)}
@@ -1227,6 +1345,45 @@ export default function PendaftaranUKT({
             </p>
           )}
         </>
+      )}
+
+      {lulusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !lulusSubmitting && setLulusModal(null)}>
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-zinc-100">Tandai Lulus UKT</h3>
+            <p className="mt-1 text-sm text-zinc-500">Peserta: {lulusModal.nama}</p>
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-zinc-400">Tingkat lulus (Kyu 1–10)</label>
+              <select
+                value={lulusTingkat}
+                onChange={(e) => setLulusTingkat(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={String(n)}>Kyu {n}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-6 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => !lulusSubmitting && setLulusModal(null)}
+                disabled={lulusSubmitting}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-400 hover:bg-white/5 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleTandaiLulusSubmit}
+                disabled={lulusSubmitting}
+                className="rounded-lg bg-emerald-600/90 px-4 py-2 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {lulusSubmitting ? "Menyimpan…" : "Tandai Lulus"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {tolakModal && (
