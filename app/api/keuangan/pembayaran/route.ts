@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
+import { requireFunctionalRole } from "@/app/lib/security/requireFunctionalRole";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,6 +16,11 @@ export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const gate = await requireFunctionalRole(user, "BENDAHARA");
+  if (!gate.ok) {
+    return NextResponse.json({ message: "Akses modul Keuangan hanya untuk Bendahara" }, { status: gate.status });
   }
 
   const { searchParams } = new URL(req.url);

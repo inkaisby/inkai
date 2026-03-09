@@ -14,7 +14,6 @@ import { ModeButton } from "./ModeButton";
 import RoleManagementPanel from "./roles/RoleManagementPanel";
 import FeatureConfigPanel from "./FeatureConfigPanel";
 import QuickLevelUpPanel from "./QuickLevelUpPanel";
-import QuickFunctionalPanel from "./QuickFunctionalPanel";
 
 // ⬇️ DATABASE MODE
 import DatabaseView from "./database/DatabaseView";
@@ -221,7 +220,6 @@ export default function SettingsView({
           >
             <div className="p-3 border-b border-white/10 space-y-3">
               <QuickLevelUpPanel />
-              <QuickFunctionalPanel />
             </div>
             <div className="section-header">Daftar Pengguna</div>
 

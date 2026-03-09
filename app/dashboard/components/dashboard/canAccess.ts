@@ -86,6 +86,15 @@ export function canAccessMenu(
     return maxLevel >= 2 && maxLevel <= 5;
   }
 
+  // Keuangan: hanya BENDAHARA (atau superadmin/root di atas)
+  if (menu.key === "keuangan") {
+    return (
+      user.functional_roles?.some(
+        (r) => r.active && (r.role_name ?? "").toUpperCase() === "BENDAHARA",
+      ) ?? false
+    );
+  }
+
   // Menu universal: tampil ke user level 2+ (termasuk yang email_allowed = false)
   if (menu.key && UNIVERSAL_MENU_KEYS.has(menu.key)) {
     return true;

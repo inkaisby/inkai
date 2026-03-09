@@ -6,6 +6,7 @@ import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
 import { insertEvent } from "@/app/lib/events/insertEvent";
+import { requireFunctionalRole } from "@/app/lib/security/requireFunctionalRole";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,20 +79,37 @@ export async function PATCH(
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
-  // Hanya Cabang atau PP yang boleh konfirmasi lunas atau tolak bukti; Ketua Ranting tidak.
+  const currentStatus = (row as { status_bayar?: string }).status_bayar;
+
+  const isRefundUpdate =
+    currentStatus === "batal" &&
+    body.status_bayar === undefined &&
+    (body.refund_status !== undefined ||
+      body.refund_jumlah !== undefined ||
+      body.refund_catatan !== undefined ||
+      body.refund_bukti_path !== undefined);
+
+  // Aksi finansial: verifikasi lunas, tolak bukti, refund → hanya BENDAHARA (atau superadmin/root).
   const isVerifikasiLunasOrTolak = body.status_bayar === "lunas" || body.status_bayar === "ditolak";
-  if (isVerifikasiLunasOrTolak) {
+  if (isVerifikasiLunasOrTolak || isRefundUpdate) {
     let cabangId = rantingCabangId;
     if (cabangId === null) {
-      const { data: r } = await admin.from("ranting").select("cabang_id").eq("id", row.ranting_id).maybeSingle();
+      const { data: r } = await admin
+        .from("ranting")
+        .select("cabang_id")
+        .eq("id", row.ranting_id)
+        .maybeSingle();
       cabangId = (r as { cabang_id?: string | null })?.cabang_id ?? null;
     }
-    const canConfirmLunas =
-      scope.is_pp || (scope.cabang_ids.length > 0 && !!cabangId && scope.cabang_ids.includes(cabangId));
-    if (!canConfirmLunas) {
+    const gate = await requireFunctionalRole(user, "BENDAHARA", [
+      null,
+      cabangId,
+      String(row.ranting_id),
+    ]);
+    if (!gate.ok) {
       return NextResponse.json(
-        { message: "Hanya Cabang atau PP yang dapat verifikasi lunas atau tolak bukti" },
-        { status: 403 }
+        { message: "Aksi ini hanya untuk Bendahara" },
+        { status: gate.status }
       );
     }
     if (body.status_bayar === "ditolak" && !(body.alasan_tolak_bukti?.trim?.())) {
@@ -103,7 +121,6 @@ export async function PATCH(
   }
 
   const now = new Date().toISOString();
-  const currentStatus = (row as { status_bayar?: string }).status_bayar;
   const payload: Record<string, unknown> = {
     updated_at: now,
   };
@@ -128,7 +145,7 @@ export async function PATCH(
       if (body.refund_status === "dikembalikan") payload.refund_at = now;
     }
   }
-  // Cabang: update hanya refund untuk record yang sudah batal (tanpa mengirim status_bayar)
+  // Update hanya refund untuk record yang sudah batal (tanpa mengirim status_bayar)
   if (currentStatus === "batal" && (body.refund_status !== undefined || body.refund_jumlah !== undefined || body.refund_catatan !== undefined || body.refund_bukti_path !== undefined)) {
     if (body.refund_jumlah !== undefined) payload.refund_jumlah = body.refund_jumlah;
     if (body.refund_status !== undefined) {

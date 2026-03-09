@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getUserScope } from "@/app/lib/scope/getUserScope";
+import { requireFunctionalRole } from "@/app/lib/security/requireFunctionalRole";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -55,6 +56,18 @@ export async function POST(
   }
   if (!canAccess) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
+  // Cetak/kwitansi: hanya BENDAHARA (atau superadmin/root)
+  const { data: ranting } = await admin
+    .from("ranting")
+    .select("cabang_id")
+    .eq("id", row.ranting_id)
+    .maybeSingle();
+  const cabangId = (ranting as { cabang_id?: string | null })?.cabang_id ?? null;
+  const gate = await requireFunctionalRole(user, "BENDAHARA", [null, cabangId, String(row.ranting_id)]);
+  if (!gate.ok) {
+    return NextResponse.json({ message: "Aksi ini hanya untuk Bendahara" }, { status: gate.status });
   }
 
   const { data: updated, error: updateErr } = await admin

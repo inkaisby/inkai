@@ -42,6 +42,15 @@ const LEVEL_LABELS: Record<number, string> = {
   5: "PP",
 };
 
+const FUNCTIONAL_ROLE_OPTIONS = [
+  { value: "SEKRETARIS", label: "Sekretaris" },
+  { value: "BENDAHARA", label: "Bendahara" },
+  { value: "PELATIH", label: "Pelatih" },
+  { value: "PENGUJI", label: "Penguji" },
+  { value: "WASIT", label: "Wasit" },
+  { value: "ADM_PERTANDINGAN", label: "Adm. Pertandingan" },
+] as const;
+
 function formatRoleLabel(roleName: string): string {
   const s = roleName.replace(/_/g, " ").toLowerCase();
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -83,6 +92,15 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId, 
   const [manualRoleName, setManualRoleName] = useState("");
   const [manualOrgId, setManualOrgId] = useState("");
   const [manualLoading, setManualLoading] = useState(false);
+
+  const [functionalRole, setFunctionalRole] = useState<string>("BENDAHARA");
+  const [functionalSaving, setFunctionalSaving] = useState(false);
+
+  const bendaharaRow = useMemo(() => {
+    const rows = (userFunctional ?? []) as Array<{ id: string; role_name: string; active: boolean }>;
+    return rows.find((r) => (r.role_name ?? "").toUpperCase() === "BENDAHARA") ?? null;
+  }, [userFunctional]);
+  const isBendaharaActive = !!bendaharaRow?.active;
 
   const selectedRoleMeta = structuralMaster.find((r) => r.id === selectedRole);
   const level = selectedRoleMeta?.structural_level ?? 0;
@@ -175,6 +193,129 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId, 
   useEffect(() => {
     load();
   }, [load, refreshTrigger]);
+
+  /* ================= FUNCTIONAL: CRUD ================= */
+  const addFunctionalRole = async () => {
+    const role = functionalRole.trim().toUpperCase().replace(/\s+/g, "_");
+    if (!role) return;
+    setFunctionalSaving(true);
+    try {
+      const res = await fetch("/api/settings/add-functional-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ user_id: userId, role }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        alert(j.message ?? "Gagal menambah role fungsional");
+        return;
+      }
+      await load();
+    } finally {
+      setFunctionalSaving(false);
+    }
+  };
+
+  const setBendaharaOneClick = async () => {
+    setFunctionalRole("BENDAHARA");
+    setFunctionalSaving(true);
+    try {
+      // Jika sudah ada row tapi nonaktif → aktifkan via PATCH
+      if (bendaharaRow && bendaharaRow.active === false) {
+        const res = await fetch("/api/settings/functional-role", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id: bendaharaRow.id, active: true }),
+        });
+        const j = (await res.json().catch(() => ({}))) as { message?: string };
+        if (!res.ok) {
+          alert(j.message ?? "Gagal mengaktifkan Bendahara");
+          return;
+        }
+        await load();
+        return;
+      }
+
+      // Jika belum ada row → tambah via add-functional-role (upsert active=true)
+      const res = await fetch("/api/settings/add-functional-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ user_id: userId, role: "BENDAHARA" }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        alert(j.message ?? "Gagal menambah role Bendahara");
+        return;
+      }
+      await load();
+    } finally {
+      setFunctionalSaving(false);
+    }
+  };
+
+  const disableBendaharaOneClick = async () => {
+    if (!bendaharaRow) return;
+    if (!confirm("Nonaktifkan role Bendahara untuk user ini?")) return;
+    setFunctionalSaving(true);
+    try {
+      const res = await fetch("/api/settings/functional-role", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: bendaharaRow.id, active: false }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        alert(j.message ?? "Gagal menonaktifkan Bendahara");
+        return;
+      }
+      await load();
+    } finally {
+      setFunctionalSaving(false);
+    }
+  };
+
+  const toggleFunctional = async (id: string, active: boolean) => {
+    setFunctionalSaving(true);
+    try {
+      const res = await fetch("/api/settings/functional-role", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id, active: !active }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        alert(j.message ?? "Gagal update role fungsional");
+        return;
+      }
+      await load();
+    } finally {
+      setFunctionalSaving(false);
+    }
+  };
+
+  const deleteFunctional = async (id: string) => {
+    if (!confirm("Hapus role fungsional ini dari user?")) return;
+    setFunctionalSaving(true);
+    try {
+      const res = await fetch(
+        `/api/settings/functional-role?id=${encodeURIComponent(id)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        alert(j.message ?? "Gagal hapus role fungsional");
+        return;
+      }
+      await load();
+    } finally {
+      setFunctionalSaving(false);
+    }
+  };
 
   /* Resolve nama kabupaten/kota dari domisili user (untuk hint saat pilih Cabang) */
   useEffect(() => {
@@ -621,23 +762,117 @@ export default function RoleManagementPanel({ userId, userEmail, userRegencyId, 
 
       {/* ================= FUNCTIONAL ================= */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Role Fungsional</h3>
+        <h3 className="text-lg font-semibold mb-2">Role Fungsional</h3>
+        <p className="text-xs text-white/50 mb-4">
+          Untuk pembagian tugas (contoh: Bendahara). Jika user ini Bendahara, tambahkan role <strong>Bendahara</strong>.
+        </p>
 
-        <div className="space-y-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/30 p-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-white">Aksi cepat</span>
+              {isBendaharaActive ? (
+                <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                  ✓ Bendahara aktif
+                </span>
+              ) : (
+                <span className="rounded-md bg-white/5 px-2 py-0.5 text-xs text-white/60">
+                  Bendahara belum aktif
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] text-white/50">
+              Bendahara bisa akses <strong>Keuangan</strong>, verifikasi lunas/tolak bukti, refund, dan cetak kwitansi.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isBendaharaActive ? (
+              <button
+                type="button"
+                onClick={setBendaharaOneClick}
+                disabled={functionalSaving}
+                className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm hover:bg-emerald-500 disabled:opacity-50"
+                title="Aktifkan role BENDAHARA untuk user ini"
+              >
+                {functionalSaving ? "Menyimpan…" : "Jadikan Bendahara"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={disableBendaharaOneClick}
+                disabled={functionalSaving}
+                className="px-4 py-2 rounded-md bg-red-600/70 text-white text-sm hover:bg-red-500/70 disabled:opacity-50"
+                title="Nonaktifkan role BENDAHARA untuk user ini"
+              >
+                {functionalSaving ? "Menyimpan…" : "Nonaktifkan Bendahara"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3 border border-white/10 rounded-lg bg-black/30 p-3">
+          <div className="min-w-[220px]">
+            <label className="block text-xs text-white/50 mb-1">Tambah role</label>
+            <select
+              value={functionalRole}
+              onChange={(e) => setFunctionalRole(e.target.value)}
+              className="w-full rounded-md bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+            >
+              {FUNCTIONAL_ROLE_OPTIONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={addFunctionalRole}
+            disabled={functionalSaving}
+            className="px-4 py-2 rounded-md bg-violet-600 text-white text-sm hover:bg-violet-500 disabled:opacity-50"
+          >
+            {functionalSaving ? "Menyimpan…" : "Tambah"}
+          </button>
+        </div>
+
+        <div className="space-y-2 mt-4">
+          {userFunctional.length === 0 && (
+            <div className="text-sm text-white/40">
+              Belum ada role fungsional.
+            </div>
+          )}
           {userFunctional.map((r) => (
             <div
               key={r.id}
               className="flex justify-between items-center p-3 bg-black/40 rounded"
             >
-              <div>{r.role_name}</div>
+              <div className="min-w-0">
+                <div className="font-medium">{formatRoleLabel(r.role_name)}</div>
+                <div className="text-[11px] text-white/40">{r.role_name}</div>
+              </div>
 
-              <span
-                className={`px-3 py-1 text-xs rounded ${
-                  r.active ? "bg-emerald-600/70" : "bg-red-600/70"
-                }`}
-              >
-                {r.active ? "Aktif" : "Nonaktif"}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleFunctional(r.id, r.active)}
+                  disabled={functionalSaving}
+                  className={`px-3 py-1 text-xs rounded disabled:opacity-50 ${
+                    r.active ? "bg-emerald-600/70" : "bg-red-600/70"
+                  }`}
+                >
+                  {r.active ? "Aktif" : "Nonaktif"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteFunctional(r.id)}
+                  disabled={functionalSaving}
+                  className="px-3 py-1 text-xs rounded bg-red-900/50 text-red-300 hover:bg-red-800/60 border border-red-600/40 disabled:opacity-50"
+                  title="Hapus role fungsional"
+                >
+                  Hapus
+                </button>
+              </div>
             </div>
           ))}
         </div>
