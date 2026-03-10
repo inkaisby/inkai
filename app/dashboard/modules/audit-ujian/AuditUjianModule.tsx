@@ -303,17 +303,32 @@ export default function AuditUjianModule() {
             >
               <div className="flex items-start justify-between gap-0.5 md:gap-2">
                 <div className="min-w-0">
-                  <p
-                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.ujian.label}`}
-                  >
-                    <span className="md:hidden">Ranting ikut</span>
-                    <span className="hidden md:inline">Total Ranting yang ikut ujian</span>
-                  </p>
-                  <p
-                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.ujian.value}`}
-                  >
-                    {fmt(r.totalRantingIkutUjian ?? 0)}
-                  </p>
+                  {/* Mobile: angka besar + label sejajar */}
+                  <div className="flex items-baseline justify-between gap-1 md:hidden">
+                    <span
+                      className={`text-base font-bold tabular-nums ${UKT_KPI_ACCENTS.ujian.value}`}
+                    >
+                      {fmt(r.totalRantingIkutUjian ?? 0)}
+                    </span>
+                    <span
+                      className={`text-[11px] font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.ujian.label}`}
+                    >
+                      Ranting ikut
+                    </span>
+                  </div>
+                  {/* Desktop: layout lama (label di atas angka) */}
+                  <div className="hidden md:block">
+                    <p
+                      className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.ujian.label}`}
+                    >
+                      Total Ranting yang ikut ujian
+                    </p>
+                    <p
+                      className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.ujian.value}`}
+                    >
+                      {fmt(r.totalRantingIkutUjian ?? 0)}
+                    </p>
+                  </div>
                 </div>
                 <Award
                   className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.ujian.icon}`}
@@ -325,17 +340,32 @@ export default function AuditUjianModule() {
             >
               <div className="flex items-start justify-between gap-0.5 md:gap-2">
                 <div className="min-w-0">
-                  <p
-                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.peserta.label}`}
-                  >
-                    <span className="md:hidden">Peserta</span>
-                    <span className="hidden md:inline">Total Peserta</span>
-                  </p>
-                  <p
-                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.peserta.value}`}
-                  >
-                    {fmt(r.totalPeserta)}
-                  </p>
+                  {/* Mobile: angka besar + label sejajar */}
+                  <div className="flex items-baseline justify-between gap-1 md:hidden">
+                    <span
+                      className={`text-base font-bold tabular-nums ${UKT_KPI_ACCENTS.peserta.value}`}
+                    >
+                      {fmt(r.totalPeserta)}
+                    </span>
+                    <span
+                      className={`text-[11px] font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.peserta.label}`}
+                    >
+                      Peserta
+                    </span>
+                  </div>
+                  {/* Desktop: layout lama */}
+                  <div className="hidden md:block">
+                    <p
+                      className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.peserta.label}`}
+                    >
+                      Total Peserta
+                    </p>
+                    <p
+                      className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.peserta.value}`}
+                    >
+                      {fmt(r.totalPeserta)}
+                    </p>
+                  </div>
                 </div>
                 <Users
                   className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.peserta.icon}`}
@@ -347,17 +377,32 @@ export default function AuditUjianModule() {
             >
               <div className="flex items-start justify-between gap-0.5 md:gap-2">
                 <div className="min-w-0">
-                  <p
-                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.lulus.label}`}
-                  >
-                    <span className="md:hidden">Lulus</span>
-                    <span className="hidden md:inline">Peserta Lulus</span>
-                  </p>
-                  <p
-                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.lulus.value}`}
-                  >
-                    {fmt(r.pesertaLulus)}
-                  </p>
+                  {/* Mobile: angka besar + label sejajar */}
+                  <div className="flex items-baseline justify-between gap-1 md:hidden">
+                    <span
+                      className={`text-base font-bold tabular-nums ${UKT_KPI_ACCENTS.lulus.value}`}
+                    >
+                      {fmt(r.pesertaLulus)}
+                    </span>
+                    <span
+                      className={`text-[11px] font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.lulus.label}`}
+                    >
+                      Lulus
+                    </span>
+                  </div>
+                  {/* Desktop: layout lama */}
+                  <div className="hidden md:block">
+                    <p
+                      className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.lulus.label}`}
+                    >
+                      Peserta Lulus
+                    </p>
+                    <p
+                      className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.lulus.value}`}
+                    >
+                      {fmt(r.pesertaLulus)}
+                    </p>
+                  </div>
                 </div>
                 <TrendingUp
                   className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.lulus.icon}`}
@@ -369,17 +414,32 @@ export default function AuditUjianModule() {
             >
               <div className="flex items-start justify-between gap-0.5 md:gap-2">
                 <div className="min-w-0">
-                  <p
-                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.rate.label}`}
-                  >
-                    <span className="md:hidden">Kelulusan</span>
-                    <span className="hidden md:inline">Tingkat Kelulusan</span>
-                  </p>
-                  <p
-                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.rate.value}`}
-                  >
-                    {tingkatKelulusan != null ? `${tingkatKelulusan}%` : "—"}
-                  </p>
+                  {/* Mobile: angka besar + label sejajar */}
+                  <div className="flex items-baseline justify-between gap-1 md:hidden">
+                    <span
+                      className={`text-base font-bold tabular-nums ${UKT_KPI_ACCENTS.rate.value}`}
+                    >
+                      {tingkatKelulusan != null ? `${tingkatKelulusan}%` : "—"}
+                    </span>
+                    <span
+                      className={`text-[11px] font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.rate.label}`}
+                    >
+                      Kelulusan
+                    </span>
+                  </div>
+                  {/* Desktop: layout lama */}
+                  <div className="hidden md:block">
+                    <p
+                      className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.rate.label}`}
+                    >
+                      Tingkat Kelulusan
+                    </p>
+                    <p
+                      className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.rate.value}`}
+                    >
+                      {tingkatKelulusan != null ? `${tingkatKelulusan}%` : "—"}
+                    </p>
+                  </div>
                 </div>
                 <BarChart3
                   className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.rate.icon}`}

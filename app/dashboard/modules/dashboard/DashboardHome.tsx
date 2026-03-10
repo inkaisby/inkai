@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Share2,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
@@ -118,6 +119,8 @@ export default function DashboardHome() {
   const [instagramFeed, setInstagramFeed] = useState<InstagramFeedItem[]>([]);
   const [homeLoading, setHomeLoading] = useState(true);
   const showAdminDashboard = useShowAdminDashboard();
+  const [showDocNotice, setShowDocNotice] = useState(false);
+  const hideDocNoticeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +157,50 @@ export default function DashboardHome() {
       });
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Soft notif: dokumen profil belum lengkap (KTP / Akte Lahir / KK)
+  useEffect(() => {
+    let cancelled = false;
+
+    type MeProfile = {
+      ktp_path?: string | null;
+      akta_lahir_path?: string | null;
+      kk_path?: string | null;
+    };
+    type MeResponse = { profile?: MeProfile | null };
+
+    fetch("/api/me", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: MeResponse | null) => {
+        if (cancelled || !data?.profile) return;
+        const profile: MeProfile = data.profile ?? {};
+        const missing = [
+          profile.ktp_path ? null : "KTP",
+          profile.akta_lahir_path ? null : "Akte Lahir",
+          profile.kk_path ? null : "Kartu Keluarga",
+        ].filter(Boolean);
+        if (missing.length > 0) {
+          setShowDocNotice(true);
+          if (hideDocNoticeRef.current) {
+            clearTimeout(hideDocNoticeRef.current);
+          }
+          hideDocNoticeRef.current = setTimeout(() => {
+            setShowDocNotice(false);
+          }, 20000);
+        }
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      cancelled = true;
+      if (hideDocNoticeRef.current) {
+        clearTimeout(hideDocNoticeRef.current);
+        hideDocNoticeRef.current = null;
+      }
     };
   }, []);
 
@@ -201,6 +248,38 @@ export default function DashboardHome() {
           Ringkasan, feed, Instagram per wilayah, dan marketplace
         </p>
       </div>
+
+      {/* Soft notif: dokumen profil belum lengkap */}
+      {showDocNotice && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs sm:text-sm text-amber-100 flex items-start gap-3">
+          <div className="mt-0.5">
+            <AlertTriangle size={18} className="text-amber-300" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <div className="font-medium text-amber-100">
+              Dokumen profil belum lengkap
+            </div>
+            <p className="text-amber-100/90">
+              Unggah scan <span className="font-semibold">KTP, Akte Lahir, dan Kartu Keluarga</span> di
+              profil Anda. Pamungkas: <span className="italic">“Jangan tunggu ujian, rapikan administrasi
+              dulu.”</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (hideDocNoticeRef.current) {
+                clearTimeout(hideDocNoticeRef.current);
+                hideDocNoticeRef.current = null;
+              }
+              setShowDocNotice(false);
+            }}
+            className="text-[11px] text-amber-100/80 hover:text-amber-50 ml-2"
+          >
+            Nanti saja
+          </button>
+        </div>
+      )}
 
       {/* Stories — teal/amber/slate halus, tidak ramai */}
       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">

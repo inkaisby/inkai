@@ -29,6 +29,9 @@ type ProfileRow = {
 
   ranting_id: string | null;
   avatar_path: string | null;
+  ktp_path?: string | null;
+  akta_lahir_path?: string | null;
+  kk_path?: string | null;
   nomor?: string | null;
   status?: string | null;
 };
@@ -68,6 +71,10 @@ export interface ProfileData {
   avatarUrl?: string | null;
   avatarDirty?: boolean;
   avatarFile?: File | null;
+
+  ktpPath?: string | null;
+  aktaLahirPath?: string | null;
+  kkPath?: string | null;
 }
 
 /* =====================
@@ -104,6 +111,10 @@ const EMPTY: ProfileData = {
   avatarUrl: null,
   avatarDirty: false,
   avatarFile: null,
+
+  ktpPath: null,
+  aktaLahirPath: null,
+  kkPath: null,
 };
 
 function toId(v: string | number | null | undefined): string {
@@ -153,6 +164,10 @@ function normalize(db: ProfileRow | null): ProfileData {
     avatarUrl: null,
     avatarDirty: false,
     avatarFile: null,
+
+    ktpPath: db.ktp_path ?? null,
+    aktaLahirPath: db.akta_lahir_path ?? null,
+    kkPath: db.kk_path ?? null,
   };
 }
 
@@ -217,6 +232,9 @@ export default function useProfileData() {
               district_id?: number | string | null;
               village_id?: number | string | null;
               ranting_id?: string | null;
+              ktp_path?: string | null;
+              akta_lahir_path?: string | null;
+              kk_path?: string | null;
             };
           };
           const p = meJson.profile;
@@ -229,6 +247,9 @@ export default function useProfileData() {
               normalized.rantingId = String(p.ranting_id);
               normalized.rantingLocked = true;
             }
+            if (p.ktp_path != null) normalized.ktpPath = p.ktp_path;
+            if (p.akta_lahir_path != null) normalized.aktaLahirPath = p.akta_lahir_path;
+            if (p.kk_path != null) normalized.kkPath = p.kk_path;
           }
         }
       } catch {
@@ -463,6 +484,53 @@ export default function useProfileData() {
     [saving, profile, nikExists]
   );
 
+  /* ===== UPLOAD OPTIONAL DOCUMENT ===== */
+  const uploadDocument = useCallback(
+    async (kind: "ktp" | "akta_lahir" | "kk", file: File) => {
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error("Ukuran maksimal 2MB");
+      }
+      if (
+        !(
+          file.type === "application/pdf" ||
+          file.type.startsWith("image/")
+        )
+      ) {
+        throw new Error("File harus PDF atau gambar");
+      }
+
+      const formData = new FormData();
+      formData.set("kind", kind);
+      formData.set("file", file);
+
+      const uploadUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/api/profile/upload-document`
+          : "/api/profile/upload-document";
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      const json = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        path?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.message || "Gagal mengunggah dokumen");
+      }
+      const path = json.path ?? null;
+
+      setProfile((prev) => {
+        if (kind === "ktp") return { ...prev, ktpPath: path };
+        if (kind === "akta_lahir") return { ...prev, aktaLahirPath: path };
+        return { ...prev, kkPath: path };
+      });
+    },
+    [],
+  );
+
   return {
     profile,
     loading,
@@ -472,6 +540,7 @@ export default function useProfileData() {
     updateField,
     selectAvatar,
     saveProfile,
+    uploadDocument,
     reload: load,
   };
 }

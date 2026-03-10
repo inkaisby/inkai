@@ -28,6 +28,7 @@ import ProfileFormRight from "./components/ProfileFormRight";
 import ProfileButtons from "./components/ProfileButtons";
 import WizardStepper from "./components/WizardStepper";
 import CompletionScore from "./components/CompletionScore";
+import ProfileDocuments from "./components/ProfileDocuments";
 
 /* ================= TYPES ================= */
 type Option = { label: string; value: string };
@@ -91,6 +92,7 @@ export default function ProfileModal() {
     updateField,
     selectAvatar,
     saveProfile,
+    uploadDocument,
     loading,
     saving,
     nikExists,
@@ -317,6 +319,14 @@ export default function ProfileModal() {
         ? step2Schema.safeParse(profile).success
         : true;
 
+  const missingDocs = profile
+    ? ([
+        profile.ktpPath ? null : "KTP",
+        profile.aktaLahirPath ? null : "Akte Lahir",
+        profile.kkPath ? null : "Kartu Keluarga",
+      ].filter(Boolean) as string[])
+    : [];
+
   if (!isOpen) return null;
 
   if (loading || !profile) {
@@ -433,14 +443,7 @@ export default function ProfileModal() {
                   })}
                 </div>
 
-                <div className="col-span-5 flex flex-col items-center gap-4 pt-20">
-                  <ProfileAvatar
-                    profile={profile}
-                    update={updateField}
-                    uploadAvatar={selectAvatar}
-                    saveProfile={saveProfile}
-                  />
-
+                <div className="col-span-5 flex flex-col items-start gap-6 pt-6">
                   {/* ================= RANTING FIELD ================= */}
                   <div className="w-full max-w-xs">
                     <label className="text-xs text-cyan-300 mb-1 block">
@@ -521,6 +524,11 @@ export default function ProfileModal() {
                       </>
                     )}
                   </div>
+
+                  <ProfileDocuments
+                    profile={profile}
+                    uploadDocument={uploadDocument}
+                  />
                 </div>
               </div>
             )}
@@ -593,6 +601,12 @@ export default function ProfileModal() {
                   try {
                     await saveProfile();
                     toast.success("Profil berhasil disimpan");
+                    if (missingDocs.length > 0) {
+                      toast(
+                        `Dokumen belum lengkap (${missingDocs.join(", ")}). Ini tidak masuk score.`,
+                        { duration: 5000 },
+                      );
+                    }
                     setRantingLocked(true);
                     setLegalConfirmOpen(false);
                     close();

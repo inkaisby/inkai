@@ -657,19 +657,17 @@ export default function PendaftaranUKT({
 
   const triggerUploadInput = useCallback((pendId: string) => {
     pendingUploadIdRef.current = pendId;
-    setUploadingId(pendId);
     queueMicrotask(() => uploadInputRef.current?.click());
   }, []);
 
   const handleUploadFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const f = e.target.files?.[0];
       const id = pendingUploadIdRef.current;
       if (f && id) {
-        handleUploadBukti(id, f);
+        await handleUploadBukti(id, f);
       }
       pendingUploadIdRef.current = null;
-      setUploadingId(null);
       e.target.value = "";
     },
     [handleUploadBukti]
