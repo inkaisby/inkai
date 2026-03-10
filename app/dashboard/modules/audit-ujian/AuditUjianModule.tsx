@@ -258,126 +258,131 @@ export default function AuditUjianModule() {
 
   return (
     <div className="space-y-8">
-      {/* Sticky: header, KPI, nav — tetap terlihat saat scroll */}
-      <div className="sticky top-0 z-10 bg-black/95 backdrop-blur-sm border-b border-white/5 pb-6 space-y-6">
-      <header className="border-b border-white/10 pb-6">
-        <Link
-          href="/dashboard/home-base"
-          className="mb-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-amber-500/30 hover:bg-white/[0.06] hover:text-amber-200/90"
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          Kembali ke Dashboard
-        </Link>
-        <div className="flex items-center gap-3">
-          <BarChart3 className="h-9 w-9 text-amber-500/80" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+      {/* Sticky di semua layar; mobile: compact agar tabel tidak tertutup */}
+      <div className="sticky top-0 z-10 bg-black/95 backdrop-blur-sm border-b border-white/5 pb-3 md:pb-6 space-y-3 md:space-y-6">
+      <header className="border-b border-white/10 pb-3 md:pb-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          <Link
+            href="/dashboard/home-base"
+            className="flex shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2 text-zinc-400 transition-colors hover:border-amber-500/30 hover:bg-white/[0.06] hover:text-amber-200/90 md:rounded-xl md:px-3 md:py-2"
+            title="Kembali ke Dashboard"
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            <span className="hidden text-sm font-medium sm:inline">Kembali</span>
+          </Link>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-semibold tracking-tight text-zinc-100 md:text-2xl truncate">
               UKT (Ujian Kenaikan Tingkat)
             </h1>
-            <p className="mt-0.5 text-sm text-zinc-500">
+            <p className="mt-0.5 hidden text-sm text-zinc-500 sm:block">
               Ringkasan UKT, peserta, dan hasil dari tabel ujian, ujian_peserta,
               ujian_hasil.
             </p>
           </div>
+          <BarChart3 className="hidden h-9 w-9 shrink-0 text-amber-500/80 sm:block" />
         </div>
       </header>
 
-      {/* KPI Cards — langsung di bawah header; skeleton saat loading */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* KPI Cards — mobile: 2x2 minimal; desktop: 4 kolom */}
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-4 lg:grid-cols-4">
         {loading ? (
           [1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="rounded-xl border border-white/10 bg-white/[0.03] p-5 animate-pulse"
+              className="rounded-md border border-white/10 bg-white/[0.03] p-2 animate-pulse md:rounded-xl md:p-5"
               aria-hidden
             >
-              <div className="h-3 w-20 rounded bg-white/10" />
-              <div className="mt-3 h-8 w-14 rounded bg-white/10" />
+              <div className="h-2 w-10 rounded bg-white/10 md:h-3 md:w-20" />
+              <div className="mt-1.5 h-5 w-8 rounded bg-white/10 md:mt-3 md:h-8 md:w-14" />
             </div>
           ))
         ) : r ? (
           <>
             <div
-              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.ujian.card}`}
+              className={`rounded-md p-2 shadow-sm backdrop-blur-sm md:rounded-xl md:p-5 ${UKT_KPI_ACCENTS.ujian.card}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
+              <div className="flex items-start justify-between gap-0.5 md:gap-2">
+                <div className="min-w-0">
                   <p
-                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.ujian.label}`}
+                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.ujian.label}`}
                   >
-                    Total Ranting yang ikut ujian
+                    <span className="md:hidden">Ranting ikut</span>
+                    <span className="hidden md:inline">Total Ranting yang ikut ujian</span>
                   </p>
                   <p
-                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.ujian.value}`}
+                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.ujian.value}`}
                   >
                     {fmt(r.totalRantingIkutUjian ?? 0)}
                   </p>
                 </div>
                 <Award
-                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.ujian.icon}`}
+                  className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.ujian.icon}`}
                 />
               </div>
             </div>
             <div
-              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.peserta.card}`}
+              className={`rounded-md p-2 shadow-sm backdrop-blur-sm md:rounded-xl md:p-5 ${UKT_KPI_ACCENTS.peserta.card}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
+              <div className="flex items-start justify-between gap-0.5 md:gap-2">
+                <div className="min-w-0">
                   <p
-                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.peserta.label}`}
+                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.peserta.label}`}
                   >
-                    Total Peserta
+                    <span className="md:hidden">Peserta</span>
+                    <span className="hidden md:inline">Total Peserta</span>
                   </p>
                   <p
-                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.peserta.value}`}
+                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.peserta.value}`}
                   >
                     {fmt(r.totalPeserta)}
                   </p>
                 </div>
                 <Users
-                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.peserta.icon}`}
+                  className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.peserta.icon}`}
                 />
               </div>
             </div>
             <div
-              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.lulus.card}`}
+              className={`rounded-md p-2 shadow-sm backdrop-blur-sm md:rounded-xl md:p-5 ${UKT_KPI_ACCENTS.lulus.card}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
+              <div className="flex items-start justify-between gap-0.5 md:gap-2">
+                <div className="min-w-0">
                   <p
-                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.lulus.label}`}
+                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.lulus.label}`}
                   >
-                    Peserta Lulus
+                    <span className="md:hidden">Lulus</span>
+                    <span className="hidden md:inline">Peserta Lulus</span>
                   </p>
                   <p
-                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.lulus.value}`}
+                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.lulus.value}`}
                   >
                     {fmt(r.pesertaLulus)}
                   </p>
                 </div>
                 <TrendingUp
-                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.lulus.icon}`}
+                  className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.lulus.icon}`}
                 />
               </div>
             </div>
             <div
-              className={`rounded-xl p-5 shadow-sm backdrop-blur-sm ${UKT_KPI_ACCENTS.rate.card}`}
+              className={`rounded-md p-2 shadow-sm backdrop-blur-sm md:rounded-xl md:p-5 ${UKT_KPI_ACCENTS.rate.card}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
+              <div className="flex items-start justify-between gap-0.5 md:gap-2">
+                <div className="min-w-0">
                   <p
-                    className={`text-xs font-medium uppercase tracking-wider ${UKT_KPI_ACCENTS.rate.label}`}
+                    className={`text-[9px] font-medium uppercase tracking-wider md:text-xs ${UKT_KPI_ACCENTS.rate.label}`}
                   >
-                    Tingkat Kelulusan
+                    <span className="md:hidden">Kelulusan</span>
+                    <span className="hidden md:inline">Tingkat Kelulusan</span>
                   </p>
                   <p
-                    className={`mt-1 text-2xl font-bold tabular-nums ${UKT_KPI_ACCENTS.rate.value}`}
+                    className={`mt-0 text-sm font-bold tabular-nums md:mt-1 md:text-2xl ${UKT_KPI_ACCENTS.rate.value}`}
                   >
                     {tingkatKelulusan != null ? `${tingkatKelulusan}%` : "—"}
                   </p>
                 </div>
                 <BarChart3
-                  className={`h-9 w-9 shrink-0 opacity-80 ${UKT_KPI_ACCENTS.rate.icon}`}
+                  className={`hidden h-4 w-4 shrink-0 opacity-80 sm:block md:h-9 md:w-9 ${UKT_KPI_ACCENTS.rate.icon}`}
                 />
               </div>
             </div>
@@ -385,9 +390,9 @@ export default function AuditUjianModule() {
         ) : null}
       </div>
 
-      {/* Daftar Ranting yang ikut ujian */}
+      {/* Daftar Ranting — sembunyikan di mobile untuk hemat ruang */}
       {r?.listRantingIkutUjian && r.listRantingIkutUjian.length > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 shadow-sm">
+        <div className="hidden rounded-xl border border-white/10 bg-white/[0.03] p-5 shadow-sm md:block">
           <h3 className="mb-3 text-sm font-semibold text-zinc-200">
             Daftar Ranting yang ikut ujian
           </h3>
@@ -404,48 +409,49 @@ export default function AuditUjianModule() {
         </div>
       )}
 
-      <nav className="flex flex-wrap gap-2">
+      <nav className="flex flex-wrap gap-1.5 md:gap-2">
         <button
           type="button"
           onClick={() => setView("pendaftaran")}
-          className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+          className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition md:gap-2 md:px-5 md:py-2.5 md:text-sm ${
             view === "pendaftaran"
               ? "bg-teal-500/20 text-teal-200 shadow-sm border border-teal-400/25"
               : "bg-white/[0.04] text-zinc-500 border border-transparent hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15"
           }`}
         >
-          <UserPlus className="h-4 w-4 shrink-0" />
-          Pendaftaran & Kelola UKT
+          <UserPlus className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" />
+          <span className="hidden sm:inline">Pendaftaran & Kelola UKT</span>
+          <span className="sm:hidden">Pendaftaran</span>
         </button>
         <button
           type="button"
           onClick={() => setView("ringkasan")}
-          className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+          className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition md:gap-2 md:px-5 md:py-2.5 md:text-sm ${
             view === "ringkasan"
               ? "bg-amber-500/20 text-amber-200 shadow-sm border border-amber-400/25"
               : "bg-white/[0.04] text-zinc-500 border border-transparent hover:bg-amber-500/10 hover:text-amber-300/90 hover:border-amber-400/15"
           }`}
         >
-          <BarChart3 className="h-4 w-4 shrink-0" />
+          <BarChart3 className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" />
           Ringkasan
         </button>
         <Link
           href="/dashboard/ukt/scan"
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15"
+          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-zinc-400 transition hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15 md:gap-2 md:px-5 md:py-2.5 md:text-sm"
         >
-          <QrCode className="h-4 w-4 shrink-0" />
-          Scan QR Kwitansi
+          <QrCode className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" />
+          Scan QR
         </Link>
         <button
           type="button"
           onClick={() => setKwitansiRantingOpen(true)}
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15"
+          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-zinc-400 transition hover:bg-teal-500/10 hover:text-teal-300/90 hover:border-teal-400/15 md:gap-2 md:px-5 md:py-2.5 md:text-sm"
         >
-          <FileText className="h-4 w-4 shrink-0" />
-          Kwitansi per Ranting
+          <FileText className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" />
+          Kwitansi
         </button>
       </nav>
-      <p className="text-xs text-zinc-500">
+      <p className="hidden text-xs text-zinc-500 md:block">
         Scan QR untuk verifikasi kwitansi per orang; Kwitansi per Ranting untuk
         laporan agregat (A, B, C).
       </p>
