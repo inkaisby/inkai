@@ -108,7 +108,7 @@ export default function ScanKwitansiPage() {
           rafId = requestAnimationFrame(detect);
         };
         rafId = requestAnimationFrame(detect);
-      } catch (e) {
+      } catch {
         if (!cancelled)
           setError(
             "Akses kamera ditolak atau tidak tersedia. Gunakan kolom tempel link di bawah."
@@ -212,8 +212,7 @@ export default function ScanKwitansiPage() {
         </h1>
       </div>
       <p className="text-sm text-zinc-500">
-        Arahkan kamera ke QR code di kwitansi. Data akan terbaca dan halaman
-        kwitansi terbuka — bendahara atau user tinggal print.
+        Untuk pendaftaran UKT yang sudah <strong>Lunas</strong> (kwitansi sudah tersedia). Arahkan kamera ke QR code di kwitansi; halaman kwitansi terbuka — bendahara atau user tinggal print.
       </p>
 
       {error && (

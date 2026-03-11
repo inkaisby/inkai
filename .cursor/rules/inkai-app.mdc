@@ -40,3 +40,14 @@ Aplikasi Next.js (dashboard/manajemen) dengan auth dan RBAC. Konteks lengkap jug
 - Lint: `npm run lint`
 
 Saat mengedit fitur, rujuk modul yang relevan di `app/dashboard/modules/<nama>/` dan API terkait di `app/api/`.
+
+## Presentasi (docs/presentasi-inkai-app.md)
+
+**Sinkron dengan modul:** Setiap kali ada perubahan pada modul dashboard yang memengaruhi isi presentasi, perbarui `docs/presentasi-inkai-app.md`.
+
+- **Modul baru** → Tambah slide/poin di bagian "Fitur" (Fitur 1, 2, …) dan di "Ringkasan", tetap pakai bahasa orang awam.
+- **Modul dihapus/rename** → Hapus atau ubah slide/poin yang relevan.
+- **Fitur utama dalam modul berubah** (mis. fitur baru yang user-facing) → Sesuaikan penjelasan di slide fitur yang bersangkutan.
+- **Peran/akses baru** (mis. role di RBAC) → Sesuaikan slide "Untuk Siapa?" dan "Keamanan" jika perlu.
+
+Jaga gaya: penjelasan untuk orang awam, tanpa jargon teknis, fokus manfaat dan contoh penggunaan.

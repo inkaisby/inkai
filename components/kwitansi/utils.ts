@@ -33,7 +33,7 @@ export async function fetchInkaiLogoDataUrl(): Promise<string | undefined> {
   try {
     const res = await fetch("/logo/inkai-logo.png");
     const blob = await res.blob();
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = () => resolve(undefined);

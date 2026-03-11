@@ -75,7 +75,7 @@ export default function AnggotaRantingModule() {
   };
   const [duplicateCheckSingle, setDuplicateCheckSingle] = useState<DuplicateCheckResult | null>(null);
   const [duplicateCheckEdit, setDuplicateCheckEdit] = useState<DuplicateCheckResult | null>(null);
-  const [duplicateCheckLoading, setDuplicateCheckLoading] = useState(false);
+  const [, setDuplicateCheckLoading] = useState(false);
 
   const [rantingList, setRantingList] = useState<RantingOption[]>([]);
   const [rantingListLoading, setRantingListLoading] = useState(true);
@@ -587,7 +587,8 @@ export default function AnggotaRantingModule() {
   }, [showSingleForm, singleForm.nik, singleForm.nomor, singleForm.nama]);
 
   useEffect(() => {
-    if (!showEditForm || !editingMember) return;
+    const editingProfileId = editingMember?.profile_id ?? "";
+    if (!showEditForm || !editingProfileId) return;
     const nik = editForm.nik.trim();
     const nomor = editForm.nomor.trim();
     const nama = editForm.nama.trim();
@@ -602,7 +603,7 @@ export default function AnggotaRantingModule() {
         if (nik) params.set("nik", nik);
         if (nomor) params.set("nomor", nomor);
         if (nama) params.set("nama", nama);
-        params.set("exclude_profile_id", editingMember.profile_id);
+        params.set("exclude_profile_id", editingProfileId);
         const res = await fetch(`/api/anggota-ranting/check-duplicate?${params}`, { credentials: "include" });
         if (res.ok) {
           const d = (await res.json()) as DuplicateCheckResult;

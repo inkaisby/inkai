@@ -288,12 +288,14 @@ export default function PendaftaranUKT({
           selectedContext && selectedContext !== "all"
             ? list.find((r: RantingOption) => r.id === selectedContext)
             : null;
-        if (list.length === 0 && rantingId === RANTING_ALL) setRantingId("");
-        else if (!rantingId) {
-          if (isLevel3OrAbove && list.length > 0) setRantingId(RANTING_ALL);
-          else if (ctxRanting) setRantingId(ctxRanting.id);
-          else if (list.length > 0) setRantingId(list[0].id);
-        }
+        setRantingId((prev) => {
+          if (list.length === 0 && prev === RANTING_ALL) return "";
+          if (prev) return prev;
+          if (isLevel3OrAbove && list.length > 0) return RANTING_ALL;
+          if (ctxRanting) return ctxRanting.id;
+          if (list.length > 0) return list[0].id;
+          return "";
+        });
       })
       .catch(() => setRantingList([]))
       .finally(() => setLoadingRanting(false));
@@ -471,6 +473,26 @@ export default function PendaftaranUKT({
       { key: "belum", label: "Belum daftar", items: belum },
     ] as const;
   }, [filtered]);
+
+  /** Total nominal untuk peserta yang status menunggu pembayaran (untuk bayar sekaligus) */
+  const menungguSummary = useMemo(() => {
+    const selectedTahun = tahunList.find((t) => t.id === tahunId);
+    const bpk =
+      selectedTahun?.biaya_per_kyu &&
+      typeof selectedTahun.biaya_per_kyu === "object" &&
+      Object.keys(selectedTahun.biaya_per_kyu).length > 0
+        ? selectedTahun.biaya_per_kyu
+        : DEFAULT_BIAYA_KYU;
+    const rows = pendaftaranList.filter((p) => p.status_bayar === "menunggu_bayar");
+    let total = 0;
+    for (const p of rows) {
+      const kyuDan = p.kyu_dan_terakhir ?? "";
+      const fromKyu = getBiayaFromKyu(bpk, kyuDan);
+      const nominal = fromKyu ?? (p.total_bayar != null && p.total_bayar > 0 ? p.total_bayar : null);
+      if (nominal != null) total += nominal;
+    }
+    return { count: rows.length, total };
+  }, [pendaftaranList, tahunId, tahunList]);
 
   const toggleCollapse = (key: string) => {
     setCollapsed((prev) => {
@@ -898,18 +920,53 @@ export default function PendaftaranUKT({
         return null;
       })()}
 
+      {tahunId && menungguSummary.count > 0 && (
+        <div className="mt-6 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <p className="text-sm font-medium text-amber-200/90">
+            Total menunggu pembayaran:{" "}
+            <span className="font-bold tabular-nums">
+              {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(menungguSummary.total)}
+            </span>{" "}
+            ({menungguSummary.count} peserta)
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">
+            Untuk bayar sekaligus: transfer nominal di atas (pakai QRIS di bawah jika sudah diatur Cabang), lalu upload bukti di masing-masing baris peserta atau hubungi Bendahara untuk verifikasi gabungan.
+          </p>
+          <p className="mt-1.5 text-xs text-zinc-500">
+            Setelah upload bukti, status berubah menjadi <strong>Menunggu verifikasi Bendahara</strong> hingga Bendahara memverifikasi dan menandai Lunas.
+          </p>
+        </div>
+      )}
+
       {tahunId &&
         (() => {
           const selectedTahun = tahunList.find((t) => t.id === tahunId);
           const qris = selectedTahun?.qris_content?.trim();
-          if (!qris) return null;
+          if (!qris) {
+            if (menungguSummary.count > 0)
+              return (
+                <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <p className="text-xs text-zinc-500">
+                    QRIS belum diatur. Agar QR tampil di sini (untuk bayar satuan atau sekaligus), Cabang perlu mengatur QR di <strong>Kelola UKT</strong> (menu UKT → Kelola UKT → Set QRIS untuk tahun ini). Setelah diatur, QR akan muncul di blok hijau di bawah total.
+                  </p>
+                </div>
+              );
+            return null;
+          }
           return (
             <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
               <p className="text-sm font-medium text-zinc-200">
                 Bayar via QRIS — {selectedTahun.nama}
               </p>
+              {menungguSummary.count > 0 && (
+                <p className="mt-1 text-xs font-medium text-emerald-200/90">
+                  Bayar sekaligus {menungguSummary.count} peserta: transfer{" "}
+                  {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(menungguSummary.total)}{" "}
+                  lalu scan QR di bawah.
+                </p>
+              )}
               <p className="mt-1 text-xs text-zinc-500">
-                Scan QR di bawah untuk transfer/pembayaran UKT.
+                Scan QR di bawah dengan aplikasi berlogo QRIS, transfer sesuai biaya (satuan atau total di atas). Setelah transfer, wajib <strong>upload bukti</strong> di baris pendaftaran (kolom Bukti / Aksi). Setelah bukti diupload, status menjadi <strong>Menunggu verifikasi Bendahara</strong> sampai Bendahara menandai Lunas.
               </p>
               <div className="mt-3 flex items-start gap-4">
                 <div className="rounded-lg border border-white/10 bg-white p-2">
@@ -951,6 +1008,24 @@ export default function PendaftaranUKT({
           </button>
         </div>
       )}
+
+      {/* Bar tetap di bawah saat scroll — agar Ketua Ranting tetap lihat tombol Daftarkan */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between gap-3 border-t border-amber-500/20 bg-black/95 px-4 py-3 backdrop-blur-sm sm:hidden">
+          <span className="text-sm text-zinc-300">
+            <span className="font-medium text-amber-400/90">{selected.size}</span> peserta terpilih
+          </span>
+          <button
+            type="button"
+            onClick={handleSimpan}
+            disabled={saving}
+            className="rounded-lg bg-amber-600/90 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+          >
+            {saving ? "Menyimpan…" : `Daftarkan ${selected.size} peserta`}
+          </button>
+        </div>
+      )}
+      {selected.size > 0 && <div className="h-14 sm:hidden" aria-hidden />}
 
       {loadingAnggota ? (
         <div className="mt-6">

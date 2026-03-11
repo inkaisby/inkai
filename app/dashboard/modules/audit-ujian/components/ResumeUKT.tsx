@@ -138,7 +138,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   }, [rantingId]);
 
   const effectiveReportRanting = reportRantingId === REPORT_ALL ? REPORT_ALL : reportRantingId;
-  const canFetchReport = tahunId && (effectiveReportRanting === REPORT_ALL || effectiveReportRanting);
+  const canFetchReport = Boolean(tahunId) && (effectiveReportRanting === REPORT_ALL || Boolean(effectiveReportRanting));
 
   useEffect(() => {
     if (!canFetchReport) {
@@ -155,7 +155,7 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
       })
       .catch(() => setData(null))
       .finally(() => setLoadingResume(false));
-  }, [tahunId, reportRantingId, resumeVersion]);
+  }, [canFetchReport, tahunId, effectiveReportRanting, resumeVersion]);
 
   const refetchResume = () => {
     if (!canFetchReport) return;
@@ -480,11 +480,14 @@ export default function ResumeUKT({ tahunId, rantingId, resumeVersion, pendingSe
   const tahunNama = tahunList.find((t) => t.id === tahunId)?.nama ?? "—";
   const isReportAll = effectiveReportRanting === REPORT_ALL;
 
-  const savedProfileIds = new Set((data?.list ?? []).map((r) => r.profile_id));
-  const pendingRows =
-    effectiveReportRanting === rantingId
-      ? pendingSelection.filter((p) => !savedProfileIds.has(p.profile_id))
-      : [];
+  const savedProfileIds = useMemo(
+    () => new Set((data?.list ?? []).map((r) => r.profile_id)),
+    [data?.list]
+  );
+  const pendingRows = useMemo(() => {
+    if (effectiveReportRanting !== rantingId) return [];
+    return pendingSelection.filter((p) => !savedProfileIds.has(p.profile_id));
+  }, [effectiveReportRanting, rantingId, pendingSelection, savedProfileIds]);
   const hasPending = pendingRows.length > 0;
 
   const searchLower = searchLaporan.trim().toLowerCase();

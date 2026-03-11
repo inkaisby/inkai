@@ -89,8 +89,6 @@ export function renderKwitansiRantingPdf(
     doc.setFontSize(LAYOUT.bodySize);
 
     const col1 = x;
-    const col2 = x + 50;
-    const col3 = x + 75;
     const col4 = x + 110;
     const col5 = x + contentW - 10;
 

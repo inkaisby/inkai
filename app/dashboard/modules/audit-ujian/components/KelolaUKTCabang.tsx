@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, Pencil, Settings2, Unlock } from "lucide-react";
+import { ChevronDown, ChevronRight, Lock, Pencil, Settings2, Unlock } from "lucide-react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -307,6 +307,8 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
   const [editModal, setEditModal] = useState<TahunRow | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [expandBuatUkt, setExpandBuatUkt] = useState(false);
+  const [expandTahunList, setExpandTahunList] = useState(false);
 
   const isSuperadmin = app_role === "SUPERADMIN";
   const isCabang = (scope?.cabang_ids?.length ?? 0) > 0 && !scope?.is_pp;
@@ -526,13 +528,22 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 shadow-sm">
-      <div className="mb-6 flex items-center gap-2">
-        <Settings2 className="h-5 w-5 text-amber-500/80" />
-        <h2 className="text-lg font-semibold text-zinc-100">
-          {isCabang ? "Buat UKT Cabang" : "Buat UKT Global"}
-        </h2>
-      </div>
-      <p className="mb-6 text-sm text-zinc-500">
+      <button
+        type="button"
+        onClick={() => setExpandBuatUkt((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-left hover:bg-white/[0.04] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-5 w-5 text-amber-500/80" />
+          <span className="font-semibold text-zinc-100">
+            {isCabang ? "Buat UKT Cabang" : "Buat UKT Global"}
+          </span>
+        </div>
+        {expandBuatUkt ? <ChevronDown className="h-5 w-5 text-zinc-400" /> : <ChevronRight className="h-5 w-5 text-zinc-400" />}
+      </button>
+      {expandBuatUkt && (
+        <div className="mt-4 space-y-4">
+      <p className="text-sm text-zinc-500">
         {isCabang
           ? "Isi nama, tahun ajaran, tanggal, dan tempat pelaksanaan UKT untuk cabang Anda. Ranting di bawah cabang ini nanti bisa mendaftarkan anggotanya ke UKT ini."
           : "Buat tahun ajaran UKT global. Semua ranting dapat mendaftarkan anggotanya ke UKT ini."}
@@ -670,9 +681,19 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
           {saving ? "Menyimpan…" : isCabang ? "Buat UKT Cabang" : "Buat UKT Global"}
         </button>
       </form>
+        </div>
+      )}
 
-      <div className="mt-10 border-t border-white/10 pt-8">
-        <h3 className="mb-3 text-sm font-semibold text-zinc-200">Tahun ajaran UKT — hubungkan dengan cabang</h3>
+      <button
+        type="button"
+        onClick={() => setExpandTahunList((v) => !v)}
+        className="mt-6 flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-left hover:bg-white/[0.04] transition-colors"
+      >
+        <span className="font-semibold text-zinc-200">Tahun ajaran UKT — hubungkan dengan cabang</span>
+        {expandTahunList ? <ChevronDown className="h-5 w-5 text-zinc-400" /> : <ChevronRight className="h-5 w-5 text-zinc-400" />}
+      </button>
+      {expandTahunList && (
+      <div className="mt-4 border-t border-white/10 pt-4">
         <p className="mb-4 text-xs text-zinc-500">
           Jika tahun ajaran ditutup, tidak ada pendaftaran baru atau daftar ulang (peserta batal). Cabang/PP dapat menutup tahun ajaran untuk UKT cabang sendiri; PP dapat menutup UKT global.
         </p>
@@ -710,40 +731,41 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-1">
                           {canEditTahun(row) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditError(null);
-                                setEditModal(row);
-                              }}
-                              className="inline-flex items-center gap-1 rounded border border-white/20 px-2 py-1 text-xs font-medium text-zinc-300 transition hover:bg-white/10"
-                            >
-                              <Pencil className="h-3 w-3" />
-                              Edit
-                            </button>
-                          )}
-                          {canClose && (
                             <>
                               <button
                                 type="button"
-                                disabled={closingId === row.id}
-                                onClick={() => handleTutupTahun(row.id, !ditutup)}
-                                className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition ${
-                                  ditutup
-                                    ? "border-emerald-500/30 text-emerald-400/90 hover:bg-emerald-500/10"
-                                    : "border-amber-500/30 text-amber-400/90 hover:bg-amber-500/10"
-                                } disabled:opacity-50`}
+                                onClick={() => {
+                                  setEditError(null);
+                                  setEditModal(row);
+                                }}
+                                className="inline-flex items-center gap-1 rounded border border-white/20 px-2 py-1 text-xs font-medium text-zinc-300 transition hover:bg-white/10"
                               >
-                                {closingId === row.id ? "…" : ditutup ? <><Unlock className="h-3 w-3" /> Buka kembali</> : <><Lock className="h-3 w-3" /> Tutup tahun ajaran</>}
+                                <Pencil className="h-3 w-3" />
+                                Edit
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleOpenQrisModal(row)}
-                                className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition border-white/20 text-zinc-300 hover:bg-white/10 ${row.qris_content ? "text-emerald-400/90" : ""}`}
+                                className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition border-white/20 text-zinc-300 hover:bg-white/10 ${row.qris_content ? "text-emerald-400/90" : "border-amber-500/30 text-amber-400/90"}`}
+                                title={row.qris_content ? "Ubah payload/URL QRIS" : "Isi payload/URL QRIS dari bank (NMID) agar QR tampil di halaman Pendaftaran UKT"}
                               >
                                 {row.qris_content ? "Edit QRIS" : "Set QRIS"}
                               </button>
                             </>
+                          )}
+                          {canClose && (
+                            <button
+                              type="button"
+                              disabled={closingId === row.id}
+                              onClick={() => handleTutupTahun(row.id, !ditutup)}
+                              className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition ${
+                                ditutup
+                                  ? "border-emerald-500/30 text-emerald-400/90 hover:bg-emerald-500/10"
+                                  : "border-amber-500/30 text-amber-400/90 hover:bg-amber-500/10"
+                              } disabled:opacity-50`}
+                            >
+                              {closingId === row.id ? "…" : ditutup ? <><Unlock className="h-3 w-3" /> Buka kembali</> : <><Lock className="h-3 w-3" /> Tutup tahun ajaran</>}
+                            </button>
                           )}
                         </div>
                       </td>
@@ -755,12 +777,13 @@ export default function KelolaUKTCabang({ onCreated }: Props) {
           </div>
         )}
       </div>
+      )}
 
       {qrisModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !qrisSaving && setQrisModal(null)}>
           <div className="w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-zinc-200">QRIS — {qrisModal.nama}</h3>
-            <p className="mt-1 text-xs text-zinc-500">Isi payload/URL QRIS dari bank atau payment gateway. Ranting akan melihat QR untuk scan bayar.</p>
+            <h3 className="text-sm font-semibold text-zinc-200">QRIS statis — {qrisModal.nama}</h3>
+            <p className="mt-1 text-xs text-zinc-500">Isi payload/URL QRIS dari bank (NMID). Peserta scan QR lalu transfer; setelah bayar mereka wajib upload bukti di pendaftaran masing-masing.</p>
             <textarea
               value={qrisModal.qris_content}
               onChange={(e) => setQrisModal((m) => (m ? { ...m, qris_content: e.target.value } : null))}

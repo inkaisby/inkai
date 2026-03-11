@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -80,7 +80,7 @@ export default function RingkasanLaporan() {
       .then((data) => {
         const arr = Array.isArray(data) ? data : [];
         setTahunList(arr);
-        if (arr.length > 0 && !tahunId) setTahunId(arr[0].id);
+        if (arr.length > 0) setTahunId((prev) => prev || arr[0].id);
       })
       .catch(() => setTahunList([]))
       .finally(() => setLoadingTahun(false));
@@ -98,11 +98,13 @@ export default function RingkasanLaporan() {
           selectedContext && selectedContext !== "all"
             ? arr.find((r: RantingOption) => r.id === selectedContext)
             : null;
-        if (!rantingId) {
-          if (isLevel3OrAbove && arr.length > 0) setRantingId(RANTING_ALL);
-          else if (ctxRanting) setRantingId(ctxRanting.id);
-          else if (arr.length > 0) setRantingId(arr[0].id);
-        }
+        setRantingId((prev) => {
+          if (prev) return prev;
+          if (isLevel3OrAbove && arr.length > 0) return RANTING_ALL;
+          if (ctxRanting) return ctxRanting.id;
+          if (arr.length > 0) return arr[0].id;
+          return "";
+        });
       })
       .catch(() => { if (!cancelled) setRantingList([]); })
       .finally(() => { if (!cancelled) setLoadingRanting(false); });

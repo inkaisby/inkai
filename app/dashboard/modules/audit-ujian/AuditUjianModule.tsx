@@ -122,19 +122,9 @@ export default function AuditUjianModule() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ViewAudit>("pendaftaran");
-  const [filterTahunId, setFilterTahunId] = useState("");
-  const [filterRantingId, setFilterRantingId] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [kelolaUktExpanded, setKelolaUktExpanded] = useState(false);
   const [kwitansiRantingOpen, setKwitansiRantingOpen] = useState(false);
-
-  const handleFilterChange = useCallback(
-    (tahunId: string, rantingId: string) => {
-      setFilterTahunId(tahunId);
-      setFilterRantingId(rantingId);
-    },
-    [],
-  );
 
   const handleRegistrationSuccess = useCallback(() => {
     setRefreshTrigger((r) => r + 1);
@@ -511,9 +501,8 @@ export default function AuditUjianModule() {
           Kwitansi
         </button>
       </nav>
-      <p className="hidden text-xs text-zinc-500 md:block">
-        Scan QR untuk verifikasi kwitansi per orang; Kwitansi per Ranting untuk
-        laporan agregat (A, B, C).
+      <p className="text-xs text-zinc-500">
+        Verifikasi kwitansi: klik tab <strong>Scan QR</strong> di atas → buka pemindai. Kwitansi per Ranting untuk laporan agregat (A, B, C).
       </p>
       </div>
 
@@ -566,7 +555,6 @@ export default function AuditUjianModule() {
           {/* Pendaftaran peserta UKT (panel kanan Laporan dihapus) */}
           <div className="min-w-0 w-full">
             <PendaftaranUKT
-              onFilterChange={handleFilterChange}
               onRegistrationSuccess={handleRegistrationSuccess}
               refreshTrigger={refreshTrigger}
             />

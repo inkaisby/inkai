@@ -62,7 +62,7 @@ export default function KwitansiRantingModal({ open, onClose }: Props) {
       .then((arr) => {
         const list = Array.isArray(arr) ? arr : [];
         setTahunList(list);
-        if (list.length > 0 && !tahunId) setTahunId(list[0].id);
+        if (list.length > 0) setTahunId((prev) => prev || list[0].id);
       })
       .catch(() => setTahunList([]));
     fetch("/api/ranting", { credentials: "include" })
@@ -70,7 +70,7 @@ export default function KwitansiRantingModal({ open, onClose }: Props) {
       .then((arr) => {
         const list = Array.isArray(arr) ? arr : [];
         setRantingList(list);
-        if (list.length > 0 && !rantingId) setRantingId(list[0].id);
+        if (list.length > 0) setRantingId((prev) => prev || list[0].id);
       })
       .catch(() => setRantingList([]));
   }, [open]);

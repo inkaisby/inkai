@@ -3,6 +3,7 @@
 import type { KwitansiRantingData } from "./types";
 import { formatCurrency } from "./utils";
 import { QRCodeSVG } from "qrcode.react";
+import Image from "next/image";
 
 type KwitansiRantingTemplateProps = {
   data: KwitansiRantingData;
@@ -37,10 +38,13 @@ export function KwitansiRantingTemplate({
         <div className="rounded-t-xl border-x border-t border-slate-200 bg-white px-8 pt-8 pb-6 shadow-sm print:shadow-none print:rounded-none print:border-0">
           <div className="mb-4 flex justify-center">
             <div className="h-16 w-16 overflow-hidden rounded-full print:h-14 print:w-14">
-              <img
+              <Image
                 src="/logo/inkai-logo.png"
                 alt="INKAI"
+                width={64}
+                height={64}
                 className="h-full w-full object-cover"
+                priority
               />
             </div>
           </div>
