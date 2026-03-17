@@ -78,7 +78,13 @@ export function canAccessMenu(
 
   // Kohai (level 1): hanya Dashboard dan Keanggotaan
   if (maxLevel === 1) {
-    return menu.key === "dashboard" || menu.key === "keanggotaan";
+    return (
+      menu.key === "dashboard" ||
+      menu.key === "keanggotaan" ||
+      menu.key === "konten-saya-berita" ||
+      menu.key === "konten-saya-instagram" ||
+      menu.key === "marketplace-saya"
+    );
   }
 
   // UKT (Ujian Kenaikan Tingkat): hanya level 2–5 (Ranting, Cabang, Pengprov, PP)

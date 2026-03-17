@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <filter id="s7" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s7)">
+    <rect x="220" y="140" width="840" height="440" rx="28" fill="#0b1223" stroke="#38bdf8" stroke-opacity=".22" stroke-width="2"/>
+
+    <!-- certificate / form -->
+    <rect x="280" y="200" width="520" height="320" rx="22" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".14"/>
+    <rect x="320" y="245" width="320" height="20" rx="10" fill="#94a3b8" opacity=".30"/>
+    <rect x="320" y="285" width="420" height="16" rx="8" fill="#94a3b8" opacity=".20"/>
+    <rect x="320" y="315" width="390" height="16" rx="8" fill="#94a3b8" opacity=".18"/>
+    <rect x="320" y="345" width="410" height="16" rx="8" fill="#94a3b8" opacity=".16"/>
+    <rect x="320" y="385" width="260" height="56" rx="18" fill="#38bdf8" opacity=".18"/>
+
+    <!-- stamp/medal -->
+    <g transform="translate(860 265)">
+      <circle cx="0" cy="0" r="84" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".18"/>
+      <circle cx="0" cy="0" r="54" fill="#38bdf8" opacity=".25"/>
+      <path d="M-20 0 l14 16 l30 -34" fill="none" stroke="#22c55e" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+      <path d="M-40 80 L-10 135 L-70 150 Z" fill="#38bdf8" opacity=".25"/>
+      <path d="M40 80 L70 150 L10 135 Z" fill="#38bdf8" opacity=".25"/>
+    </g>
+  </g>
+</svg>

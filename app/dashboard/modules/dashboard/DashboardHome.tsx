@@ -12,6 +12,8 @@ import {
   Share2,
   ExternalLink,
   AlertTriangle,
+  Pencil,
+  X,
 } from "lucide-react";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
@@ -35,6 +37,17 @@ type FeedPost = {
   date: string;
   likes: number;
   type: "event" | "pengumuman" | "dojo";
+  liked?: boolean;
+};
+
+type FeedComment = {
+  id: string;
+  feed_id: string;
+  user_id: string | null;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+  mine: boolean;
 };
 
 type MarketplaceItem = {
@@ -115,6 +128,10 @@ export default function DashboardHome() {
   const [rantingList, setRantingList] = useState<RantingItem[]>([]);
   const [rantingLoading, setRantingLoading] = useState(true);
   const [feed, setFeed] = useState<FeedPost[]>([]);
+  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, FeedComment[]>>({});
+  const [commentsLoading, setCommentsLoading] = useState<Record<string, boolean>>({});
+  const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
   const [instagramFeed, setInstagramFeed] = useState<InstagramFeedItem[]>([]);
   const [homeLoading, setHomeLoading] = useState(true);
@@ -122,12 +139,33 @@ export default function DashboardHome() {
   const [showDocNotice, setShowDocNotice] = useState(false);
   const hideDocNoticeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { data: bootstrap } = useBootstrapStore();
+  const currentUserId = bootstrap?.user?.id ?? null;
+
+  const [editingPost, setEditingPost] = useState<FeedPost | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingBody, setEditingBody] = useState("");
+  const [editingImage, setEditingImage] = useState("");
+  const [uploadImageLoading, setUploadImageLoading] = useState(false);
+  const [uploadImageError, setUploadImageError] = useState<string | null>(null);
+  const [editingSaving, setEditingSaving] = useState(false);
+  const [editingError, setEditingError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/home", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : { feed: [], marketplace: [] }))
       .then((data: {
-        feed?: Array<{ id: string; title: string; body: string; image: string | null; date: string; likes: number; type: FeedPost["type"] }>;
+        feed?: Array<{
+          id: string;
+          title: string;
+          body: string;
+          image: string | null;
+          date: string;
+          likes: number;
+          type: FeedPost["type"];
+          liked?: boolean;
+        }>;
         marketplace?: MarketplaceItem[];
         instagramFeed?: InstagramFeedItem[];
       }) => {
@@ -142,7 +180,14 @@ export default function DashboardHome() {
             date: formatFeedDate(r.date),
             likes: r.likes ?? 0,
             type: r.type,
-          }))
+            liked: Boolean(r.liked),
+          })),
+        );
+        setLikedPosts(
+          feedList.reduce<Record<string, boolean>>((acc, r) => {
+            if (r.liked) acc[r.id] = true;
+            return acc;
+          }, {}),
         );
         setMarketplace(Array.isArray(data.marketplace) ? data.marketplace : []);
         setInstagramFeed(Array.isArray(data.instagramFeed) ? data.instagramFeed : []);
@@ -159,6 +204,154 @@ export default function DashboardHome() {
       cancelled = true;
     };
   }, []);
+
+  const loadComments = async (postId: string) => {
+    if (commentsLoading[postId]) return;
+    setCommentsLoading((prev) => ({ ...prev, [postId]: true }));
+    try {
+      const res = await fetch(`/api/home/comments?feedId=${encodeURIComponent(postId)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        return;
+      }
+      const json = (await res
+        .json()
+        .catch(() => ({}))) as {
+        items?: Array<{
+          id: string;
+          feed_id: string;
+          user_id: string | null;
+          author_name: string | null;
+          body: string;
+          created_at: string;
+        }>;
+      };
+      const items = Array.isArray(json?.items) ? json.items : [];
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: items.map((c) => ({
+          id: c.id,
+          feed_id: c.feed_id,
+          user_id: c.user_id ?? null,
+          author_name: c.author_name ?? null,
+          body: c.body ?? "",
+          created_at: c.created_at ?? "",
+          mine: currentUserId != null && c.user_id === currentUserId,
+        })),
+      }));
+    } finally {
+      setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleSubmitComment = async (postId: string) => {
+    const text = (commentInput[postId] ?? "").trim();
+    if (!text) return;
+
+    setCommentInput((prev) => ({ ...prev, [postId]: "" }));
+
+    try {
+      const res = await fetch("/api/home/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ feedId: postId, text }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.item) {
+        // fallback: kembalikan teks ke input bila gagal
+        setCommentInput((prev) => ({ ...prev, [postId]: text }));
+        return;
+      }
+      const c = json.item as {
+        id: string;
+        feed_id: string;
+        user_id: string | null;
+        author_name: string | null;
+        body: string;
+        created_at: string;
+      };
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: [
+          ...(prev[postId] ?? []),
+          {
+            id: c.id,
+            feed_id: c.feed_id,
+            user_id: c.user_id ?? null,
+            author_name: c.author_name ?? null,
+            body: c.body ?? "",
+            created_at: c.created_at ?? "",
+            mine: true,
+          },
+        ],
+      }));
+    } catch {
+      setCommentInput((prev) => ({ ...prev, [postId]: text }));
+    }
+  };
+
+  const handleToggleLike = async (postId: string) => {
+    try {
+      const res = await fetch("/api/home/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: postId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+
+      const nextLikes = typeof json?.likes === "number" ? json.likes : null;
+      const delta = typeof json?.delta === "number" ? json.delta : 0;
+
+      if (nextLikes != null) {
+        setFeed((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? {
+                  ...p,
+                  likes: nextLikes,
+                }
+              : p,
+          ),
+        );
+      } else if (delta !== 0) {
+        setFeed((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? {
+                  ...p,
+                  likes: Math.max(0, p.likes + delta),
+                }
+              : p,
+          ),
+        );
+      }
+
+      setLikedPosts((prev) => ({ ...prev, [postId]: delta > 0 ? true : false }));
+    } catch {
+      // abaikan error jaringan, tidak mengubah state like lokal
+    }
+  };
+
+  const handleShare = async (postId: string) => {
+    const url = `${window.location.origin}${window.location.pathname}#post-${postId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "INKAI Feed", text: "Lihat postingan INKAI", url });
+        return;
+      }
+    } catch {
+      // fallback ke copy clipboard
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("Tautan disalin ke clipboard.");
+    } catch {
+      alert("Tidak bisa menyalin tautan, silakan salin manual.");
+    }
+  };
 
   // Soft notif: dokumen profil belum lengkap (KTP / Akte Lahir / KK)
   useEffect(() => {
@@ -249,6 +442,38 @@ export default function DashboardHome() {
         </p>
       </div>
 
+      {/* Shortcut: Konten Saya */}
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-medium text-white/90">Konten Saya</div>
+            <div className="text-xs text-white/60 mt-0.5">
+              Buat konten sendiri. Yang bukan pembuat hanya melihat yang publish/aktif.
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link
+              href="/dashboard/konten-saya-berita"
+              className="rounded-md bg-white/10 hover:bg-white/15 px-3 py-2 text-sm text-white/90"
+            >
+              Berita
+            </Link>
+            <Link
+              href="/dashboard/konten-saya-instagram"
+              className="rounded-md bg-white/10 hover:bg-white/15 px-3 py-2 text-sm text-white/90"
+            >
+              Instagram
+            </Link>
+            <Link
+              href="/dashboard/marketplace-saya"
+              className="rounded-md bg-white/10 hover:bg-white/15 px-3 py-2 text-sm text-white/90"
+            >
+              Marketplace
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Soft notif: dokumen profil belum lengkap */}
       {showDocNotice && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs sm:text-sm text-amber-100 flex items-start gap-3">
@@ -337,6 +562,7 @@ export default function DashboardHome() {
               return (
                 <article
                   key={post.id}
+                  id={`post-${post.id}`}
                   className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden"
                 >
                   <div className="flex">
@@ -350,6 +576,21 @@ export default function DashboardHome() {
                           <div className="font-medium text-white/95">{post.title}</div>
                           <div className="text-xs text-white/50">{post.date}</div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingPost(post);
+                            setEditingTitle(post.title);
+                            setEditingBody(post.body);
+                            setEditingImage(post.image ?? "");
+                            setUploadImageError(null);
+                            setEditingError(null);
+                          }}
+                          className="ml-2 inline-flex items-center justify-center rounded-full p-1.5 text-white/40 hover:text-teal-300 hover:bg-teal-500/10 border border-white/10 hover:border-teal-400/40 transition-colors"
+                          title="Edit konten ini"
+                        >
+                          <Pencil size={14} />
+                        </button>
                       </div>
                       {post.image ? (
                         <div className="aspect-video bg-black/30 relative">
@@ -363,18 +604,88 @@ export default function DashboardHome() {
                       <div className="p-4">
                         <p className="text-sm text-white/80">{post.body}</p>
                         <div className="flex items-center gap-4 mt-3 text-white/50 text-sm">
-                          <button type="button" className="flex items-center gap-1.5 hover:text-white/70 transition-colors">
-                            <Heart size={16} />
+                          <button
+                            type="button"
+                            onClick={() => handleToggleLike(post.id)}
+                            className={`flex items-center gap-1.5 hover:text-white/70 transition-colors ${
+                              likedPosts[post.id] ? "text-rose-400" : ""
+                            }`}
+                          >
+                            <Heart size={16} className={likedPosts[post.id] ? "fill-current" : ""} />
                             {post.likes}
                           </button>
-                          <button type="button" className="flex items-center gap-1.5 hover:text-white/70 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = document.getElementById(`comments-${post.id}`);
+                              if (!el) return;
+                              el.classList.toggle("hidden");
+                              if (!commentsByPost[post.id]) {
+                                void loadComments(post.id);
+                              }
+                            }}
+                            className="flex items-center gap-1.5 hover:text-white/70 transition-colors"
+                          >
                             <MessageCircle size={16} />
                             Komentar
                           </button>
-                          <button type="button" className="flex items-center gap-1.5 hover:text-white/70 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => handleShare(post.id)}
+                            className="flex items-center gap-1.5 hover:text-white/70 transition-colors"
+                          >
                             <Share2 size={16} />
                             Bagikan
                           </button>
+                        </div>
+                        <div id={`comments-${post.id}`} className="mt-3 hidden">
+                          <div className="rounded-md border border-white/10 bg-black/40 p-3 space-y-3">
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {commentsLoading[post.id] && (
+                                <p className="text-[11px] text-white/50">Memuat komentar…</p>
+                              )}
+                              {!commentsLoading[post.id] &&
+                                (commentsByPost[post.id] ?? []).map((c) => (
+                                  <div
+                                    key={c.id}
+                                    className="rounded-md bg-white/[0.03] px-2.5 py-2 text-[11px] text-white/80"
+                                  >
+                                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                                      <span className="font-medium text-white/90">
+                                        {c.mine ? "Anda" : c.author_name || "Anggota"}
+                                      </span>
+                                      {c.created_at && (
+                                        <span className="text-[10px] text-white/40">
+                                          {formatFeedDate(c.created_at)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="whitespace-pre-wrap break-words">{c.body}</p>
+                                  </div>
+                                ))}
+                              {!commentsLoading[post.id] && (!commentsByPost[post.id] || commentsByPost[post.id].length === 0) && (
+                                <p className="text-[11px] text-white/50">Belum ada komentar.</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 pt-1 border-t border-white/10">
+                              <input
+                                value={commentInput[post.id] ?? ""}
+                                onChange={(e) =>
+                                  setCommentInput((prev) => ({ ...prev, [post.id]: e.target.value }))
+                                }
+                                className="flex-1 rounded-md bg-black/60 border border-white/15 px-2 py-1.5 text-xs text-white outline-none focus:border-teal-400/60"
+                                placeholder="Tulis komentar…"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleSubmitComment(post.id)}
+                                disabled={!(commentInput[post.id] ?? "").trim()}
+                                className="rounded-md bg-teal-600 hover:bg-teal-500 disabled:opacity-40 disabled:hover:bg-teal-600 px-2.5 py-1.5 text-[11px] text-white"
+                              >
+                                Kirim
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -525,6 +836,211 @@ export default function DashboardHome() {
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-white/50">
         Home — Stories ranting, feed, Instagram per wilayah, dan marketplace.
       </div>
+
+      {/* Modal edit konten feed */}
+      {editingPost && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-3 sm:px-0"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-feed-modal-title"
+          onClick={() => !editingSaving && setEditingPost(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-md text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div>
+                <h2
+                  id="edit-feed-modal-title"
+                  className="text-sm font-semibold text-white/95"
+                >
+                  Edit Konten Home
+                </h2>
+                <p className="text-[11px] text-white/50">
+                  Perubahan akan memodifikasi konten di modul Konten Saya — Berita.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !editingSaving && setEditingPost(null)}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-white/60 hover:text-white hover:bg-white/10"
+                aria-label="Tutup"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <form
+              className="px-4 py-4 sm:px-5 sm:py-5 space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const title = editingTitle.trim();
+                const body = editingBody.trim();
+                if (!title || !body) {
+                  setEditingError("Judul dan isi wajib diisi.");
+                  return;
+                }
+                setEditingSaving(true);
+                setEditingError(null);
+                const imagePath = editingImage.trim() || null;
+                try {
+                  const res = await fetch(`/api/konten/berita/${editingPost.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, body, image_path: imagePath }),
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) {
+                    const msg =
+                      typeof json?.message === "string"
+                        ? json.message
+                        : "Gagal menyimpan perubahan.";
+                    setEditingError(msg);
+                    return;
+                  }
+
+                  setFeed((prev) =>
+                    prev.map((p) =>
+                      p.id === editingPost.id
+                        ? {
+                            ...p,
+                            title,
+                            body,
+                            image: imagePath ?? null,
+                          }
+                        : p,
+                    ),
+                  );
+                  setEditingPost(null);
+                } catch {
+                  setEditingError("Terjadi kesalahan jaringan saat menyimpan.");
+                } finally {
+                  setEditingSaving(false);
+                }
+              }}
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/60">Gambar</label>
+                {editingImage ? (
+                  <div className="relative aspect-video w-full rounded-md overflow-hidden border border-white/10 bg-black/40">
+                    <Image
+                      src={editingImage}
+                      alt={editingTitle || "Gambar konten"}
+                      fill
+                      className="object-cover"
+                      sizes="(min-width: 768px) 560px, 100vw"
+                      unoptimized
+                      onError={() => {}}
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-video w-full rounded-md border border-white/10 bg-black/40 flex items-center justify-center">
+                    <Trophy className="w-10 h-10 text-white/30" />
+                  </div>
+                )}
+                <p className="text-[11px] text-white/50">
+                  Bisa pakai URL langsung (link gambar) atau upload dari perangkat. Foto dari Instagram: simpan dulu ke HP/laptop lalu upload di sini.
+                </p>
+                <input
+                  type="url"
+                  value={editingImage}
+                  onChange={(e) => {
+                    setEditingImage(e.target.value);
+                    setUploadImageError(null);
+                  }}
+                  className="w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-teal-400/60"
+                  placeholder="Tempel URL (kosongkan untuk tanpa gambar)"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white/50">Atau upload file:</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    disabled={uploadImageLoading}
+                    className="text-xs text-white/70 file:mr-2 file:rounded file:border-0 file:bg-teal-600 file:px-2 file:py-1 file:text-white file:text-xs"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!f) return;
+                      setUploadImageError(null);
+                      setUploadImageLoading(true);
+                      try {
+                        const fd = new FormData();
+                        fd.append("file", f);
+                        const res = await fetch("/api/konten/berita/upload", {
+                          method: "POST",
+                          credentials: "include",
+                          body: fd,
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          setUploadImageError(data?.message ?? "Gagal mengunggah");
+                          return;
+                        }
+                        if (data?.url) {
+                          setEditingImage(data.url);
+                        }
+                      } catch {
+                        setUploadImageError("Gagal mengunggah gambar");
+                      } finally {
+                        setUploadImageLoading(false);
+                      }
+                    }}
+                  />
+                  {uploadImageLoading && (
+                    <span className="text-xs text-white/50">Mengunggah…</span>
+                  )}
+                </div>
+                {uploadImageError && (
+                  <p className="text-[11px] text-red-300">{uploadImageError}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/60">Judul</label>
+                <input
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  className="w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-teal-400/60"
+                  placeholder="Judul konten"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/60">Isi</label>
+                <textarea
+                  value={editingBody}
+                  onChange={(e) => setEditingBody(e.target.value)}
+                  className="w-full min-h-[140px] rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-teal-400/60"
+                  placeholder="Isi konten…"
+                />
+              </div>
+              {editingError && (
+                <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] text-red-100">
+                  {editingError}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={editingSaving}
+                  onClick={() => !editingSaving && setEditingPost(null)}
+                  className="rounded-md border border-white/20 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={editingSaving || !editingTitle.trim() || !editingBody.trim()}
+                  className="rounded-md bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-500 disabled:opacity-50"
+                >
+                  {editingSaving ? "Menyimpan…" : "Simpan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

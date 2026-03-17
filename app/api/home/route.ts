@@ -20,29 +20,57 @@ export async function GET() {
     admin
       .from("home_feed")
       .select("id, title, body, image_path, type, likes, created_at")
+      .eq("status", "published")
       .order("order_index", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(50),
     admin
       .from("home_marketplace")
       .select("id, title, price, image_path, href")
+      .eq("is_active", true)
       .order("order_index", { ascending: false })
       .limit(20),
     admin
       .from("home_instagram_feed")
       .select("id, image_url, caption, post_url")
+      .eq("status", "published")
       .order("order_index", { ascending: false })
       .limit(20),
   ]);
 
-  const feed = (feedRes.data ?? []).map((r: Record<string, unknown>) => ({
+  const rawFeed = (feedRes.data ?? []) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    image_path: string | null;
+    type: "event" | "pengumuman" | "dojo";
+    likes: number | null;
+    created_at: string;
+  }>;
+
+  // Ambil daftar feed yang sudah di-like oleh user ini.
+  const likedRes = await admin
+    .from("home_feed_likes")
+    .select("feed_id")
+    .eq("user_id", user.id)
+    .in(
+      "feed_id",
+      rawFeed.length > 0 ? rawFeed.map((f) => f.id) : ["00000000-0000-0000-0000-000000000000"],
+    );
+
+  const likedSet = new Set<string>(
+    (likedRes.data ?? []).map((r: { feed_id: string }) => r.feed_id),
+  );
+
+  const feed = rawFeed.map((r) => ({
     id: r.id,
     title: r.title ?? "",
     body: r.body ?? "",
-    image: (r.image_path as string) || null,
+    image: r.image_path || null,
     date: r.created_at,
     likes: Number(r.likes ?? 0),
-    type: r.type as "event" | "pengumuman" | "dojo",
+    type: r.type,
+    liked: likedSet.has(r.id),
   }));
 
   const marketplace = (marketplaceRes.data ?? []).map((r: Record<string, unknown>) => ({

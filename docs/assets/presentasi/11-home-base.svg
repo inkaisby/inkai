@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <filter id="s11" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s11)">
+    <rect x="240" y="140" width="800" height="440" rx="28" fill="#0b1223" stroke="#38bdf8" stroke-opacity=".22" stroke-width="2"/>
+
+    <!-- dojo / home -->
+    <g transform="translate(420 210)">
+      <path d="M80 150 L240 40 L400 150" fill="none" stroke="#38bdf8" stroke-opacity=".35" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M120 150 V320 H360 V150" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".16" stroke-width="8" stroke-linejoin="round"/>
+      <rect x="190" y="210" width="100" height="110" rx="18" fill="#38bdf8" opacity=".16"/>
+      <rect x="145" y="175" width="70" height="50" rx="14" fill="#94a3b8" opacity=".18"/>
+      <rect x="265" y="175" width="70" height="50" rx="14" fill="#94a3b8" opacity=".18"/>
+      <path d="M150 150 H330" stroke="#22c55e" stroke-opacity=".45" stroke-width="10" stroke-linecap="round"/>
+    </g>
+
+    <!-- pin -->
+    <g transform="translate(960 225)">
+      <path d="M0 60 c0-48 72-48 72 0 c0 26-36 70-36 70S0 86 0 60z" fill="#22c55e" opacity=".55"/>
+      <circle cx="36" cy="60" r="12" fill="#0b1223" opacity=".6"/>
+    </g>
+  </g>
+</svg>

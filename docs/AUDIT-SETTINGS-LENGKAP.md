@@ -4,7 +4,7 @@
 
 | Bagian | Komponen | Fungsi |
 |--------|----------|--------|
-| **Mode** | Users / Menu / Database | Tiga konteks: kelola user, kelola menu, audit DB |
+| **Mode** | Users / Master Data | Kelola user + CRUD data inti sistem (Menu Sidebar + Konfigurasi Fitur) |
 | **Kiri (Users)** | EmailList | Daftar user dari `/api/users`, pilih user |
 | **Kiri (Users)** | PermissionMatrix | Read/Create/Update/Delete per menu → simpan ke `/api/permissions` |
 | **Kanan** | Tab Profil | Edit identitas, wilayah, role, level, email_allowed |

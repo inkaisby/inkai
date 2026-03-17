@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <filter id="s10" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s10)">
+    <rect x="210" y="140" width="860" height="440" rx="28" fill="#0b1223" stroke="#38bdf8" stroke-opacity=".22" stroke-width="2"/>
+
+    <!-- map panel -->
+    <rect x="260" y="195" width="520" height="330" rx="22" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".14"/>
+    <path d="M300 440 C360 380, 420 470, 480 410 S610 380, 690 430" fill="none" stroke="#38bdf8" stroke-opacity=".35" stroke-width="10" stroke-linecap="round"/>
+    <path d="M320 255 C380 300, 440 240, 520 290 S640 320, 720 270" fill="none" stroke="#22c55e" stroke-opacity=".25" stroke-width="10" stroke-linecap="round"/>
+    <g>
+      <path d="M380 350 c0-40 60-40 60 0 c0 22-30 56-30 56s-30-34-30-56z" fill="#38bdf8" opacity=".65"/>
+      <circle cx="410" cy="350" r="10" fill="#0b1223" opacity=".6"/>
+      <path d="M610 315 c0-40 60-40 60 0 c0 22-30 56-30 56s-30-34-30-56z" fill="#f59e0b" opacity=".55"/>
+      <circle cx="640" cy="315" r="10" fill="#0b1223" opacity=".6"/>
+    </g>
+
+    <!-- list panel -->
+    <rect x="810" y="195" width="220" height="330" rx="22" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".14"/>
+    <g fill="#94a3b8" opacity=".22">
+      <rect x="835" y="230" width="170" height="18" rx="9"/>
+      <rect x="835" y="270" width="150" height="14" rx="7"/>
+      <rect x="835" y="310" width="170" height="14" rx="7"/>
+      <rect x="835" y="350" width="140" height="14" rx="7"/>
+      <rect x="835" y="390" width="165" height="14" rx="7"/>
+      <rect x="835" y="430" width="155" height="14" rx="7"/>
+    </g>
+  </g>
+</svg>

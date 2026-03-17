@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <filter id="s12" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s12)">
+    <rect x="240" y="140" width="800" height="440" rx="28" fill="#0b1223" stroke="#38bdf8" stroke-opacity=".22" stroke-width="2"/>
+
+    <!-- shield -->
+    <path d="M640 210 C720 250 780 250 820 250 V360 C820 470 740 540 640 570 C540 540 460 470 460 360 V250 C500 250 560 250 640 210 Z"
+          fill="#0f172a" stroke="#38bdf8" stroke-opacity=".18" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M560 390 L615 445 L740 320" fill="none" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>
+
+    <!-- keyholes / role dots -->
+    <g opacity=".22" fill="#94a3b8">
+      <circle cx="430" cy="250" r="16"/>
+      <circle cx="850" cy="250" r="16"/>
+      <circle cx="430" cy="520" r="16"/>
+      <circle cx="850" cy="520" r="16"/>
+    </g>
+    <g stroke="#38bdf8" stroke-opacity=".25" stroke-width="6" fill="none" stroke-linecap="round">
+      <path d="M446 250 H510"/>
+      <path d="M770 250 H834"/>
+      <path d="M446 520 H510"/>
+      <path d="M770 520 H834"/>
+    </g>
+  </g>
+</svg>

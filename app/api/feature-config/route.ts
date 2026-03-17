@@ -8,8 +8,11 @@ import { requireSuperadmin } from "@/app/lib/security/requireSuperadmin";
 
 export async function GET() {
   const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+  const gate = await requireSuperadmin(user);
+  if (!gate.ok) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
   const config = await getFeatureConfig();

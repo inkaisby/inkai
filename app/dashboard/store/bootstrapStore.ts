@@ -13,6 +13,7 @@ export type BootstrapScope = {
 
 /** User dari bootstrap (session + scope + nama + avatar untuk AvatarMenu). */
 export type BootstrapUser = SessionUserAccess & {
+  id?: string;
   scope?: BootstrapScope;
   nama?: string | null;
   avatar_url?: string | null;

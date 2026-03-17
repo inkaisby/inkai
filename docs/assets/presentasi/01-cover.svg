@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#22c55e" stop-opacity=".10"/>
+    </linearGradient>
+    <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <!-- Transparent background to blend with slide -->
+  <g filter="url(#s)">
+    <rect x="220" y="130" width="840" height="480" rx="28" fill="#0b1223" stroke="#38bdf8" stroke-opacity=".35" stroke-width="2"/>
+    <rect x="260" y="170" width="760" height="60" rx="16" fill="#0f172a"/>
+    <circle cx="300" cy="200" r="10" fill="#38bdf8" opacity=".9"/>
+    <circle cx="332" cy="200" r="10" fill="#22c55e" opacity=".65"/>
+    <circle cx="364" cy="200" r="10" fill="#f59e0b" opacity=".6"/>
+
+    <!-- Dashboard cards -->
+    <rect x="260" y="260" width="360" height="150" rx="18" fill="url(#g)" stroke="#38bdf8" stroke-opacity=".25"/>
+    <rect x="650" y="260" width="370" height="90" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".22"/>
+    <rect x="650" y="370" width="370" height="180" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".18"/>
+
+    <!-- Simple chart lines -->
+    <path d="M300 380 C340 330, 390 420, 440 360 S540 350, 590 320" fill="none" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+    <path d="M690 520 L720 480 L760 505 L800 450 L840 470 L890 420 L970 440" fill="none" stroke="#22c55e" stroke-width="6" stroke-linecap="round" opacity=".75"/>
+  </g>
+
+  <!-- Belt / dojo emblem -->
+  <g transform="translate(930 520) rotate(-8)" filter="url(#s)">
+    <rect x="-210" y="-48" width="320" height="96" rx="48" fill="#0b1223" stroke="#38bdf8" stroke-opacity=".25"/>
+    <rect x="-190" y="-18" width="170" height="36" rx="18" fill="#38bdf8" opacity=".85"/>
+    <rect x="-10" y="-18" width="110" height="36" rx="18" fill="#22c55e" opacity=".55"/>
+    <circle cx="-70" cy="0" r="22" fill="#0f172a" stroke="#38bdf8" stroke-opacity=".35"/>
+  </g>
+</svg>

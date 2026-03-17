@@ -9,23 +9,23 @@ Dokumen ini memetakan **di mana** dan **untuk apa** setiap pengaturan di aplikas
 **URL:** `/dashboard/settings`  
 **Akses:** Hanya **Superadmin**.
 
-Semua pengaturan sistem ada di sini, dibagi menjadi **3 mode** (tombol di kanan atas):
+Semua pengaturan sistem ada di sini, dibagi menjadi **2 mode** (tombol di kanan atas):
 
 | Mode | Untuk apa |
 |------|-----------|
 | **Users** | Kelola akun pengguna, profil, password, role, akses menu, log aktivitas |
-| **Menu** | Kelola item menu sidebar (dari DB) — navigasi yang muncul di kiri dashboard |
-| **Database** | Lihat struktur tabel & audit (untuk development/debug) |
+| **Master Data** | CRUD data inti sistem: **Menu Sidebar** + **Konfigurasi Fitur** (contoh: aturan Home Base) |
 
 ---
 
 ## Mode Users (Akun & Profil)
 
 1. **Pilih user** di daftar kiri.
-2. Di panel kanan ada **4 tab**:
+2. Di panel kanan ada **5 tab**:
 
 | Tab | Isi | Catatan |
 |-----|-----|--------|
+| **Resume** | Ringkasan profil & role user | Cepat untuk cek kelengkapan data dan jabatan aktif. |
 | **Profil** | Nama, alamat, wilayah, **level hirarki**, jabatan (ringkasan) | Level & domisili di sini dipakai untuk scope (mis. Home Base, filter wilayah). Untuk **banyak jabatan** per user → pakai tab Role Management. |
 | **Ubah Password** | Form ganti password untuk user tersebut | - |
 | **Role Management** | Jabatan organisasi (Kohai → Ranting → Cabang → Pengprov → PP) + Role Fungsional | **Ini yang mengisi scope** (cabang_ids, dll.). Tambah jabatan + pilih Cabang/Ranting/Provinsi agar user punya akses ke modul sesuai level. |
@@ -40,18 +40,23 @@ Semua pengaturan sistem ada di sini, dibagi menjadi **3 mode** (tombol di kanan 
 
 ---
 
-## Mode Menu (Navigasi & Akses)
+## Mode Master Data
+
+Mode ini berisi 3 tab:
+
+| Tab | Untuk apa |
+|-----|-----------|
+| **Menu Sidebar** | Kelola item menu sidebar (dari DB) — navigasi yang muncul di kiri dashboard |
+| **Konfigurasi Fitur** | Atur aturan RBAC tingkat fitur (contoh: modul Home Base) |
+| **DB Viewer** | Melihat daftar tabel, kolom, dan preview data (**read-only**, untuk kebutuhan teknis) |
+
+---
+
+## Tab Menu Sidebar (Navigasi & Akses)
 
 - Daftar **menu** yang muncul di sidebar dashboard.
 - CRUD: tambah, edit, hapus item menu.
 - Menu di sidebar **100% dari sini** (DB); RBAC menentukan siapa boleh lihat mana.
-
----
-
-## Mode Database (Audit & Struktur)
-
-- Lihat tabel-tabel di DB, kolom, relasi, isi data.
-- Berguna untuk debug atau cek struktur; bukan untuk konfigurasi bisnis sehari-hari.
 
 ---
 
@@ -74,4 +79,4 @@ Semua pengaturan sistem ada di sini, dibagi menjadi **3 mode** (tombol di kanan 
 
 ---
 
-*Terakhir diperbarui: Maret 2025*
+*Terakhir diperbarui: Maret 2026*

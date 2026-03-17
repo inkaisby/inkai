@@ -7,18 +7,14 @@ import EmailList, { UserRow } from "./EmailList";
 import ProfilePanel from "./ProfilePanel";
 import ChangePasswordPanel from "./ChangePasswordPanel";
 import PermissionMatrix from "./PermissionMatrix";
-import MenuList from "./menu/MenuList";
 import UserActivityLogPanel from "./logs/UserActivityLogPanel";
 import UserResumePanel from "./UserResumePanel";
 import { ModeButton } from "./ModeButton";
 import RoleManagementPanel from "./roles/RoleManagementPanel";
-import FeatureConfigPanel from "./FeatureConfigPanel";
 import QuickLevelUpPanel from "./QuickLevelUpPanel";
+import MasterDataPanel from "./MasterDataPanel";
 
-// ⬇️ DATABASE MODE
-import DatabaseView from "./database/DatabaseView";
-
-type Mode = "users" | "menu" | "database" | "feature";
+type Mode = "users" | "master";
 type Tab = "resume" | "profile" | "password" | "roles" | "logs";
 
 const STORAGE_KEY = "settings:leftPanelWidth";
@@ -187,25 +183,11 @@ export default function SettingsView({
             onClick={() => setMode("users")}
           />
           <ModeButton
-            active={mode === "menu"}
+            active={mode === "master"}
             variant="menu"
-            title="Menu"
-            subtitle="Navigasi & Akses"
-            onClick={() => setMode("menu")}
-          />
-          <ModeButton
-            active={mode === "database"}
-            variant="database"
-            title="Database"
-            subtitle="Audit & Struktur"
-            onClick={() => setMode("database")}
-          />
-          <ModeButton
-            active={mode === "feature"}
-            variant="menu"
-            title="Fitur"
-            subtitle="Konfigurasi RBAC"
-            onClick={() => setMode("feature")}
+            title="Master Data"
+            subtitle="CRUD inti sistem"
+            onClick={() => setMode("master")}
           />
         </div>
       </header>
@@ -372,26 +354,8 @@ export default function SettingsView({
         </div>
       )}
 
-      {/* ================= MENU MODE ================= */}
-      {mode === "menu" && (
-        <section className="section-card">
-          <MenuList />
-        </section>
-      )}
-
-      {/* ================= DATABASE MODE ================= */}
-      {mode === "database" && (
-        <section className="section-card h-[640px]">
-          <DatabaseView />
-        </section>
-      )}
-
-      {/* ================= FEATURE CONFIG MODE ================= */}
-      {mode === "feature" && (
-        <section className="section-card">
-          <FeatureConfigPanel />
-        </section>
-      )}
+      {/* ================= MASTER DATA MODE ================= */}
+      {mode === "master" && <MasterDataPanel />}
     </div>
   );
 }

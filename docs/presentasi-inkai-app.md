@@ -17,11 +17,15 @@ style: |
 # **inkai-app**
 ## Aplikasi untuk Mengelola Organisasi
 
+![bg right:40%](./assets/presentasi/01-cover.svg)
+
 *Satu aplikasi — semua pengurus bisa pakai — data rapi dan aman*
 
 ---
 
 ## Apa itu inkai-app?
+
+![bg right:35%](./assets/presentasi/02-apa-itu.svg)
 
 **inkai-app** adalah aplikasi berbasis web (diakses lewat browser) untuk **mengelola organisasi** dari tingkat ranting hingga pusat.
 
@@ -33,6 +37,8 @@ style: |
 ---
 
 ## Untuk Siapa?
+
+![bg right:35%](./assets/presentasi/03-untuk-siapa.svg)
 
 | Pengguna | Apa yang bisa dilakukan |
 |----------|-------------------------|
@@ -47,6 +53,8 @@ style: |
 
 ## Keuntungan Pakai inkai-app
 
+![bg right:35%](./assets/presentasi/04-keuntungan.svg)
+
 ✅ **Data terpusat** — Tidak perlu lagi data tersebar di banyak file Excel atau WhatsApp  
 ✅ **Hemat waktu** — Cari data anggota atau cetak kartu tinggal klik  
 ✅ **Aman** — Login dengan akun sendiri; yang bukan pengurus tidak bisa akses  
@@ -56,6 +64,8 @@ style: |
 ---
 
 ## Tampilan Utama: Dashboard
+
+![bg right:35%](./assets/presentasi/05-dashboard.svg)
 
 Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
@@ -68,6 +78,8 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 ---
 
 ## Fitur 1: Keanggotaan
+
+![bg right:35%](./assets/presentasi/06-keanggotaan.svg)
 
 **Untuk apa?** Mengelola data anggota organisasi.
 
@@ -82,6 +94,8 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
 ## Fitur 2: Ujian Kenaikan Tingkat (UKT)
 
+![bg right:35%](./assets/presentasi/07-ukt.svg)
+
 **Untuk apa?** Mengelola pendaftaran dan pelaksanaan ujian kenaikan tingkat.
 
 - **Pendaftaran UKT** — Anggota mendaftar lewat sistem
@@ -93,6 +107,8 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
 ## Fitur 3: Keuangan
 
+![bg right:35%](./assets/presentasi/08-keuangan.svg)
+
 **Untuk apa?** Mengelola keuangan organisasi.
 
 - Pencatatan pemasukan dan pengeluaran
@@ -102,6 +118,8 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 ---
 
 ## Fitur 4: Pertandingan & Event
+
+![bg right:35%](./assets/presentasi/09-pertandingan-event.svg)
 
 **Untuk apa?** Mengelola pertandingan dan kegiatan organisasi.
 
@@ -113,6 +131,8 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
 ## Fitur 5: Ranting & Anggota Ranting
 
+![bg right:35%](./assets/presentasi/10-ranting.svg)
+
 **Untuk apa?** Mengelola struktur ranting dan daftar anggota per ranting.
 
 - **Ranting** — Data ranting (nama, lokasi, status aktif)
@@ -123,6 +143,8 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
 ## Fitur 6: Home Base
 
+![bg right:35%](./assets/presentasi/11-home-base.svg)
+
 **Untuk apa?** Mengelola "home base" atau tempat latihan (dojo) per ranting.
 
 - Informasi lokasi latihan
@@ -130,7 +152,20 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
 ---
 
+## Fitur 7: Konten Dashboard (Berita, IG, Marketplace)
+
+**Untuk apa?** Membuat konten yang tampil di beranda dashboard, tanpa ribet dan tetap aman.
+
+- **Berita/Feed**: pengumuman, event, info dojo
+- **Instagram feed**: tautan post & gambar yang ditampilkan di beranda
+- **Marketplace**: produk/perlengkapan yang ingin ditampilkan
+- **Aturan aman**: semua user bisa membuat, tapi **hanya pembuat yang bisa mengubah/hapus**; yang lain hanya melihat yang sudah publish/aktif
+
+---
+
 ## Keamanan: Siapa Bisa Akses Apa?
+
+![bg right:35%](./assets/presentasi/12-keamanan.svg)
 
 Sistem mengatur **siapa lihat apa** berdasarkan jabatan:
 
@@ -145,17 +180,20 @@ Sistem mengatur **siapa lihat apa** berdasarkan jabatan:
 
 ## Pengaturan (Hanya Superadmin)
 
+![bg right:35%](./assets/presentasi/13-settings.svg)
+
 Jika Anda Superadmin, ada halaman **Settings** untuk:
 
 | Bagian | Kegunaan |
 |--------|----------|
 | **Users** | Tambah pengguna baru, atur jabatan, ganti password, lihat log aktivitas |
-| **Menu** | Atur menu yang muncul di sidebar (bisa disesuaikan per kebutuhan organisasi) |
-| **Database** | Lihat struktur data (lebih untuk keperluan teknis) |
+| **Master Data** | Kelola data inti sistem: **Menu Sidebar** + **Konfigurasi Fitur**, serta **DB Viewer** (lihat tabel/kolom, read-only) |
 
 ---
 
 ## Alur Singkat: Dari Login sampai Pakai
+
+![bg right:35%](./assets/presentasi/14-alur.svg)
 
 1. **Buka aplikasi** di browser → halaman login
 2. **Masuk** dengan email & password yang sudah didaftarkan
@@ -166,6 +204,8 @@ Jika Anda Superadmin, ada halaman **Settings** untuk:
 ---
 
 ## Contoh Skenario Sehari-hari
+
+![bg right:35%](./assets/presentasi/15-skenario.svg)
 
 **Skenario 1:** Admin ranting ingin cetak kartu anggota baru  
 → Login → Keanggotaan → Cari anggota → Preview kartu → Cetak/unduh PDF
@@ -180,6 +220,8 @@ Jika Anda Superadmin, ada halaman **Settings** untuk:
 
 ## Dibangun dengan Teknologi Modern
 
+![bg right:35%](./assets/presentasi/16-teknologi.svg)
+
 inkai-app memakai teknologi terkini agar:
 
 - **Cepat** — Halaman muat dengan baik di HP dan laptop
@@ -189,7 +231,35 @@ inkai-app memakai teknologi terkini agar:
 
 ---
 
+## Untuk Tim Profesional (Operasional & Manajemen)
+
+![bg right:35%](./assets/presentasi/19-tim-profesional.svg)
+
+**Fokus:** memastikan operasional organisasi jalan rapi, konsisten, dan mudah diaudit.
+
+- **SOP data**: format input yang seragam (anggota, UKT, keuangan) → mengurangi salah tulis/duplikasi
+- **Pelaporan cepat**: ringkasan per ranting/cabang/provinsi sesuai kebutuhan rapat
+- **Kontrol akses**: pembagian tugas jelas (siapa input, siapa review, siapa approve)
+- **Pelatihan pengguna**: panduan 1 halaman + simulasi 3 skenario (cetak kartu, UKT, laporan)
+
+---
+
+## Untuk Tim IT (Teknis)
+
+![bg right:35%](./assets/presentasi/20-tim-it.svg)
+
+**Fokus:** stabilitas, keamanan, dan kemudahan pengembangan.
+
+- **Stack**: Next.js (App Router) + Supabase (Auth & DB)
+- **Keamanan**: login, pembatasan akses per peran, dan aturan data (RLS) di database
+- **Operasional**: env parity (lokal vs deploy), build & lint, smoke check sebelum rilis
+- **Pengembangan**: modul per fitur (dashboard/modules) + API route handlers (app/api) → mudah tambah fitur
+
+---
+
 ## Ringkasan
+
+![bg right:35%](./assets/presentasi/17-ringkasan.svg)
 
 | Aspek | Keterangan |
 |-------|------------|
@@ -203,6 +273,8 @@ inkai-app memakai teknologi terkini agar:
 <!-- _class: lead -->
 
 # Terima kasih
+
+![bg right:40%](./assets/presentasi/18-terima-kasih.svg)
 
 **inkai-app** — Satu aplikasi untuk mengelola organisasi dengan rapi dan aman.
 
