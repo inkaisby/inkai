@@ -311,7 +311,7 @@ export default function MarketplaceCheckoutModule() {
                     <span>
                       <span className="font-medium text-emerald-200">{c.seller_name}</span>
                       <span className="block text-[11px] text-white/50 mt-0.5">
-                        {[...new Set(c.product_titles)].slice(0, 3).join(", ")}
+                        {Array.from(new Set(c.product_titles)).slice(0, 3).join(", ")}
                         {c.product_titles.length > 3
                           ? ` +${c.product_titles.length - 3}`
                           : ""}

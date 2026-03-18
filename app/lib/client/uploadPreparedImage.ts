@@ -6,7 +6,7 @@ export async function uploadPreparedImage(
   uploadUrl: string,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const prep = await prepareMarketplaceUploadFile(file);
-  if (!prep.ok) return { ok: false, error: prep.message };
+  if (prep.ok === false) return { ok: false, error: prep.message };
 
   const fd = new FormData();
   fd.append("file", prep.file);

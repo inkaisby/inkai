@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   const supabase = createSupabaseAdminClient();
   const gate = await assertMarketplaceOwner(supabase, user.id, id);
-  if (!gate.ok) {
+  if (gate.ok === false) {
     return NextResponse.json({ message: gate.message }, { status: gate.status });
   }
 
@@ -78,7 +78,7 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
 
   const supabase = createSupabaseAdminClient();
   const gate = await assertMarketplaceOwner(supabase, user.id, id);
-  if (!gate.ok) {
+  if (gate.ok === false) {
     return NextResponse.json({ message: gate.message }, { status: gate.status });
   }
   const { error } = await supabase.from("home_marketplace").delete().eq("id", id);

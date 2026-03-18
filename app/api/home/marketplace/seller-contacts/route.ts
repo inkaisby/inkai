@@ -56,7 +56,11 @@ export async function GET(req: NextRequest) {
   }
 
   const list = (rows ?? []) as { id: string; title: string; created_by: string | null }[];
-  const userIds = [...new Set(list.map((r) => r.created_by).filter(Boolean))] as string[];
+  const userIds = Array.from(
+    new Set(
+      list.map((r) => r.created_by).filter((x): x is string => x != null && x !== ""),
+    ),
+  );
 
   const waByUser = new Map<string, string | null>();
   const nameByUser = new Map<string, string>();
@@ -93,7 +97,7 @@ export async function GET(req: NextRequest) {
   }
 
   const contacts: SellerContactRow[] = [];
-  for (const [key, g] of groupMap) {
+  for (const [key, g] of Array.from(groupMap.entries())) {
     const uid = g.created_by;
     let wa: string | null = null;
     let name = "Administrasi toko";

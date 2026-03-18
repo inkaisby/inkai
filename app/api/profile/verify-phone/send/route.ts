@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
   }
 
   const wa = await sendTwilioWhatsAppOtp(e164, code);
-  if (!wa.ok) {
+  if (wa.ok === false) {
     await admin
       .from("profiles")
       .update({
