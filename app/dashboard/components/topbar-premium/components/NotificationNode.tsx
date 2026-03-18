@@ -29,15 +29,16 @@ export default function NotificationNode({ onClick }: Props) {
           handleClick();
         }
       }}
+      title="Notifikasi & aktivitas"
       className="
-        relative cursor-pointer p-2.5 rounded-xl
+        relative shrink-0 cursor-pointer p-2.5 rounded-xl
         bg-gradient-to-br from-white/[0.06] to-white/[0.02]
         hover:from-cyan-500/15 hover:to-cyan-500/5
         border border-white/10 hover:border-cyan-500/40
         shadow-[0_2px_12px_rgba(0,0,0,0.3)]
         transition-colors duration-200
       "
-      aria-label={count > 0 ? `${count} notifikasi` : "Notifikasi"}
+      aria-label={count > 0 ? `${count} notifikasi belum dibaca` : "Notifikasi — klik untuk melihat aktivitas"}
     >
       {/* Lonceng dengan efek swing saat ada notifikasi baru */}
       <motion.span

@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { notifyFeedPublished } from "@/app/lib/events/notifyFeedPublished";
 
 type Status = "draft" | "published";
 
@@ -64,6 +65,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, id: data?.id ?? null });
+  const newId = data?.id ?? null;
+  if (status === "published" && newId) {
+    await notifyFeedPublished(supabase, {
+      feedId: newId,
+      title,
+      authorUserId: user.id,
+    });
+  }
+
+  return NextResponse.json({ ok: true, id: newId });
 }
 

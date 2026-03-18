@@ -3,7 +3,11 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
-import { isValidUuid } from "@/app/lib/security/validateUuid";
+import { insertEvent } from "@/app/lib/events/insertEvent";
+/** UUID format standar (v1–v7); lebih longgar dari isValidUuid agar id dari DB selalu diterima. */
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
@@ -12,9 +16,9 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const id = typeof body?.id === "string" ? body.id : "";
+  const id = typeof body?.id === "string" ? body.id.trim() : "";
 
-  if (!isValidUuid(id)) {
+  if (!isUuidLike(id)) {
     return NextResponse.json({ message: "id tidak valid" }, { status: 400 });
   }
 
@@ -88,6 +92,30 @@ export async function POST(req: NextRequest) {
   if (updateError) {
     console.error("[API home/like UPDATE]", updateError);
     return NextResponse.json({ message: "Gagal mengubah likes" }, { status: 500 });
+  }
+
+  if (delta === 1) {
+    const { data: feedRow } = await supabase
+      .from("home_feed")
+      .select("created_by, title")
+      .eq("id", id)
+      .maybeSingle();
+    const ownerId = feedRow?.created_by as string | null | undefined;
+    if (ownerId && ownerId !== user.id) {
+      const liker =
+        (user.user_metadata?.full_name as string | undefined) ||
+        (user.user_metadata?.name as string | undefined) ||
+        (user.email as string | undefined) ||
+        "Seseorang";
+      const t = (feedRow?.title as string | undefined)?.trim() || "postingan Anda";
+      await insertEvent(supabase, {
+        user_id: ownerId,
+        type: "feed_like",
+        title: `${liker} menyukai: ${t.length > 70 ? `${t.slice(0, 70)}…` : t}`,
+        module: "home_feed",
+        link: `/dashboard#post-${id}`,
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, likes: nextLikes, delta });

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { isValidUuid } from "@/app/lib/security/validateUuid";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import { notifyFeedPublished } from "@/app/lib/events/notifyFeedPublished";
 
 type Status = "draft" | "published";
 
@@ -35,14 +36,38 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const supabase = createSupabaseAdminClient();
-  const { error } = await supabase
-    .from("home_feed")
-    .update(payload)
-    .eq("id", id);
+
+  let notifyOnPublish = false;
+  let publishTitle = "";
+  let publishAuthor: string | null = null;
+  if (payload.status === "published") {
+    const { data: existing } = await supabase
+      .from("home_feed")
+      .select("status, title, created_by")
+      .eq("id", id)
+      .maybeSingle();
+    if (existing && (existing as { status?: string }).status === "draft") {
+      notifyOnPublish = true;
+      publishTitle =
+        (typeof payload.title === "string" ? payload.title : (existing as { title?: string }).title) ||
+        "";
+      publishAuthor = (existing as { created_by?: string | null }).created_by ?? user.id;
+    }
+  }
+
+  const { error } = await supabase.from("home_feed").update(payload).eq("id", id);
 
   if (error) {
     console.error("[API konten/berita PATCH]", error);
     return NextResponse.json({ message: "Gagal update" }, { status: 500 });
+  }
+
+  if (notifyOnPublish) {
+    await notifyFeedPublished(supabase, {
+      feedId: id,
+      title: publishTitle,
+      authorUserId: publishAuthor,
+    });
   }
 
   return NextResponse.json({ ok: true });

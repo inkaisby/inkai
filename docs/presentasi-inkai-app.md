@@ -158,8 +158,9 @@ Setelah login, Anda masuk ke **Dashboard** — layar utama yang menampilkan:
 
 - **Berita/Feed**: pengumuman, event, info dojo
 - **Instagram feed**: tautan post & gambar yang ditampilkan di beranda
-- **Marketplace**: produk/perlengkapan yang ingin ditampilkan
+- **Marketplace**: katalog, **Pesanan saya** (riwayat & status), **keranjang** (pilih item), **checkout** (metode bayar + WA penjual); penjual punya **Pesanan masuk** (ubah status, WA pembeli) di **Marketplace Saya**
 - **Aturan aman**: semua user bisa membuat, tapi **hanya pembuat yang bisa mengubah/hapus**; yang lain hanya melihat yang sudah publish/aktif
+- **Lonceng di toolbar**: notifikasi aktivitas — **feed baru yang dipublish** (ke semua pengguna), komentar/suka di postingan Anda, pendaftaran UKT, dll.; klik untuk melihat daftar
 
 ---
 
@@ -215,6 +216,21 @@ Jika Anda Superadmin, ada halaman **Settings** untuk:
 
 **Skenario 3:** Pengurus ingin lihat ringkasan event aktif  
 → Login → Dashboard → Lihat card "Event Aktif" dan feed pengumuman
+
+---
+
+## Daftar Singkatan
+
+- **UKT**: Ujian Kenaikan Tingkat  
+- **OTP**: Kode verifikasi sekali pakai (mis. lewat WhatsApp/SMS)  
+- **RBAC**: Aturan akses berdasarkan peran/jabatan (siapa boleh lihat/ubah apa)  
+- **RLS**: Aturan akses langsung di database (data dibatasi sesuai wilayah/jabatan)  
+- **API**: “Pintu layanan” untuk komunikasi aplikasi dengan server/database  
+- **DB**: Database (tempat penyimpanan data)  
+- **WA**: WhatsApp (mis. untuk kirim notifikasi/konfirmasi)  
+- **PDF**: Format dokumen untuk cetak/unduh (contoh: kartu anggota, kwitansi)  
+- **CI/CD**: Proses otomatis untuk build, test, dan rilis aplikasi  
+- **PWA**: Web yang bisa dipasang seperti aplikasi di HP (opsional)
 
 ---
 

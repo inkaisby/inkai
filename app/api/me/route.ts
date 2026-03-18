@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   let { data: profileRow } = await admin
     .from("profiles")
     .select(
-      "id, user_id, nama, email, email_allowed, app_role, nik, telepon, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path, ktp_path, akta_lahir_path, kk_path"
+      "id, user_id, nama, email, email_allowed, app_role, nik, telepon, telepon_verified_at, telepon_verified_e164, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path, ktp_path, akta_lahir_path, kk_path"
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
         app_role: "USER",
         email_allowed: true,
       })
-      .select("id, user_id, nama, email, email_allowed, app_role, nik, telepon, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path, ktp_path, akta_lahir_path, kk_path")
+      .select("id, user_id, nama, email, email_allowed, app_role, nik, telepon, telepon_verified_at, telepon_verified_e164, jenis_kelamin, tanggal_lahir, nama_ayah, nama_ibu, pekerjaan_ortu, alamat, province_id, regency_id, district_id, village_id, ranting_id, avatar_path, ktp_path, akta_lahir_path, kk_path")
       .single();
     if (inserted) profileRow = inserted;
   }
@@ -65,6 +65,12 @@ export async function GET(req: NextRequest) {
         ktp_path: (profileRow as { ktp_path?: string | null }).ktp_path ?? null,
         akta_lahir_path: (profileRow as { akta_lahir_path?: string | null }).akta_lahir_path ?? null,
         kk_path: (profileRow as { kk_path?: string | null }).kk_path ?? null,
+        telepon_verified_at:
+          (profileRow as { telepon_verified_at?: string | null }).telepon_verified_at ??
+          null,
+        telepon_verified_e164:
+          (profileRow as { telepon_verified_e164?: string | null }).telepon_verified_e164 ??
+          null,
       }
     : null;
 

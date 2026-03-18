@@ -30,13 +30,19 @@ export default function useRealtimeNotification() {
   // Load unread count via RPC (bypass permission denied)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for call site
   const loadUnreadCount = async (_uid: string) => {
-    const { data } = await supabase.rpc("get_my_events_count");
+    const { data, error } = await supabase.rpc("get_my_events_count");
+    if (error) {
+      console.warn("[notifications] get_my_events_count:", error.message);
+      setCount(0);
+      setHasNew(false);
+      return;
+    }
     const c = typeof data === "number" ? data : 0;
     setCount(c);
     setHasNew(c > 0);
   };
 
-  // Subscribe realtime SETELAH userId ada
+  // Subscribe realtime SETELAH userId ada + polling cadangan (Realtime/ RPC kadang belum jalan)
   useEffect(() => {
     if (!userId) return;
 
@@ -65,8 +71,14 @@ export default function useRealtimeNotification() {
       )
       .subscribe();
 
+    const pollMs = 45_000;
+    const pollId = setInterval(() => {
+      void loadUnreadCount(userId);
+    }, pollMs);
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      clearInterval(pollId);
       supabase.removeChannel(channel);
     };
   }, [userId]);

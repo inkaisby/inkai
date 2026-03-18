@@ -3,6 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabaseBrowser as supabase } from "@/app/lib/supabaseBrowser";
 import { waitForSessionReady } from "@/app/lib/auth/sessionReady";
+import {
+  validateProfileDocFileSize,
+  PROFILE_DOC_MAX_KB,
+} from "@/app/lib/profile/profileDocLimits";
 
 /* =====================
    DB ROW TYPE
@@ -32,6 +36,7 @@ type ProfileRow = {
   ktp_path?: string | null;
   akta_lahir_path?: string | null;
   kk_path?: string | null;
+  telepon_verified_e164?: string | null;
   nomor?: string | null;
   status?: string | null;
 };
@@ -75,6 +80,9 @@ export interface ProfileData {
   ktpPath?: string | null;
   aktaLahirPath?: string | null;
   kkPath?: string | null;
+
+  /** Nomor WA terverifikasi (62…) dari /api/me */
+  teleponVerifiedE164?: string | null;
 }
 
 /* =====================
@@ -115,6 +123,8 @@ const EMPTY: ProfileData = {
   ktpPath: null,
   aktaLahirPath: null,
   kkPath: null,
+
+  teleponVerifiedE164: null,
 };
 
 function toId(v: string | number | null | undefined): string {
@@ -168,6 +178,8 @@ function normalize(db: ProfileRow | null): ProfileData {
     ktpPath: db.ktp_path ?? null,
     aktaLahirPath: db.akta_lahir_path ?? null,
     kkPath: db.kk_path ?? null,
+
+    teleponVerifiedE164: db.telepon_verified_e164 ?? null,
   };
 }
 
@@ -235,6 +247,7 @@ export default function useProfileData() {
               ktp_path?: string | null;
               akta_lahir_path?: string | null;
               kk_path?: string | null;
+              telepon_verified_e164?: string | null;
             };
           };
           const p = meJson.profile;
@@ -250,6 +263,9 @@ export default function useProfileData() {
             if (p.ktp_path != null) normalized.ktpPath = p.ktp_path;
             if (p.akta_lahir_path != null) normalized.aktaLahirPath = p.akta_lahir_path;
             if (p.kk_path != null) normalized.kkPath = p.kk_path;
+            if (p.telepon_verified_e164 != null && p.telepon_verified_e164 !== "") {
+              normalized.teleponVerifiedE164 = p.telepon_verified_e164;
+            }
           }
         }
       } catch {
@@ -487,9 +503,8 @@ export default function useProfileData() {
   /* ===== UPLOAD OPTIONAL DOCUMENT ===== */
   const uploadDocument = useCallback(
     async (kind: "ktp" | "akta_lahir" | "kk", file: File) => {
-      if (file.size > 2 * 1024 * 1024) {
-        throw new Error("Ukuran maksimal 2MB");
-      }
+      const sizeErr = validateProfileDocFileSize(file);
+      if (sizeErr) throw new Error(sizeErr);
       if (
         !(
           file.type === "application/pdf" ||

@@ -10,6 +10,7 @@ import { useBootstrapStore } from "../../store/bootstrapStore";
 
 import TitleDynamic from "./components/TitleDynamic";
 import NotificationNode from "./components/NotificationNode";
+import MarketplaceCartNode from "./components/MarketplaceCartNode";
 import AvatarMenu from "./components/AvatarMenu";
 import NotificationPanel from "./components/NotificationPanel";
 
@@ -93,7 +94,7 @@ function TopbarContent() {
         {/* <HologramScanline /> */}
         {/* <GoldCyanFX /> */}
 
-        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-48 sm:pr-72">
+        <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0 flex-1 pr-52 sm:pr-80">
           <button
             type="button"
             suppressHydrationWarning
@@ -133,6 +134,7 @@ function TopbarContent() {
             {userLabel}
           </span>
         )}
+        <MarketplaceCartNode />
         <NotificationNode />
         <AvatarMenu />
       </div>

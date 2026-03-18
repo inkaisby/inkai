@@ -4,17 +4,19 @@ import React, { useRef, useState } from "react";
 import { UploadCloud, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import type { ProfileData } from "../hooks/useProfileData";
+import {
+  validateProfileDocFileSize,
+  PROFILE_DOC_MAX_KB,
+} from "@/app/lib/profile/profileDocLimits";
 
 type DocKind = "ktp" | "akta_lahir" | "kk";
 
+const HINT_BASE = `PDF / JPG / PNG / WebP • maks. ${PROFILE_DOC_MAX_KB} KB`;
+
 const DOCS: Array<{ kind: DocKind; label: string; hint: string }> = [
-  { kind: "ktp", label: "KTP", hint: "PDF / JPG / PNG / WebP (opsional)" },
-  {
-    kind: "akta_lahir",
-    label: "Akte Lahir",
-    hint: "PDF / JPG / PNG / WebP (opsional)",
-  },
-  { kind: "kk", label: "Kartu Keluarga", hint: "PDF / JPG / PNG / WebP (opsional)" },
+  { kind: "ktp", label: "KTP", hint: HINT_BASE },
+  { kind: "akta_lahir", label: "Akte Lahir", hint: HINT_BASE },
+  { kind: "kk", label: "Kartu Keluarga", hint: HINT_BASE },
 ];
 
 function getStatus(profile: ProfileData, kind: DocKind): boolean {
@@ -97,6 +99,12 @@ export default function ProfileDocuments({
                 onChange={async (e) => {
                   const file = e.target.files?.[0] ?? null;
                   if (!file) return;
+                  const sizeErr = validateProfileDocFileSize(file);
+                  if (sizeErr) {
+                    toast.error(sizeErr);
+                    e.currentTarget.value = "";
+                    return;
+                  }
                   try {
                     setUploadingKind(d.kind);
                     await uploadDocument(d.kind, file);

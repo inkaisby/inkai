@@ -6,11 +6,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
+import {
+  MARKETPLACE_IMAGE_MAX_BYTES,
+  MARKETPLACE_IMAGE_MAX_KB,
+} from "@/app/lib/marketplaceImageLimits";
 
 export const runtime = "nodejs";
 
 const BUCKET = "home_feed";
-const MAX_SIZE_BYTES = 3 * 1024 * 1024; // 3MB
+const MAX_SIZE_BYTES = MARKETPLACE_IMAGE_MAX_BYTES;
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(req: NextRequest) {
@@ -44,7 +48,9 @@ export async function POST(req: NextRequest) {
 
     if (file.size > MAX_SIZE_BYTES) {
       return NextResponse.json(
-        { message: "Ukuran file maksimal 3MB." },
+        {
+          message: `File melebihi ${MARKETPLACE_IMAGE_MAX_KB} KB. JPG/PNG/WebP otomatis dikompres di browser; GIF maks. ${MARKETPLACE_IMAGE_MAX_KB} KB.`,
+        },
         { status: 400 }
       );
     }

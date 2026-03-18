@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/app/lib/supabase/session";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { isValidUuid } from "@/app/lib/security/validateUuid";
+import { insertEvent } from "@/app/lib/events/insertEvent";
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser();
@@ -71,6 +72,23 @@ export async function POST(req: NextRequest) {
   if (error) {
     console.error("[API home/comments POST]", error);
     return NextResponse.json({ message: "Gagal membuat komentar", detail: error.message }, { status: 500 });
+  }
+
+  const { data: feedRow } = await supabase
+    .from("home_feed")
+    .select("created_by, title")
+    .eq("id", feedId)
+    .maybeSingle();
+  const ownerId = feedRow?.created_by as string | null | undefined;
+  if (ownerId && ownerId !== user.id) {
+    const t = (feedRow?.title as string | undefined)?.trim() || "postingan Anda";
+    await insertEvent(supabase, {
+      user_id: ownerId,
+      type: "feed_comment",
+      title: `${authorName} mengomentari: ${t.length > 80 ? `${t.slice(0, 80)}…` : t}`,
+      module: "home_feed",
+      link: `/dashboard#post-${feedId}`,
+    });
   }
 
   return NextResponse.json({ item: data });

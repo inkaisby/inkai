@@ -96,6 +96,7 @@ export default function ProfileModal() {
     loading,
     saving,
     nikExists,
+    reload: reloadProfile,
   } = useProfileData();
 
   const bootstrapUser = useBootstrapStore((s) => s.data?.user);
@@ -391,6 +392,7 @@ export default function ProfileModal() {
                   errors={errors}
                   nikExists={nikExists}
                   canEditNomor={canEditNomor}
+                  onProfileReload={reloadProfile}
                 />
               </>
             )}

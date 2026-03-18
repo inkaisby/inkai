@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/app/lib/supabase/admin";
 import { getSessionUser } from "@/app/lib/supabase/session";
+import {
+  PROFILE_DOC_MAX_KB,
+  profileDocMaxBytes,
+  fileSizeKbCeil,
+} from "@/app/lib/profile/profileDocLimits";
 
 export const runtime = "nodejs";
 
 const BUCKET = "profile_docs";
-const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+const MAX_SIZE_BYTES = profileDocMaxBytes();
 const ALLOWED_TYPES = [
   "application/pdf",
   "image/jpeg",
@@ -70,7 +75,9 @@ export async function POST(req: NextRequest) {
 
     if (file.size > MAX_SIZE_BYTES) {
       return NextResponse.json(
-        { message: "Ukuran file maksimal 2MB." },
+        {
+          message: `Ukuran file ${fileSizeKbCeil(file.size)} KB melebihi batas maksimal ${PROFILE_DOC_MAX_KB} KB.`,
+        },
         { status: 400 },
       );
     }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
 type Status = "draft" | "published";
 
@@ -21,6 +23,7 @@ function fmtDate(iso: string | null) {
 }
 
 export default function KontenSayaInstagramModule() {
+  const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -105,10 +108,21 @@ export default function KontenSayaInstagramModule() {
         <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-wide">
           Konten Saya — Instagram Feed
         </h1>
-        <p className="text-sm text-white/60 mt-1">
-          Cukup isi link post Instagram. Gambar akan diambil otomatis. User lain hanya melihat yang{" "}
-          <span className="font-semibold">Publish</span>.
-        </p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-white/60">
+            Cukup isi link post Instagram. Gambar akan diambil otomatis. User lain hanya melihat yang{" "}
+            <span className="font-semibold">Publish</span>.
+          </p>
+          <button
+            type="button"
+            suppressHydrationWarning
+            onClick={() => router.back()}
+            className="inline-flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-white/15 text-white/80 hover:bg-white/10"
+          >
+            <ArrowLeft size={14} aria-hidden />
+            Kembali halaman sebelumnya
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -132,6 +146,7 @@ export default function KontenSayaInstagramModule() {
         <div className="space-y-2">
           <div className="text-xs text-white/60">Post URL</div>
           <input
+            suppressHydrationWarning
             value={postUrl}
             onChange={(e) => setPostUrl(e.target.value)}
             className="w-full rounded-md bg-black/30 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50"
@@ -152,6 +167,7 @@ export default function KontenSayaInstagramModule() {
           <div className="space-y-2">
             <div className="text-xs text-white/60">Caption</div>
             <input
+              suppressHydrationWarning
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               className="w-full rounded-md bg-black/30 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50"
@@ -161,6 +177,7 @@ export default function KontenSayaInstagramModule() {
           <div className="space-y-2">
             <div className="text-xs text-white/60">Status</div>
             <select
+              suppressHydrationWarning
               value={status}
               onChange={(e) => setStatus(e.target.value as Status)}
               className="w-full rounded-md bg-black/30 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50"
@@ -174,6 +191,7 @@ export default function KontenSayaInstagramModule() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            suppressHydrationWarning
             onClick={create}
             disabled={saving || !postUrl.trim()}
             className="rounded-md bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:hover:bg-cyan-600 px-3 py-2 text-sm text-white"
@@ -182,6 +200,7 @@ export default function KontenSayaInstagramModule() {
           </button>
           <button
             type="button"
+            suppressHydrationWarning
             onClick={load}
             className="rounded-md bg-white/10 hover:bg-white/15 px-3 py-2 text-sm text-white/90"
           >
@@ -236,6 +255,7 @@ export default function KontenSayaInstagramModule() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  suppressHydrationWarning
                   onClick={() => togglePublish(i.id, i.status === "published" ? "draft" : "published")}
                   className="rounded-md bg-white/10 hover:bg-white/15 px-3 py-2 text-sm text-white/90"
                 >
@@ -243,6 +263,7 @@ export default function KontenSayaInstagramModule() {
                 </button>
                 <button
                   type="button"
+                  suppressHydrationWarning
                   onClick={() => remove(i.id)}
                   className="rounded-md bg-red-600/80 hover:bg-red-600 px-3 py-2 text-sm text-white"
                 >

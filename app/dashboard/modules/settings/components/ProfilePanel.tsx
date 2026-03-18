@@ -375,7 +375,7 @@ export default function ProfilePanel({ user, isSuperAdmin = false }: ProfilePane
           <Input
             label="Nama Lengkap"
             value={form.nama}
-            onChange={(v) => update("nama", v)}
+            onChange={(v) => update("nama", v.toUpperCase())}
             placeholder="Nama lengkap"
           />
           <Input

@@ -14,9 +14,19 @@ import {
   AlertTriangle,
   Pencil,
   X,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { useScope } from "@/app/dashboard/components/topbar-premium/context/ScopeContext";
 import { useBootstrapStore } from "@/app/dashboard/store/bootstrapStore";
+import { displayRupiah } from "@/app/lib/formatRupiah";
+import {
+  MARKETPLACE_IMAGE_MAX_EDGE_PX,
+  formatImageSizeLabel,
+  MARKETPLACE_IMAGE_MAX_BYTES,
+} from "@/app/lib/marketplaceImageUpload";
+import { uploadPreparedImage } from "@/app/lib/client/uploadPreparedImage";
 
 /* ================= TYPES ================= */
 type RantingItem = {
@@ -56,6 +66,8 @@ type MarketplaceItem = {
   price: string;
   image?: string | null;
   href: string;
+  description?: string | null;
+  category?: string | null;
 };
 
 type InstagramFeedItem = {
@@ -64,6 +76,19 @@ type InstagramFeedItem = {
   caption: string;
   post_url: string;
 };
+
+function getDashboardScrollEl(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("main.dashboard-main-scroll");
+}
+
+function scrollDashboardTo(top: number) {
+  const el = getDashboardScrollEl();
+  if (el) {
+    el.scrollTo({ top, behavior: "smooth" });
+  } else {
+    window.scrollTo({ top, behavior: "smooth" });
+  }
+}
 
 /** Format created_at ke relatif (2 jam, 1 hari, 2 hari) atau tanggal */
 function formatFeedDate(iso: string | null | undefined): string {
@@ -189,7 +214,19 @@ export default function DashboardHome() {
             return acc;
           }, {}),
         );
-        setMarketplace(Array.isArray(data.marketplace) ? data.marketplace : []);
+        setMarketplace(
+          Array.isArray(data.marketplace)
+            ? data.marketplace.map((m) => ({
+                id: m.id,
+                title: m.title,
+                price: m.price,
+                image: m.image ?? null,
+                href: m.href,
+                description: m.description ?? null,
+                category: m.category ?? null,
+              }))
+            : [],
+        );
         setInstagramFeed(Array.isArray(data.instagramFeed) ? data.instagramFeed : []);
       })
       .catch(() => {
@@ -297,10 +334,20 @@ export default function DashboardHome() {
       const res = await fetch("/api/home/like", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ id: postId }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) return;
+      if (!res.ok) {
+        const msg =
+          typeof json?.message === "string"
+            ? json.message
+            : res.status === 401
+              ? "Silakan login ulang untuk menyukai postingan."
+              : "Like gagal. Coba lagi.";
+        toast.error(msg);
+        return;
+      }
 
       const nextLikes = typeof json?.likes === "number" ? json.likes : null;
       const delta = typeof json?.delta === "number" ? json.delta : 0;
@@ -331,7 +378,7 @@ export default function DashboardHome() {
 
       setLikedPosts((prev) => ({ ...prev, [postId]: delta > 0 ? true : false }));
     } catch {
-      // abaikan error jaringan, tidak mengubah state like lokal
+      toast.error("Jaringan bermasalah. Coba lagi.");
     }
   };
 
@@ -593,8 +640,14 @@ export default function DashboardHome() {
                         </button>
                       </div>
                       {post.image ? (
-                        <div className="aspect-video bg-black/30 relative">
-                          <Image src={post.image} alt="" fill className="object-cover" unoptimized />
+                        <div className="relative aspect-video overflow-hidden bg-black/30">
+                          <Image
+                            src={post.image}
+                            alt=""
+                            fill
+                            className="pointer-events-none object-cover"
+                            unoptimized
+                          />
                         </div>
                       ) : (
                         <div className={`aspect-video bg-gradient-to-br ${style.placeholder} flex items-center justify-center`}>
@@ -602,21 +655,30 @@ export default function DashboardHome() {
                         </div>
                       )}
                       <div className="p-4">
-                        <p className="text-sm text-white/80">{post.body}</p>
-                        <div className="flex items-center gap-4 mt-3 text-white/50 text-sm">
+                        <p className="text-sm text-white/80 break-words whitespace-pre-wrap">
+                          {post.body}
+                        </p>
+                        <div className="relative z-10 mt-3 flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
                           <button
                             type="button"
-                            onClick={() => handleToggleLike(post.id)}
-                            className={`flex items-center gap-1.5 hover:text-white/70 transition-colors ${
-                              likedPosts[post.id] ? "text-rose-400" : ""
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              void handleToggleLike(post.id);
+                            }}
+                            className={`inline-flex min-h-10 min-w-10 cursor-pointer touch-manipulation items-center gap-1.5 rounded-lg px-2 py-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white active:bg-white/[0.12] ${
+                              likedPosts[post.id] ? "text-rose-400 hover:text-rose-300" : ""
                             }`}
+                            aria-label={likedPosts[post.id] ? "Batal suka" : "Suka"}
                           >
-                            <Heart size={16} className={likedPosts[post.id] ? "fill-current" : ""} />
-                            {post.likes}
+                            <Heart size={18} className={likedPosts[post.id] ? "fill-current" : ""} />
+                            <span className="tabular-nums">{post.likes}</span>
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               const el = document.getElementById(`comments-${post.id}`);
                               if (!el) return;
                               el.classList.toggle("hidden");
@@ -624,17 +686,21 @@ export default function DashboardHome() {
                                 void loadComments(post.id);
                               }
                             }}
-                            className="flex items-center gap-1.5 hover:text-white/70 transition-colors"
+                            className="inline-flex min-h-10 cursor-pointer touch-manipulation items-center gap-1.5 rounded-lg px-2 py-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                           >
-                            <MessageCircle size={16} />
+                            <MessageCircle size={18} />
                             Komentar
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleShare(post.id)}
-                            className="flex items-center gap-1.5 hover:text-white/70 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              void handleShare(post.id);
+                            }}
+                            className="inline-flex min-h-10 cursor-pointer touch-manipulation items-center gap-1.5 rounded-lg px-2 py-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                           >
-                            <Share2 size={16} />
+                            <Share2 size={18} />
                             Bagikan
                           </button>
                         </div>
@@ -806,24 +872,33 @@ export default function DashboardHome() {
               marketplace.map((item) => (
                 <Link
                   key={item.id}
-                  href={item.href}
+                  href={`/dashboard/marketplace/p/${item.id}`}
                   className="block rounded-lg border border-white/10 bg-white/[0.04] p-2.5 hover:bg-white/[0.07] hover:border-teal-500/20 transition-colors no-underline"
                 >
                   <div className="aspect-square rounded bg-white/5 flex items-center justify-center mb-1.5 overflow-hidden relative">
                     {item.image ? (
-                      <Image src={item.image} alt="" fill className="object-cover" sizes="120px" unoptimized />
+                      <Image src={item.image} alt={item.title} fill className="object-cover" sizes="120px" unoptimized />
                     ) : (
                       <ShoppingBag className="w-6 h-6 text-teal-400/60" />
                     )}
                   </div>
+                  {item.category ? (
+                    <span className="inline-block mb-0.5 text-[9px] px-1.5 py-0.5 rounded border border-white/15 text-white/50">
+                      {item.category}
+                    </span>
+                  ) : null}
                   <div className="text-xs font-medium text-white/90 truncate">{item.title}</div>
-                  <div className="text-xs text-amber-400/90 mt-0.5">{item.price}</div>
+                  {item.description ? (
+                    <div className="text-[10px] text-white/45 line-clamp-2 mt-0.5">{item.description}</div>
+                  ) : null}
+                  <div className="text-xs text-amber-400/90 mt-0.5">{displayRupiah(item.price)}</div>
+                  <div className="mt-1 text-[10px] text-teal-300/70">Detail</div>
                 </Link>
               ))
               )}
             </div>
             <Link
-              href="/dashboard"
+              href="/dashboard/marketplace"
               className="mt-2.5 block text-center text-xs text-teal-400 hover:text-teal-300 no-underline"
             >
               Lihat semua →
@@ -940,7 +1015,13 @@ export default function DashboardHome() {
                   </div>
                 )}
                 <p className="text-[11px] text-white/50">
-                  Bisa pakai URL langsung (link gambar) atau upload dari perangkat. Foto dari Instagram: simpan dulu ke HP/laptop lalu upload di sini.
+                  URL gambar atau upload file. Unggah: maks.{" "}
+                  <strong className="text-white/70">
+                    {formatImageSizeLabel(MARKETPLACE_IMAGE_MAX_BYTES)}
+                  </strong>
+                  ; sisi terpanjang max. {MARKETPLACE_IMAGE_MAX_EDGE_PX}px (JPG/PNG/WebP otomatis
+                  diperkecil & dikompres agar tidak melebihi kapasitas). GIF tanpa resize, maks. sama.
+                  Foto IG: simpan ke perangkat dulu.
                 </p>
                 <input
                   type="url"
@@ -966,21 +1047,12 @@ export default function DashboardHome() {
                       setUploadImageError(null);
                       setUploadImageLoading(true);
                       try {
-                        const fd = new FormData();
-                        fd.append("file", f);
-                        const res = await fetch("/api/konten/berita/upload", {
-                          method: "POST",
-                          credentials: "include",
-                          body: fd,
-                        });
-                        const data = await res.json().catch(() => ({}));
-                        if (!res.ok) {
-                          setUploadImageError(data?.message ?? "Gagal mengunggah");
+                        const up = await uploadPreparedImage(f, "/api/konten/berita/upload");
+                        if (up.ok === false) {
+                          setUploadImageError(up.error);
                           return;
                         }
-                        if (data?.url) {
-                          setEditingImage(data.url);
-                        }
+                        setEditingImage(up.url);
                       } catch {
                         setUploadImageError("Gagal mengunggah gambar");
                       } finally {
@@ -1041,6 +1113,40 @@ export default function DashboardHome() {
           </div>
         </div>
       )}
+
+      {/* Panah scroll ke atas / bawah */}
+      <div
+        className="fixed bottom-6 right-4 z-50 flex flex-col gap-2 sm:right-6"
+        aria-label="Navigasi halaman"
+      >
+        <button
+          type="button"
+          onClick={() => scrollDashboardTo(0)}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-slate-950/90 text-white/90 shadow-lg backdrop-blur-sm transition-colors hover:border-teal-400/50 hover:bg-teal-950/80 hover:text-teal-200"
+          title="Ke atas halaman"
+          aria-label="Ke atas halaman"
+        >
+          <ChevronUp size={22} strokeWidth={2.5} />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const el = getDashboardScrollEl();
+            const max = el
+              ? el.scrollHeight - el.clientHeight
+              : Math.max(
+                  document.documentElement.scrollHeight,
+                  document.body.scrollHeight,
+                );
+            scrollDashboardTo(max);
+          }}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-slate-950/90 text-white/90 shadow-lg backdrop-blur-sm transition-colors hover:border-teal-400/50 hover:bg-teal-950/80 hover:text-teal-200"
+          title="Ke bawah halaman"
+          aria-label="Ke bawah halaman"
+        >
+          <ChevronDown size={22} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
   );
 }

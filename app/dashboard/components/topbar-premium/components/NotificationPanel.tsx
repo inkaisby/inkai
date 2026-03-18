@@ -12,6 +12,7 @@ type EventItem = {
   title: string;
   created_at: string;
   read_at: string | null;
+  link?: string | null;
 };
 
 type GroupedEvents = {
@@ -108,19 +109,40 @@ export default function NotificationPanel() {
           {label}
         </div>
 
-        {items.map((e) => (
-          <div
-            key={e.id}
-            className={`px-4 py-3 text-xs border-b border-cyan-500/10
-              ${e.read_at ? "opacity-60" : "bg-cyan-500/5"}
-            `}
-          >
-            <div className="text-cyan-200">{e.title}</div>
-            <div className="text-[10px] text-cyan-400">
-              {new Date(e.created_at).toLocaleString()}
+        {items.map((e) => {
+          const href = e.link?.trim();
+          const inner = (
+            <>
+              <div className="text-cyan-200">{e.title}</div>
+              <div className="text-[10px] text-cyan-400">
+                {new Date(e.created_at).toLocaleString()}
+              </div>
+              {href && (
+                <div className="mt-1 text-[10px] text-cyan-500/90">Ketuk untuk buka</div>
+              )}
+            </>
+          );
+          return (
+            <div
+              key={e.id}
+              className={`border-b border-cyan-500/10 ${
+                e.read_at ? "opacity-60" : "bg-cyan-500/5"
+              }`}
+            >
+              {href ? (
+                <a
+                  href={href}
+                  onClick={() => closeNotifications()}
+                  className="block px-4 py-3 text-xs no-underline hover:bg-cyan-500/10 transition-colors"
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div className={`px-4 py-3 text-xs`}>{inner}</div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

@@ -26,7 +26,7 @@ export async function GET() {
       .limit(50),
     admin
       .from("home_marketplace")
-      .select("id, title, price, image_path, href")
+      .select("id, title, price, image_path, href, description, category")
       .eq("is_active", true)
       .order("order_index", { ascending: false })
       .limit(20),
@@ -79,6 +79,8 @@ export async function GET() {
     price: r.price ?? "",
     image: (r.image_path as string) || null,
     href: (r.href as string) || "/dashboard",
+    description: (r.description as string) || null,
+    category: (r.category as string) || "",
   }));
 
   const instagramFeed = (igRes.data ?? []).map((r: Record<string, unknown>) => ({

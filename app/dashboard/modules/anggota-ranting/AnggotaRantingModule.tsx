@@ -1445,7 +1445,10 @@ export default function AnggotaRantingModule() {
                     type="text"
                     value={singleForm.nama}
                     onChange={(e) =>
-                      setSingleForm((f) => ({ ...f, nama: e.target.value }))
+                      setSingleForm((f) => ({
+                        ...f,
+                        nama: e.target.value.toUpperCase(),
+                      }))
                     }
                     className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                     placeholder="Nama sesuai identitas"
@@ -1598,7 +1601,10 @@ export default function AnggotaRantingModule() {
                         type="text"
                         value={editForm.nama}
                         onChange={(e) =>
-                          setEditForm((f) => ({ ...f, nama: e.target.value }))
+                          setEditForm((f) => ({
+                            ...f,
+                            nama: e.target.value.toUpperCase(),
+                          }))
                         }
                         className="w-full rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white placeholder:text-white/35 focus:border-emerald-400/80 focus:outline-none"
                         placeholder="Nama sesuai identitas"
