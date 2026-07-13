@@ -41,6 +41,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'self' https://inkai-jatim.vercel.app http://localhost:3000"
+          }
+        ]
+      }
+    ];
+  },
   // Batas ukuran body (termasuk upload avatar ~2MB) agar tidak "Failed to fetch" / truncate
   experimental: {
     serverActions: {
