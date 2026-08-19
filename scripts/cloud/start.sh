@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cloud Agent `start` phase: per-boot bring-up of the Docker daemon and the local
-# Supabase stack, then write .env.local for the Next.js app. Idempotent and safe
-# to re-run. Must reach a ready state and return (the dev server runs as a terminal).
+# Supabase stack, write .env.local, then launch the Next.js dev server. Idempotent
+# and safe to re-run.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -39,7 +39,19 @@ sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
 enable_bridge_bypass
 
 log "Start local Supabase stack (applies migrations + seed.sql on first start)"
-supabase start || supabase start
+# On a cold boot the Postgres container can lag behind the CLI, so retry until the
+# stack reports healthy rather than failing on the first attempt.
+supabase_up=false
+for attempt in $(seq 1 8); do
+  if supabase start >/tmp/supabase-start.log 2>&1 || supabase status >/dev/null 2>&1; then
+    if supabase status >/dev/null 2>&1; then supabase_up=true; break; fi
+  fi
+  echo "Supabase not ready yet (attempt ${attempt}); waiting for containers..."
+  sleep 10
+done
+if [ "$supabase_up" != true ]; then
+  echo "ERROR: Supabase stack did not become healthy"; tail -n 30 /tmp/supabase-start.log 2>/dev/null || true; exit 1
+fi
 
 log "Write .env.local from local Supabase keys"
 ANON="$(supabase status -o env | grep '^ANON_KEY=' | cut -d= -f2- | tr -d '"')"
@@ -53,4 +65,14 @@ INKAI_ROOT_EMAIL=admin@inkai.local
 NEXT_PUBLIC_INKAI_ROOT_EMAIL=admin@inkai.local
 EOF
 
-log "start.sh complete — Supabase up at http://127.0.0.1:54321 (Studio :54323)"
+log "Launch Next.js dev server (tmux session: next-dev)"
+# Run the dev server in a detached, persistent session so it survives after this
+# script returns and its logs can be inspected/attached later.
+TMUX_BIN="tmux"
+TMUX_CONF=""
+[ -f /exec-daemon/tmux.portal.conf ] && TMUX_CONF="-f /exec-daemon/tmux.portal.conf"
+if ! $TMUX_BIN $TMUX_CONF has-session -t "=next-dev" 2>/dev/null; then
+  $TMUX_BIN $TMUX_CONF new-session -d -s next-dev -c "$PWD" -- bash -lc 'npm run dev 2>&1 | tee /tmp/next-dev.log'
+fi
+
+log "start.sh complete — Supabase at http://127.0.0.1:54321 (Studio :54323), app at http://localhost:3000"
