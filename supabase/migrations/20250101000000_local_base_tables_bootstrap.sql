@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   avatar_path text,
   app_role text DEFAULT 'USER',
   email_allowed boolean DEFAULT true,
+  profile_completed boolean DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
 
